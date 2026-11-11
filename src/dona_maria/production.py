@@ -1,0 +1,161 @@
+"""Contratos de produção e decisões humanas; sem transporte, banco ou rede."""
+
+import re
+from datetime import UTC, datetime
+from typing import Annotated, Literal
+
+from pydantic import AwareDatetime, Field, StrictBool, StrictInt, field_validator, model_validator
+
+from dona_maria.candidates import (
+    CandidateModel,
+    Category,
+    Note,
+    ShortText,
+    UUIDText,
+)
+
+
+class UserEvidence(CandidateModel):
+    turn_ref: ShortText
+    statement: Note
+    captured_at: AwareDatetime
+
+    @field_validator("turn_ref", "statement")
+    @classmethod
+    def nonblank_text(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Evidência exige referência e fala com conteúdo.")
+        return value
+
+    @field_validator("captured_at", mode="before")
+    @classmethod
+    def textual_date(cls, value: object) -> str:
+        if not isinstance(value, str):
+            raise ValueError("Evidência exige data RFC 3339 textual com timezone.")
+        return value
+
+    @field_validator("captured_at")
+    @classmethod
+    def utc_date(cls, value: datetime) -> datetime:
+        return value.astimezone(UTC)
+
+
+class CommandMeta(CandidateModel):
+    workspace_id: UUIDText
+    operation_id: UUIDText
+    expected_revision: Annotated[StrictInt, Field(ge=0)]
+
+
+class FeedbackRequest(CommandMeta):
+    recipe_id: UUIDText
+    feedback: Literal["INTERESTED", "REJECTED", "UNDECIDED"]
+    evidence: UserEvidence
+
+
+class RecipeFeedback(CandidateModel):
+    recipe_id: UUIDText
+    feedback: Literal["INTERESTED", "REJECTED", "UNDECIDED"]
+    evidence: UserEvidence
+
+
+class PlanItemInput(CandidateModel):
+    recipe_id: UUIDText
+    recipe_version: Annotated[StrictInt, Field(gt=0)]
+    position: Annotated[StrictInt, Field(ge=0)]
+    batches: Annotated[StrictInt, Field(gt=0)]
+    requested_servings: Annotated[StrictInt, Field(gt=0)] | None = None
+
+
+class PlanRequest(CommandMeta):
+    items: list[PlanItemInput]
+    evidence: UserEvidence
+
+    @model_validator(mode="after")
+    def unique_items(self):
+        for values in (
+            [item.recipe_id for item in self.items],
+            [item.position for item in self.items],
+        ):
+            if len(values) != len(set(values)):
+                raise ValueError("Receitas e posições do plano devem ser únicas.")
+        return self
+
+
+class PlanItem(PlanItemInput):
+    plan_item_id: UUIDText
+    servings: Annotated[StrictInt, Field(gt=0)] | None
+    surplus_servings: Annotated[StrictInt, Field(ge=0)] | None
+    business_recipe_version: Annotated[StrictInt, Field(gt=0)]
+
+
+class ProductionPlan(CandidateModel):
+    id: UUIDText
+    version: Annotated[StrictInt, Field(gt=0)]
+    items: list[PlanItem]
+    inventory_snapshot_id: UUIDText
+    evidence: UserEvidence
+
+
+class KitchenFactInput(CandidateModel):
+    category: Category
+    key: ShortText
+    value: StrictBool | ShortText
+    unit: ShortText | None = None
+    context: ShortText | None = None
+    evidence: UserEvidence
+    replaces_fact_id: UUIDText | None = None
+
+
+class KitchenFactsRequest(CommandMeta):
+    facts: Annotated[list[KitchenFactInput], Field(min_length=1)]
+
+    @model_validator(mode="after")
+    def unique_keys(self):
+        keys = [(fact.category, fact.key) for fact in self.facts]
+        if len(keys) != len(set(keys)):
+            raise ValueError("Chave de fato duplicada.")
+        return self
+
+
+class KitchenFact(KitchenFactInput):
+    id: UUIDText
+    version: Annotated[StrictInt, Field(gt=0)]
+    recorded_at: AwareDatetime
+
+
+class FeasibilityRequest(CandidateModel):
+    workspace_id: UUIDText
+    recipe_id: UUIDText
+    plan_item_id: UUIDText
+
+
+class AcceptanceRequest(CommandMeta):
+    recipe_id: UUIDText
+    plan_item_id: UUIDText
+    evaluation_id: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+    evidence: UserEvidence
+
+
+class RecipeAcceptance(CandidateModel):
+    id: UUIDText
+    recipe_id: UUIDText
+    recipe_version: Annotated[StrictInt, Field(gt=0)]
+    plan_item_id: UUIDText
+    batches: Annotated[StrictInt, Field(gt=0)]
+    evaluation_id: str
+    fingerprint: str
+    evidence: UserEvidence
+    accepted_at: AwareDatetime
+
+
+def explicit_acceptance(evidence: UserEvidence) -> bool:
+    # Conservador: frases ambíguas pedem esclarecimento; não pretende autenticar a fala.
+    statement = " ".join(evidence.statement.casefold().strip().rstrip(".! ").split())
+    return (
+        re.fullmatch(
+            r"(?:sim,? )?aceito(?: (?:este|esse|o) prato| (?:esta|essa|a) receita)?"
+            r"(?: conforme (?:este|esse|o) resumo)?",
+            statement,
+        )
+        is not None
+    )

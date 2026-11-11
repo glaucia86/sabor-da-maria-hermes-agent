@@ -23,6 +23,52 @@ from dona_maria.business_state import (
 )
 from dona_maria.candidates import RegisterCandidateRequest
 from dona_maria.persistence import SQLiteWorkspaceRepository
+from dona_maria.production import (
+    AcceptanceRequest,
+    FeasibilityRequest,
+    FeedbackRequest,
+    KitchenFactsRequest,
+    PlanRequest,
+)
+
+PRODUCTION_TOOLS = [
+    (
+        "record_recipe_feedback",
+        FeedbackRequest,
+        False,
+        "Registra interesse ou recusa; não aceita receita.",
+    ),
+    (
+        "record_kitchen_facts",
+        KitchenFactsRequest,
+        False,
+        "Registra fatos tipados com evidência humana.",
+    ),
+    (
+        "set_production_plan",
+        PlanRequest,
+        False,
+        "Confirma lotes inteiros e substitui o rascunho completo.",
+    ),
+    (
+        "evaluate_recipe_feasibility",
+        FeasibilityRequest,
+        True,
+        "Avalia condições na escala do plano atual.",
+    ),
+    (
+        "evaluate_purchase_plan",
+        GetBusinessStateRequest,
+        True,
+        "Avalia demanda de todos os itens ativos, sem comprar.",
+    ),
+    (
+        "accept_recipe",
+        AcceptanceRequest,
+        False,
+        "Aceita somente após resumo atual e manifestação inequívoca.",
+    ),
+]
 
 
 def create_server(reader: BusinessStateReader) -> Server:
@@ -66,6 +112,21 @@ def create_server(reader: BusinessStateReader) -> Server:
                     ),
                 ),
             ]
+            + [
+                Tool(
+                    name=name,
+                    description=description,
+                    input_schema=schema.model_json_schema(),
+                    output_schema=ReadErrorEnvelope.model_json_schema(),
+                    annotations=ToolAnnotations(
+                        read_only_hint=read_only,
+                        destructive_hint=False,
+                        idempotent_hint=True,
+                        open_world_hint=False,
+                    ),
+                )
+                for name, schema, read_only, description in PRODUCTION_TOOLS
+            ]
         )
 
     async def call_tool(ctx, params):
@@ -74,6 +135,7 @@ def create_server(reader: BusinessStateReader) -> Server:
             "get_inventory_snapshot": reader.get_inventory_snapshot,
             "register_recipe_candidate": reader.register_recipe_candidate,
         }
+        handlers.update({name: getattr(reader, name) for name, *_ in PRODUCTION_TOOLS})
         if params.name not in handlers:
             raise MCPError(code=-32602, message="Ferramenta desconhecida.")
         started = perf_counter()

@@ -212,6 +212,7 @@ class RecipeCandidate(CandidateInput):
     requirements: list[CriticalRequirement] = []
     id: UUID
     version: Annotated[StrictInt, Field(gt=0)]
+    business_version: Annotated[StrictInt, Field(gt=0)] = 1
     recorded_at: AwareDatetime
 
     def public(self) -> dict:
@@ -245,6 +246,21 @@ class RecipeCandidate(CandidateInput):
         )
         for requirement in data["requirements"]:
             requirement["status"] = "UNKNOWN"
+        return data
+
+    def business_content(self) -> dict:
+        payload = self.model_dump(mode="json")
+        data = {name: payload[name] for name in CandidateInput.model_fields}
+        data.pop("title")
+        for ingredient in data["ingredients"]:
+            ingredient.pop("line_id", None)
+        for requirement in data["requirements"]:
+            requirement.pop("id", None)
+        for review in data["category_reviews"]:
+            # Só uma revisão efetivamente atual pode preservar a base anterior.
+            review["method_version"] = (
+                "CURRENT" if review["method_version"] == self.version else "STALE"
+            )
         return data
 
 

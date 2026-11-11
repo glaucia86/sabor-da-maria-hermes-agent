@@ -1,4 +1,4 @@
-"""Serviço público de consulta e registro de candidatas, sem aceite ou preço."""
+"""Serviço público de consulta, produção e aceite, sem precificação."""
 
 import sqlite3
 from collections.abc import Callable
@@ -10,6 +10,14 @@ from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 
 from dona_maria.candidates import RegisterCandidateRequest
 from dona_maria.persistence import BusinessRuleError, SQLiteWorkspaceRepository
+from dona_maria.planning import evaluate_plan
+from dona_maria.production import (
+    AcceptanceRequest,
+    FeasibilityRequest,
+    FeedbackRequest,
+    KitchenFactsRequest,
+    PlanRequest,
+)
 
 
 class GetBusinessStateRequest(BaseModel):
@@ -61,6 +69,93 @@ class BusinessStateReader:
     ) -> None:
         self.repository = repository
         self.clock = clock
+
+    def record_recipe_feedback(self, arguments: dict[str, object]) -> dict[str, object]:
+        return self._production_command("record_recipe_feedback", FeedbackRequest, arguments)
+
+    def set_production_plan(self, arguments: dict[str, object]) -> dict[str, object]:
+        return self._production_command("set_production_plan", PlanRequest, arguments)
+
+    def record_kitchen_facts(self, arguments: dict[str, object]) -> dict[str, object]:
+        return self._production_command("record_kitchen_facts", KitchenFactsRequest, arguments)
+
+    def accept_recipe(self, arguments: dict[str, object]) -> dict[str, object]:
+        return self._production_command("accept_recipe", AcceptanceRequest, arguments)
+
+    def evaluate_recipe_feasibility(self, arguments: dict[str, object]) -> dict[str, object]:
+        return self._production_query(FeasibilityRequest, self.repository.feasibility, arguments)
+
+    def evaluate_purchase_plan(self, arguments: dict[str, object]) -> dict[str, object]:
+        return self._production_query(
+            GetBusinessStateRequest,
+            lambda request: self.repository.purchase_evaluation(str(request.workspace_id)),
+            arguments,
+        )
+
+    def _production_query(self, schema: type[BaseModel], query: Callable, arguments: dict) -> dict:
+        try:
+            request = schema.model_validate(arguments)
+        except ValidationError:
+            return ReadErrorEnvelope(
+                workspace_id=None,
+                error=ReadError(
+                    code="VALIDATION_ERROR",
+                    message="Consulta de viabilidade inválida.",
+                    details={},
+                    retryable=False,
+                    next_action="CORRECT_INPUT",
+                ),
+            ).model_dump(mode="json")
+        try:
+            return query(request)
+        except BusinessRuleError as exc:
+            return ReadErrorEnvelope(
+                workspace_id=request.workspace_id,
+                error=ReadError(
+                    code=exc.code,
+                    message=exc.message,
+                    details={},
+                    retryable=False,
+                    next_action="CORRECT_INPUT",
+                ),
+            ).model_dump(mode="json")
+        except (sqlite3.Error, ValidationError):
+            return _storage_unavailable(str(request.workspace_id))
+
+    def _production_command(self, tool: str, schema: type[BaseModel], arguments: dict) -> dict:
+        try:
+            request = schema.model_validate(arguments)
+        except ValidationError as exc:
+            return ReadErrorEnvelope(
+                workspace_id=None,
+                error=ReadError(
+                    code="VALIDATION_ERROR",
+                    message="Entrada inválida para produção.",
+                    details={
+                        "fields": sorted({".".join(map(str, e["loc"])) for e in exc.errors()})
+                    },
+                    retryable=False,
+                    next_action="CORRECT_INPUT",
+                ),
+            ).model_dump(mode="json")
+        try:
+            return self.repository.production_command(tool, request, self.clock())
+        except BusinessRuleError as exc:
+            return ReadErrorEnvelope(
+                workspace_id=request.workspace_id,
+                operation_id=request.operation_id,
+                error=ReadError(
+                    code=exc.code,
+                    message=exc.message,
+                    details={},
+                    retryable=False,
+                    next_action="RELOAD_STATE" if exc.code == "STALE_REVISION" else "CORRECT_INPUT",
+                ),
+            ).model_dump(mode="json")
+        except (sqlite3.Error, ValidationError) as exc:
+            return _storage_unavailable(
+                str(request.workspace_id), operation_id=request.operation_id, cause=exc
+            )
 
     def register_recipe_candidate(self, arguments: dict[str, object]) -> dict[str, object]:
         try:
@@ -160,11 +255,74 @@ class BusinessStateReader:
             ).model_dump(mode="json")
         workspace_id = str(request.workspace_id)
         try:
-            loaded = self.repository.load(workspace_id)
+            loaded = self.repository.load(workspace_id, with_snapshot=True)
         except (sqlite3.Error, ValidationError):
             return _storage_unavailable(workspace_id)
         if loaded is not None:
-            revision, state = loaded
+            revision, state, snapshot = loaded
+            evaluation = evaluate_plan(
+                state.candidates,
+                state.plan,
+                state.kitchen_facts,
+                state.feedback,
+                snapshot,
+                state.pricing_policy_version,
+                revision,
+            )
+            acceptances = [
+                acceptance.model_dump(mode="json")
+                | {
+                    "validity": "VALID"
+                    if acceptance.id not in state.invalidated_acceptance_ids
+                    and acceptance.fingerprint == evaluation["fingerprint"]
+                    else "INVALIDATED",
+                }
+                for acceptance in state.acceptances
+            ]
+            candidates = [candidate.public() for candidate in state.candidates]
+            for candidate in candidates:
+                feedback = next(
+                    (item for item in state.feedback if str(item.recipe_id) == candidate["id"]),
+                    None,
+                )
+                if feedback:
+                    candidate["interest"] = feedback.feedback
+                feasibility = next(
+                    (
+                        entry
+                        for entry in evaluation["feasibility_by_recipe"]
+                        if entry["recipe_id"] == candidate["id"]
+                    ),
+                    None,
+                )
+                if feasibility:
+                    derived = {entry["id"]: entry for entry in feasibility["requirements"]}
+                    for requirement in candidate["requirements"]:
+                        requirement.update(derived[requirement["id"]])
+                    candidate["status"] = (
+                        "BLOCKED"
+                        if feasibility["status"] == "BLOCKED"
+                        else "FEASIBILITY_PENDING"
+                        if feasibility["status"] == "PENDING"
+                        or any(
+                            entry["status"] != "ELIGIBLE"
+                            for entry in evaluation["feasibility_by_recipe"]
+                        )
+                        else "INGREDIENT_CHECK_PENDING"
+                        if evaluation["purchase_status"] != "CONFIRMED"
+                        else "DISCOVERED"
+                        if candidate["interest"] == "UNDECIDED"
+                        else "READY_FOR_ACCEPTANCE"
+                    )
+                elif feedback:
+                    candidate["status"] = "FEASIBILITY_PENDING"
+                if any(
+                    a["recipe_id"] == candidate["id"] and a["validity"] == "VALID"
+                    for a in acceptances
+                ):
+                    candidate["status"] = "ACCEPTED"
+                if candidate["interest"] == "REJECTED":
+                    candidate["status"] = "REJECTED"
             return ReadErrorEnvelope(
                 ok=True,
                 workspace_id=workspace_id,
@@ -172,11 +330,23 @@ class BusinessStateReader:
                 data={
                     "inventory_snapshot_id": str(state.inventory_snapshot_id),
                     "budget_initial": state.budget_initial,
-                    "budget_remaining": "80.00",
-                    "candidates": [candidate.public() for candidate in state.candidates],
-                    "next_action": "CLARIFY_CANDIDATE_GAPS"
-                    if state.candidates
-                    else "RESEARCH_CANDIDATE",
+                    "budget_remaining": evaluation["remaining_budget"]
+                    if state.plan and state.plan.items
+                    else "80.00",
+                    "candidates": candidates,
+                    "acceptances": acceptances,
+                    "evaluation": evaluation,
+                    "plan": state.plan.model_dump(mode="json") if state.plan else None,
+                    "kitchen_facts": [fact.model_dump(mode="json") for fact in state.kitchen_facts],
+                    "next_action": (
+                        "ASK_EXPLICIT_ACCEPTANCE"
+                        if any(c.get("status") == "READY_FOR_ACCEPTANCE" for c in candidates)
+                        else "REVIEW_ACCEPTED_RECIPES"
+                        if any(a["validity"] == "VALID" for a in acceptances)
+                        else "CLARIFY_CANDIDATE_GAPS"
+                        if any(c["interest"] != "REJECTED" for c in candidates)
+                        else "RESEARCH_CANDIDATE"
+                    ),
                 },
             ).model_dump(mode="json")
         return ReadErrorEnvelope(

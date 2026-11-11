@@ -107,8 +107,10 @@ hermes -p sabor-da-maria mcp test dona_maria
 hermes -p sabor-da-maria skills list --enabled-only
 ```
 
-O MCP deve descobrir `get_business_state`, `get_inventory_snapshot` e
-`register_recipe_candidate`, e a listagem de skills deve
+O MCP deve descobrir `get_business_state`, `get_inventory_snapshot`,
+`register_recipe_candidate`, `record_recipe_feedback`, `record_kitchen_facts`,
+`set_production_plan`, `evaluate_recipe_feasibility`, `evaluate_purchase_plan`
+e `accept_recipe`, e a listagem de skills deve
 incluir `dona-maria-cardapio`. Descoberta não comprova que o corpo da skill foi
 carregado; a invocação explícita abaixo é o caminho de verificação.
 

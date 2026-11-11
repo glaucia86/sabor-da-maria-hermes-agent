@@ -1,40 +1,34 @@
 """SQLite local: agregado validado, fotografia imutável e transações explícitas."""
 
-import hashlib
 import json
 import sqlite3
 import threading
 from contextlib import closing, contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Literal
 from uuid import UUID, uuid4
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict
-
-from dona_maria.candidates import CandidateInput, RecipeCandidate, RegisterCandidateRequest
+from dona_maria.candidates import RecipeCandidate, RegisterCandidateRequest
 from dona_maria.inventory import InventorySnapshot
-
-
-class WorkspaceState(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    state_schema_version: Literal["1.0"] = "1.0"
-    id: UUID
-    inventory_snapshot_id: UUID
-    budget_initial: Literal["80.00"] = "80.00"
-    pricing_policy_version: Literal["1.0"] = "1.0"
-    created_at: AwareDatetime
-    updated_at: AwareDatetime
-    candidates: list[RecipeCandidate] = []
-
-
-def canonical_json(value: object) -> str:
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
-
-
-def fingerprint(value: object) -> str:
-    return hashlib.sha256(canonical_json(value).encode("utf-8")).hexdigest()
+from dona_maria.planning import (
+    BusinessRuleError,
+    WorkspaceState,
+    _accept_recipe,
+    _apply_production_command,
+    _invalidate_acceptances,
+    _validate_ingredient_references,
+    canonical_json,
+    evaluate_feasibility,
+    evaluate_plan,
+    fingerprint,
+)
+from dona_maria.production import (
+    AcceptanceRequest,
+    FeasibilityRequest,
+    FeedbackRequest,
+    KitchenFactsRequest,
+    PlanRequest,
+)
 
 
 def _decode_json(text: str) -> dict:
@@ -50,12 +44,6 @@ def _decode_json(text: str) -> dict:
         return json.loads(text, object_pairs_hook=unique_object)
     except (TypeError, ValueError) as exc:
         raise sqlite3.DatabaseError("JSON persistido inválido.") from exc
-
-
-class BusinessRuleError(Exception):
-    def __init__(self, code: str, message: str) -> None:
-        self.code, self.message = code, message
-        super().__init__(message)
 
 
 SCHEMA = (
@@ -119,7 +107,7 @@ class SQLiteWorkspaceRepository:
             raise sqlite3.DatabaseError("Versão de schema não suportada.")
         return True
 
-    def load(self, workspace_id: str) -> tuple[int, WorkspaceState] | None:
+    def load(self, workspace_id: str, *, with_snapshot: bool = False) -> tuple | None:
         with closing(self._connect("ro")) as db:
             db.execute("BEGIN")
             tables = {
@@ -138,8 +126,7 @@ class SQLiteWorkspaceRepository:
             loaded = self.load_state(db, workspace_id)
             if loaded is None:
                 return None
-            revision, state, _snapshot = loaded
-            return revision, state
+            return loaded if with_snapshot else loaded[:2]
 
     @staticmethod
     def load_state(
@@ -309,6 +296,23 @@ class SQLiteWorkspaceRepository:
                 version=previous.version + 1 if previous else 1,
                 recorded_at=now,
             )
+            material_change = (
+                previous is None or candidate.business_content() != previous.business_content()
+            )
+            candidate.business_version = (
+                previous.business_version + int(material_change) if previous else 1
+            )
+            if previous and not material_change:
+                candidate.ingredients = previous.ingredients
+                candidate.requirements = previous.requirements
+            previously_invalid = set(state.invalidated_acceptance_ids)
+            if (
+                previous
+                and material_change
+                and state.plan
+                and any(item.recipe_id == previous.id for item in state.plan.items)
+            ):
+                _invalidate_acceptances(state)
             state.candidates = [item for item in state.candidates if item.id != candidate.id]
             state.candidates.append(candidate)
             state.updated_at = now
@@ -322,7 +326,11 @@ class SQLiteWorkspaceRepository:
                 "operation_id": operation_id,
                 "data": {
                     "candidate": candidate.public(),
-                    "invalidated_decisions": [],
+                    "invalidated_decisions": [
+                        str(identifier)
+                        for identifier in state.invalidated_acceptance_ids
+                        if identifier not in previously_invalid
+                    ],
                     "next_action": "CLARIFY_CANDIDATE_GAPS",
                 },
                 "warnings": [],
@@ -367,21 +375,146 @@ class SQLiteWorkspaceRepository:
             )
         return result
 
+    def production_command(
+        self,
+        tool: str,
+        request: FeedbackRequest | PlanRequest | KitchenFactsRequest | AcceptanceRequest,
+        now: datetime,
+    ) -> dict:
+        workspace_id, operation_id = str(request.workspace_id), str(request.operation_id)
+        payload_hash = fingerprint(request.model_dump(mode="json"))
+        with self.transaction() as db:
+            self.check_schema(db)
+            loaded = self.load_state(db, workspace_id)
+            if loaded is None:
+                raise BusinessRuleError("NOT_FOUND", "Workspace não encontrado.")
+            replay = db.execute(
+                "SELECT * FROM operations WHERE workspace_id=? AND operation_id=?",
+                (workspace_id, operation_id),
+            ).fetchone()
+            if replay:
+                if replay["tool"] != tool or replay["payload_hash"] != payload_hash:
+                    raise BusinessRuleError("IDEMPOTENCY_CONFLICT", "Operação já utilizada.")
+                return _decode_json(replay["result_json"])
+            revision, state, snapshot = loaded
+            if revision != request.expected_revision:
+                raise BusinessRuleError("STALE_REVISION", "Recarregue o workspace.")
+            previously_invalid = set(state.invalidated_acceptance_ids)
+            if isinstance(request, AcceptanceRequest):
+                evaluation = evaluate_plan(
+                    state.candidates,
+                    state.plan,
+                    state.kitchen_facts,
+                    state.feedback,
+                    snapshot,
+                    state.pricing_policy_version,
+                    revision,
+                )
+                data = _accept_recipe(state, request, evaluation, now)
+            else:
+                data = _apply_production_command(state, request, now)
+            state.updated_at = now
+            state = WorkspaceState.model_validate_json(state.model_dump_json())
+            revision += 1
+            data["invalidated_decisions"] = [
+                str(identifier)
+                for identifier in state.invalidated_acceptance_ids
+                if identifier not in previously_invalid
+            ]
+            result = {
+                "schema_version": "1.0",
+                "ok": True,
+                "workspace_id": workspace_id,
+                "revision": revision,
+                "operation_id": operation_id,
+                "data": data,
+                "warnings": [],
+                "error": None,
+            }
+            db.execute(
+                "UPDATE workspaces SET revision=?, state_json=?, updated_at=? WHERE id=?",
+                (revision, state.model_dump_json(), now.isoformat(), workspace_id),
+            )
+            db.execute(
+                "INSERT INTO decisions VALUES (?, ?, ?, ?, ?, ?)",
+                (
+                    str(uuid4()),
+                    workspace_id,
+                    tool.upper(),
+                    payload_hash,
+                    canonical_json(data),
+                    now.isoformat(),
+                ),
+            )
+            db.execute(
+                "INSERT INTO operations VALUES (?, ?, ?, ?, ?, ?)",
+                (workspace_id, operation_id, tool, payload_hash, canonical_json(result), revision),
+            )
+        return result
 
-def _validate_ingredient_references(snapshot: InventorySnapshot, candidate: CandidateInput) -> None:
-    items = {item.id: item for item in snapshot.items}
-    if isinstance(candidate, RecipeCandidate) and (
-        len({item.line_id for item in candidate.ingredients}) != len(candidate.ingredients)
-    ):
-        raise BusinessRuleError("VALIDATION_ERROR", "Linhas de ingredientes duplicadas.")
-    dimensions = {"g": "g", "kg": "g", "ml": "ml", "L": "ml", "un": "un"}
-    for ingredient in candidate.ingredients:
-        if ingredient.ingredient_id is None:
-            continue
-        item = items.get(ingredient.ingredient_id)
-        if item is None:
-            raise BusinessRuleError("NOT_FOUND", "Ingrediente não pertence ao workspace.")
-        if ingredient.quantity and dimensions[ingredient.quantity.unit] != item.dimension:
-            raise BusinessRuleError(
-                "UNIT_CONVERSION_REQUIRED", "Medida exige conversão sustentada."
+    def feasibility(self, request: FeasibilityRequest) -> dict:
+        with closing(self._connect("ro")) as db:
+            db.execute("BEGIN")
+            self.check_schema(db)
+            loaded = self.load_state(db, str(request.workspace_id))
+            if loaded is None:
+                raise BusinessRuleError("NOT_FOUND", "Workspace não encontrado.")
+            revision, state, _snapshot = loaded
+            recipe = next((r for r in state.candidates if r.id == request.recipe_id), None)
+            item = (
+                next(
+                    (
+                        i
+                        for i in state.plan.items
+                        if i.plan_item_id == request.plan_item_id
+                        and i.recipe_id == request.recipe_id
+                    ),
+                    None,
+                )
+                if state.plan
+                else None
+            )
+            if recipe is None or item is None:
+                raise BusinessRuleError(
+                    "NOT_FOUND", "Receita/item não pertence ao plano do workspace."
+                )
+            return dict(
+                schema_version="1.0",
+                ok=True,
+                workspace_id=str(request.workspace_id),
+                revision=revision,
+                operation_id=None,
+                warnings=[],
+                error=None,
+                data=evaluate_feasibility(
+                    recipe, item, state.kitchen_facts, plan=state.plan, candidates=state.candidates
+                ),
+            )
+
+    def purchase_evaluation(self, workspace_id: str) -> dict:
+        with closing(self._connect("ro")) as db:
+            db.execute("BEGIN")
+            self.check_schema(db)
+            loaded = self.load_state(db, workspace_id)
+            if loaded is None:
+                raise BusinessRuleError("NOT_FOUND", "Workspace não encontrado.")
+            revision, state, snapshot = loaded
+            evaluation = evaluate_plan(
+                state.candidates,
+                state.plan,
+                state.kitchen_facts,
+                state.feedback,
+                snapshot,
+                state.pricing_policy_version,
+                revision,
+            )
+            return dict(
+                schema_version="1.0",
+                ok=True,
+                workspace_id=workspace_id,
+                revision=revision,
+                operation_id=None,
+                warnings=[],
+                error=None,
+                data=evaluation,
             )

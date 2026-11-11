@@ -76,7 +76,7 @@ flowchart LR
     C[".hermes.md + skill de domínio"] --> H
     H <-->|"receitas e fontes"| W["Pesquisa web"]
     H <-->|"MCP / stdio"| M["Adaptador Python"]
-    M --> S["Consultas e registro de candidatas"]
+    M --> S["Consultas, viabilidade e aceite"]
     S --> R["Repositório SQLite"]
 ```
 
@@ -160,6 +160,13 @@ uv run --locked --no-sync ruff format --check src tests/unit tests/integration
 ```
 
 A suíte verifica importação e diagnósticos por célula, custos de aquisição, leitura sem mutação, registro/revisão de candidatas, replay e rollback em SQLite temporário. Também cobre transporte MCP real, separação de `stdout`/`stderr`, encerramento do processo e resposta ao ping durante lock do SQLite.
+
+O servidor também registra interesse, fatos da cozinha, produção em lotes inteiros
+e aceite explícito vinculado à avaliação atual. Os testes cobrem categorias
+omitidas, condições desconhecidas ou bloqueadas, insuficiência agregada de
+ingredientes, invalidação, retomada e sequências geradas com Hypothesis.
+Aceitar um prato preserva estoque físico e orçamento inicial. Cotação de
+complementos, cálculo de preços e escolha do cardápio ainda não estão expostos.
 
 O [workflow de CI](.github/workflows/ci.yml) executa esses checks em Windows, Ubuntu e macOS. A execução local em um sistema não comprova sucesso nos demais; consulte os resultados no GitHub Actions.
 

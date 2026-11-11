@@ -49,6 +49,11 @@ explícita e os guards determinísticos da aplicação.
 
 ## Contexto
 
+Para verificar e aceitar uma candidata registrada, siga
+[viabilidade e aceite](references/viabilidade.md). Interesse, condições da
+cozinha, produção e aceite são confirmações distintas. Avaliações pendentes
+pedem pergunta e pausa; nunca transforme uma tentativa recusada em sucesso.
+
 Siga a orientação curta do projeto. Não carregue documentos de engenharia,
 skills de desenvolvimento ou páginas completas no atendimento habitual.
 Fatos pessoais e decisões não pertencem a esta skill.
