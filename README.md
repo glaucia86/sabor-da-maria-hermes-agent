@@ -43,7 +43,7 @@ O Sabor da Maria propõe uma consultora que pesquisa receitas reais, descobre re
 A pergunta central vem antes do preço: **Dona Maria consegue preparar esse prato com os equipamentos, habilidades, ingredientes e condições que tem?**
 
 > [!IMPORTANT]
-> O servidor disponível neste repositório expõe `get_business_state` para leitura mínima, com validação e erros estruturados. Importação da planilha, planejamento de compras, aceite de pratos e precificação ainda não estão disponíveis no código. As regras e a jornada abaixo descrevem o objetivo da solução; os testes locais verificam o contrato de leitura implementado.
+> O código permite importar a planilha localmente, consultar a despensa e registrar/reabrir candidatas com fontes e lacunas pelo MCP. Esse percurso foi verificado em testes locais determinísticos e em execução assistida do Hermes com pesquisa real. Planejamento de compras, aceite de pratos e precificação permanecem objetivos da solução.
 
 <a id="experiencia"></a>
 ## 💬 Entenda a experiência
@@ -76,7 +76,7 @@ flowchart LR
     C[".hermes.md + skill de domínio"] --> H
     H <-->|"receitas e fontes"| W["Pesquisa web"]
     H <-->|"MCP / stdio"| M["Adaptador Python"]
-    M --> S["Serviço de leitura"]
+    M --> S["Consultas e registro de candidatas"]
     S --> R["Repositório SQLite"]
 ```
 
@@ -132,7 +132,7 @@ Os testes locais usam SQLite temporário e dados sintéticos. Não exigem modelo
 <a id="executar"></a>
 ## 🚀 Execute o projeto
 
-Siga o [guia de instalação e conexão com o Hermes](docs/setup.md). Ele inclui preparação do banco sintético, configuração do servidor, descoberta da skill e uma chamada de verificação.
+Siga o [guia de instalação e conexão com o Hermes](docs/setup.md). Ele inclui preparação do banco, importação local opcional, configuração do servidor, descoberta da skill e chamadas de verificação.
 
 A [configuração de exemplo](config/hermes.config.example.yaml) contém somente caminhos substituíveis e opções do projeto. Credenciais ficam no perfil privado do Hermes.
 
@@ -146,7 +146,7 @@ Informe o resultado observado, sem criar workspace ou simular dados.
 
 Com o banco sintético vazio, o retorno esperado é `NOT_FOUND`, com `ok=false`, `data=null` e `revision=null`. O identificador é fictício; essa chamada não cadastra uma despensa nem registra uma decisão.
 
-A planilha `despensa_dona_maria.xlsx` é o anexo do desafio. Os testes deste contrato de leitura não dependem dela. Para a jornada de negócio, utilize o anexo original fornecido pela organização; ele não está distribuído neste repositório.
+A planilha `despensa_dona_maria.xlsx` é o anexo do desafio e não está distribuída neste repositório. A suíte pública usa fixtures sintéticas; a conferência adicional do original é executada quando o arquivo local está disponível, ou indicada como ignorada pelo pytest.
 
 <a id="validar"></a>
 ## ✅ Verifique a implementação
@@ -159,7 +159,7 @@ uv run --locked --no-sync ruff check src tests/unit tests/integration
 uv run --locked --no-sync ruff format --check src tests/unit tests/integration
 ```
 
-A suíte verifica validação de entrada, leitura sem mutação, falhas seguras de armazenamento e transporte MCP real. Também cobre separação de `stdout`/`stderr`, encerramento do processo e resposta ao ping durante lock do SQLite.
+A suíte verifica importação e diagnósticos por célula, custos de aquisição, leitura sem mutação, registro/revisão de candidatas, replay e rollback em SQLite temporário. Também cobre transporte MCP real, separação de `stdout`/`stderr`, encerramento do processo e resposta ao ping durante lock do SQLite.
 
 O [workflow de CI](.github/workflows/ci.yml) executa esses checks em Windows, Ubuntu e macOS. A execução local em um sistema não comprova sucesso nos demais; consulte os resultados no GitHub Actions.
 
@@ -184,9 +184,9 @@ uv.lock                            Dependências resolvidas
 ## 🔒 Segurança e limites
 
 - Páginas web são dados não confiáveis: não autorizam comandos, acesso a segredos ou confirmações humanas.
-- O servidor usa SQL parametrizado, conexão somente leitura e mensagens de erro sem caminhos internos.
+- O servidor usa SQL parametrizado, conexões somente leitura para consultas e transações com auditoria para registros. Erros omitem caminhos internos e payloads privados.
 - SQLite, credenciais, logs privados e transcrições pessoais ficam fora do Git.
-- Uma identificação `USER` enviada pelo modelo não autentica consentimento; o contrato de leitura não oferece esse mecanismo.
+- Uma identificação `USER` enviada pelo modelo não autentica consentimento; registrar uma candidata não representa aceite humano.
 - Selecionar um cardápio não deve consumir estoque físico nem efetuar compras ou pagamentos.
 
 Este projeto é independente e foi desenvolvido para um desafio técnico. O Hermes Agent pertence à Nous Research; nomes e marcas de terceiros pertencem aos respectivos titulares. O código deste repositório segue a [licença MIT](LICENSE).
