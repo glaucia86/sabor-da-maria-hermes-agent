@@ -8,6 +8,9 @@ __pycache__/
 .pytest_cache/
 .hypothesis/
 .ruff_cache/
+*.egg-info/
+build/
+dist/
 
 # Coverage
 .coverage
@@ -25,6 +28,7 @@ htmlcov/
 *.db
 *.db-*
 *.sqlite
+*.sqlite-*
 *.sqlite3
 *.sqlite3-*
 
@@ -40,3 +44,13 @@ eval-results/private/
 Thumbs.db
 
 .harness/**
+
+# Local development context (preserved on disk, outside the deliverable)
+/RULES.md
+/docs/architecture.md
+/docs/development.md
+/docs/testing.md
+/docs/ci.md
+/docs/s00-smoke.md
+/tools/harness_check.py
+/tests/harness/

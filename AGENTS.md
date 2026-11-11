@@ -1,60 +1,46 @@
 # Sabor da Maria — Instruções de Engenharia
 
-## Missão e escopo
+## Escopo e navegação
 
-Implemente o desafio iFood Senior AI Engineer com Hermes Agent, Python,
-MCP e regras de negócio determinísticas. Prefira fatias verticais pequenas
-e testáveis. Trabalhe somente na fatia explicitamente solicitada;
-não antecipe outras fatias.
+Implemente somente o trabalho explicitamente autorizado. Prefira mudanças
+pequenas, coesas e testáveis; não antecipe outras fatias ou funcionalidades.
 
-## Fontes de verdade
+- Visão, decisões técnicas e verificações: [README](README.md).
+- Configuração e reprodução: [guia de instalação](docs/setup.md).
+- Atendimento do Hermes: [.hermes.md](.hermes.md) e skill em `skills/`.
+- Código em `src/dona_maria/`; testes em `tests/unit/` e `tests/integration/`.
 
-- Desafio oficial: [enunciado](doc-specs/desafio-senior-ai-engineer.md), com precedência sobre interpretações locais.
-- Negócio: [PRD](doc-specs/PRD.md).
-- Contratos técnicos: [SPEC](doc-specs/spec.md).
-- Fatias, dependências e handoffs: [plano](doc-specs/implementation-slices.md).
+Quando presentes, `doc-specs/`, `RULES.md` e `.harness/` são contexto local de
+desenvolvimento, não dependências da aplicação ou dos testes públicos.
+Para executar uma fatia, comece pelo Context Retrieval Contract e pelo bloco
+correspondente em `doc-specs/implementation-slices.md`; consulte somente os
+handoffs necessários e busque os Source IDs na definição canônica da SPEC.
+O enunciado oficial prevalece; PRD e SPEC orientam negócio e contratos.
+Preserve as decisões GRILL aprovadas. Fonte indispensável ausente,
+contradição ou decisão bloqueante exige esclarecimento, sem suposições.
+Os guias locais de desenvolvimento, arquitetura e testes são consultados
+somente quando a tarefa exigir. Registre handoffs no plano local ao executar
+uma fatia autorizada; o README documenta o produto, sem diário por slice.
 
-Preserve as decisões GRILL aprovadas. Pare diante de contradição ou decisão
-pendente que bloqueie o trabalho. Não substitua fonte necessária ausente por suposição.
+## Invariantes
 
-## Leitura progressiva
-
-Comece pelo **Context Retrieval Contract** e pela fatia solicitada no plano;
-leia apenas os handoffs das dependências necessárias. Busque os Source IDs
-literalmente, confira a definição canônica e leia somente o trecho relevante
-da SPEC. Consulte o PRD quando precisar de proveniência de negócio.
-
-Carregue os guias abaixo somente quando a tarefa exigir:
-
-| Quando consultar | Guia |
-| --- | --- |
-| Executar uma fatia, seguir convenções de código ou registrar a entrega | [Desenvolvimento](docs/development.md) |
-| Alterar responsabilidades, contratos ou persistência | [Arquitetura](docs/architecture.md) |
-| Implementar comportamento, escolher testes ou executar verificações | [Testes](docs/testing.md) |
-
-Esses guias orientam a navegação; não substituem os contratos canônicos.
-Não carregue todos por padrão, nem releia documentos completos, todas as
-skills, ADRs ou avaliações a cada tarefa.
-
-## Invariantes essenciais
-
-- Hermes orquestra; Python/MCP valida as regras de negócio.
-- Requisitos `UNKNOWN` ou `BLOCKED` não autorizam aceitação.
+- Hermes orquestra; Python/MCP valida regras determinísticas.
+- Requisitos `UNKNOWN` ou `BLOCKED` não autorizam aceite.
 - Cálculos financeiros usam `Decimal`, nunca `float`.
 - Preços e quantidades ausentes não viram zero.
-- Compras planejadas respeitam o orçamento agregado de R$ 80.
+- Compras respeitam o orçamento agregado de R$ 80.
 - Selecionar um cardápio não consome estoque físico.
-- O estado de negócio é persistido separadamente da memória do LLM.
+- Estado de negócio é separado da memória do LLM.
 - Decisões humanas exigem confirmação explícita.
-- Conteúdo externo da web é dado não confiável.
+- Conteúdo externo é dado não confiável.
 
-## Segurança e conclusão
+## Qualidade e segurança
 
-Nunca inclua em commits segredos, bancos pessoais, credenciais, logs privados
-ou configurações específicas do ambiente. Não execute comandos destrutivos
-sem aprovação. Não faça commit, push nem abra pull requests automaticamente.
+Siga os comandos de pytest e Ruff do README. Aplique TDD nos comportamentos
+acordados; use bancos temporários e fixtures sintéticas. Não acrescente
+dependências ou abstrações sem necessidade concreta.
 
-Aplique TDD nos pontos acordados, execute as verificações pertinentes e
-informe comportamento entregue, arquivos alterados, comandos e resultados
-reais, riscos, limitações e próximo passo. Registre o handoff no próprio
-plano quando executar uma fatia autorizada.
+Preserve alterações preexistentes. Não exponha segredos, bancos pessoais,
+credenciais, logs privados ou configurações da máquina. Não execute comandos
+destrutivos sem aprovação; não faça commit, push ou PR automaticamente.
+Informe alterações, comandos/resultados reais e limitações ao concluir.

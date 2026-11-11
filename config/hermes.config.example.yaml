@@ -1,0 +1,14 @@
+# Merge these sections into the dedicated Hermes profile, replacing every path.
+# This is an example, not a full profile or an automatically expanded template.
+# Provider credentials belong only in Hermes' private configuration.
+skills:
+  external_dirs:
+    - /ABSOLUTE/PATH/TO/CHECKOUT/skills
+
+mcp_servers:
+  dona_maria:
+    command: /ABSOLUTE/PATH/TO/CHECKOUT/.venv/Scripts/python.exe
+    args: ["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"]
+    env:
+      DONA_MARIA_DB_PATH: /ABSOLUTE/PATH/TO/CHECKOUT/artifacts/private/smoke/empty.sqlite3
+    connect_timeout: 15

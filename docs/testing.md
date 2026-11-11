@@ -34,18 +34,21 @@ decisão indevida persistida. Leia apenas os casos pertinentes à mudança.
 
 ## Comandos e resultados
 
-Ainda não há `pyproject.toml`, dependências resolvidas ou testes da aplicação.
-Os comandos abaixo são **propostas da SPEC §6.5**, pendentes de configuração
-e comprovação; não representam verificações já disponíveis:
+O recorte S00 possui manifesto, lock e testes locais comprovados em Windows
+com Python 3.13.15. Instale pelo lock com
+`uv sync --locked --cache-dir .venv/uv-cache` e execute a partir da raiz:
 
 ```text
-uv run pytest tests/unit tests/integration
-uv run ruff check .
-uv run ruff format --check .
+uv run --locked --cache-dir .venv/uv-cache python -X utf8 -m pytest tests/unit tests/integration -q -s
+.venv/Scripts/python.exe -m ruff check src tests/unit tests/integration
+.venv/Scripts/python.exe -m ruff format --check src tests/unit tests/integration
 ```
 
-Documente o comando real do harness somente após implementar e verificar sua
-interface. Execute as verificações pertinentes à alteração e registre comando,
+São 20 casos de leitura segura/MCP stdio, sem provas de Hermes, web ou regras
+dos próximos slices; detalhes em [s00-smoke.md](s00-smoke.md). Hypothesis e
+Agent Evals permanecem pendentes dos comportamentos correspondentes.
+
+Execute as verificações pertinentes à alteração e registre comando,
 versões, resultados reais e limitações no handoff. Para evals, use `PASS`,
 `FAIL`, `NOT_RUN` ou `ERROR`, incluindo número de execuções e fontes.
 Falha de instalação ou teste não executado nunca equivale a aprovação.
@@ -56,11 +59,16 @@ O verificador local usa somente biblioteca padrão e tem testes separados da
 aplicação. Execute a partir da raiz:
 
 ```text
-python -X utf8 -B -m unittest discover -s .harness/tests -v
-python -X utf8 -B .harness/check.py
+python -X utf8 -B -m unittest discover -s tests/harness -v
+python -X utf8 -B tools/harness_check.py
 ```
 
 Esses comandos verificam integridade dos registros, índice, Source IDs e
 dependências; não provam domínio, Hermes/MCP ou Agent Evals. Consulte
 [.harness/verification.md](../.harness/verification.md) para resultados reais e
 [.harness/tools.md](../.harness/tools.md) para limites e regeneração do índice.
+
+A [CI](ci.md) usa somente a suíte pública com fixtures sintéticas em
+temporários, sem depender dos documentos ignorados. A verificação do bundle
+real continua local. Os comandos anteriores em .harness/ permanecem como
+entradas de compatibilidade para a implementação e suíte públicas.

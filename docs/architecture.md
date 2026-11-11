@@ -7,8 +7,10 @@ Leia outros contratos somente quando forem afetados pela tarefa.
 
 ## Estado atual e estrutura proposta
 
-O repositório contém orientação em `AGENTS.md`, guias em `docs/` e fontes
-locais em `doc-specs/`. Ainda não há código de aplicação, manifesto ou suíte.
+O recorte S00 contém manifesto/lock, leitura mínima em
+`src/dona_maria/business_state.py`, adaptador em `src/dona_maria/mcp_server.py`
+e testes locais. Não há bootstrap ou persistência funcional de negócio.
+Comandos e limites comprovados estão em [s00-smoke.md](s00-smoke.md).
 
 O layout da SPEC é uma proposta a concretizar nas fatias autorizadas:
 
