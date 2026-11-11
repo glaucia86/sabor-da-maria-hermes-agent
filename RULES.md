@@ -114,11 +114,11 @@ Execute as verificações proporcionais ao slice e aos contratos alterados.
 Fixtures controladas não provam pesquisa web ou integração Hermes reais.
 Não invente meta de cobertura, SLA ou threshold herdado do template.
 
-**Comandos executáveis da aplicação e lint: [A DEFINIR].** Ainda não há
-manifesto, dependências resolvidas ou suíte da aplicação implementada no estado
-inspecionado. As sugestões em docs/testing.md são propostas. O Harness local
+**Comandos executáveis S00:** manifesto e lock disponíveis; testes locais,
+lint e launcher stdio comprovados em [docs/s00-smoke.md](docs/s00-smoke.md).
+Isso não comprova host Hermes, web ou conclusão do slice. O Harness local
 possui `python -X utf8 -B .harness/check.py` e
-`python -X utf8 -B -m unittest discover -s .harness/tests -v`, documentados em
+`python -X utf8 -B -m unittest discover -s tests/harness -v`, documentados em
 [.harness/tools.md](.harness/tools.md); seu sucesso não valida a aplicação.
 Confirme comandos novos no código/configuração e registre-os após execução.
 
@@ -179,7 +179,8 @@ seguir com o modelo atual, sem criar uma pausa obrigatória por fatia.
 
 O Harness Model pode manter README, progress, verification, handoff, tools e o
 índice derivado em .harness/, além do Handoff e status factual da fatia no plano.
-Não pode alterar check.py, seus testes, RULES.md, AGENTS.md ou guias operacionais,
+Não pode alterar tools/harness_check.py, .harness/check.py, testes em
+tests/harness/ ou .harness/tests/, workflows, RULES.md, AGENTS.md ou guias operacionais,
 nem código, testes da aplicação, configurações, dependências,
 infraestrutura, contratos, regras de negócio, objetivos, critérios de aceite,
 dependências entre slices ou gates sem aprovação humana. Uma aprovação amplia

@@ -32,8 +32,10 @@ não comportar a mudança, reduza o incremento e registre o ponto de retomada.
 - Consulte [testes](testing.md) ao implementar comportamento e
   [arquitetura](architecture.md) quando alterar responsabilidades.
 
-Ainda não há manifesto nem configuração de lint no repositório. Não apresente
-ferramentas propostas como já instaladas ou comandos futuros como comprovados.
+O recorte local S00 possui `pyproject.toml`, `uv.lock`, servidor stdio e
+configuração de lint. Comandos executados e limites estão em
+[s00-smoke.md](s00-smoke.md). Não apresente comandos futuros ou integração
+Hermes/web como comprovados pelos testes locais.
 
 ## Entrega e continuidade
 
