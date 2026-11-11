@@ -29,7 +29,29 @@ uv run --locked --no-sync python -c "from pathlib import Path; import sqlite3; p
 
 Guarde o caminho absoluto impresso. A preparação cria somente um arquivo
 SQLite vazio, sem tabelas, migrações, despensa ou confirmação humana.
-O servidor abre esse banco em modo somente leitura e não o cria por conta própria.
+As consultas abrem esse banco em modo somente leitura e não o criam por conta própria.
+
+Para usar a despensa, coloque o anexo recebido em
+`artifacts/private/input/despensa_dona_maria.xlsx` e execute a importação local:
+
+```sh
+uv run --locked --no-sync python -m dona_maria.bootstrap --database artifacts/private/smoke/workspace.sqlite3 --inventory artifacts/private/input/despensa_dona_maria.xlsx --allowed-directory artifacts/private/input
+```
+
+O comando exige XLSX dentro do diretório autorizado e imprime o `workspace_id`
+e o `snapshot_id`. Guarde esses IDs localmente. Configure o caminho absoluto
+de `workspace.sqlite3` no perfil para usar essa despensa; `empty.sqlite3`
+continua servindo apenas ao teste de ausência de workspace.
+
+O orçamento inicial é R$ 80,00. Preços históricos não são saldo disponível;
+custos usam quantidade comprada, preservando o estoque e a origem de cada célula.
+Consulte diagnósticos por `get_inventory_snapshot`. Fórmulas e dados ausentes
+ou ambíguos geram pendências, sem virar zero. A correção cria nova fotografia.
+
+Sem `--workspace-id`, cada importação cria outro workspace e reutiliza a mesma
+fotografia quando hash/política coincidem. Com `--workspace-id ID_EXISTENTE`,
+somente o mesmo snapshot é reutilizado, preservando estado e revisão. Outra
+planilha não substitui silenciosamente o workspace existente.
 
 Obtenha também os caminhos do Python da aplicação e da pasta de skills:
 
@@ -85,7 +107,8 @@ hermes -p sabor-da-maria mcp test dona_maria
 hermes -p sabor-da-maria skills list --enabled-only
 ```
 
-O MCP deve descobrir somente `get_business_state`, e a listagem de skills deve
+O MCP deve descobrir `get_business_state`, `get_inventory_snapshot` e
+`register_recipe_candidate`, e a listagem de skills deve
 incluir `dona-maria-cardapio`. Descoberta não comprova que o corpo da skill foi
 carregado; a invocação explícita abaixo é o caminho de verificação.
 
@@ -117,18 +140,34 @@ Confira a chamada efetiva da ferramenta e o retorno `NOT_FOUND`, com
 Isso é esperado para o workspace sintético ausente.
 
 Para verificar pesquisa separadamente, peça a busca e extração de uma receita
-real e confira a ferramenta utilizada, URL e conteúdo recuperado. Essa consulta
-não importa a receita nem valida viabilidade, aceite ou cálculos.
+real e confira a ferramenta utilizada, URL e conteúdo recuperado. Para registrar
+a candidata, use o workspace importado, fontes efetivamente extraídas e os
+schemas descobertos no MCP. Rendimento, medidas ou contexto ausentes precisam
+de lacunas explícitas. `complete` e outros campos derivados não são entradas.
+
+O horário de recuperação da fonte também precisa de evidência observável em
+UTC. Se ele não estiver disponível, aguarde esse dado; um marcador de meia-noite
+não representa o instante observado da extração. Correções de proveniência
+usam nova revisão, mantendo histórico e identidade da candidata.
+
+`register_recipe_candidate` exige `workspace_id`, `operation_id`,
+`expected_revision` e `candidate`; revisão da receita também exige `recipe_id`
+e `expected_recipe_version`. A resposta confirma a gravação somente após commit.
+Em resultado incerto, consulte o estado e repita o mesmo comando/ID. Payload
+diferente com o mesmo ID é recusado. Reabra a conversa e consulte
+`get_business_state` para reencontrar a candidata. Esse registro não valida
+viabilidade, aceite, compras ou preço.
 
 ## Se algo falhar
 
 | Sintoma | Verificação |
 | --- | --- |
 | Módulo `dona_maria` ausente | Execute `uv sync --locked --python 3.13` e confirme que o perfil usa o Python do checkout. |
-| Banco indisponível | Confira o caminho absoluto, existência e permissão de leitura do arquivo. Um banco com workspace existente também é recusado por este contrato mínimo. |
+| Banco indisponível | Confira caminho, permissões e versão do schema; banco corrompido ou mais novo é recusado e preservado. Registros precisam de permissão de escrita e do diretório do SQLite. |
 | Skill ausente | Confira `skills.external_dirs`, o caminho de `skills/` e a listagem no perfil correto. |
 | Sessão sem resposta | Confira modelo, provedor e conectividade no Hermes; não substitua uma chamada pendente por um resultado simulado. |
-| Ferramentas inesperadas | Revise o catálogo e os toolsets antes de prosseguir; este fluxo precisa de web e MCP de leitura. |
+| Ferramentas inesperadas | Revise catálogo e filtros; este fluxo precisa de web e das três ferramentas MCP descritas acima. |
+| Catálogo antigo após atualizar o servidor | No gateway, `/reload-mcp` pode preservar conexões já registradas. No perfil dedicado, desabilite somente `mcp_servers.dona_maria.enabled`, recarregue, reabilite e recarregue novamente. Confira nomes e workspace antes de pesquisar. |
 
 A ausência de ferramentas perigosas deve ser conferida no catálogo efetivo.
 Uma skill builtin essencial pode permanecer no contexto conforme a versão;

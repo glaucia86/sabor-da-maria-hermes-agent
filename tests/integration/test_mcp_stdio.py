@@ -60,7 +60,11 @@ async def test_official_client_discovers_and_calls_the_real_stdio_server(tmp_pat
                 tools = (await session.list_tools()).tools
                 assert initialized.server_info.name == "dona_maria"
                 assert initialized.protocol_version
-                assert [tool.name for tool in tools] == ["get_business_state"]
+                assert [tool.name for tool in tools] == [
+                    "get_business_state",
+                    "get_inventory_snapshot",
+                    "register_recipe_candidate",
+                ]
                 tool = tools[0]
                 assert tool.input_schema["additionalProperties"] is False
                 assert tool.annotations.read_only_hint is True

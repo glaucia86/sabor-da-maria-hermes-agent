@@ -1,11 +1,14 @@
-"""Adaptador MCP oficial v2, exclusivamente stdio e somente leitura em S00."""
+"""Adaptador MCP oficial v2, exclusivamente stdio; regras no serviço Python."""
 
 import asyncio
 import json
 import logging
 import os
+from datetime import UTC, datetime
 from importlib.metadata import version
 from pathlib import Path
+from time import perf_counter
+from uuid import uuid4
 
 from mcp.server.lowlevel import Server
 from mcp.server.stdio import stdio_server
@@ -15,9 +18,11 @@ from mcp.types import CallToolResult, ListToolsResult, TextContent, Tool, ToolAn
 from dona_maria.business_state import (
     BusinessStateReader,
     GetBusinessStateRequest,
+    GetInventorySnapshotRequest,
     ReadErrorEnvelope,
-    SQLiteWorkspaceRepository,
 )
+from dona_maria.candidates import RegisterCandidateRequest
+from dona_maria.persistence import SQLiteWorkspaceRepository
 
 
 def create_server(reader: BusinessStateReader) -> Server:
@@ -35,18 +40,63 @@ def create_server(reader: BusinessStateReader) -> Server:
                         idempotent_hint=True,
                         open_world_hint=False,
                     ),
-                )
+                ),
+                Tool(
+                    name="get_inventory_snapshot",
+                    description="Lê itens, custos e diagnósticos da fotografia da despensa.",
+                    input_schema=GetInventorySnapshotRequest.model_json_schema(),
+                    output_schema=ReadErrorEnvelope.model_json_schema(),
+                    annotations=ToolAnnotations(
+                        read_only_hint=True,
+                        destructive_hint=False,
+                        idempotent_hint=True,
+                        open_world_hint=False,
+                    ),
+                ),
+                Tool(
+                    name="register_recipe_candidate",
+                    description="Registra candidata com fontes e lacunas, sem aceite ou preço.",
+                    input_schema=RegisterCandidateRequest.model_json_schema(),
+                    output_schema=ReadErrorEnvelope.model_json_schema(),
+                    annotations=ToolAnnotations(
+                        read_only_hint=False,
+                        destructive_hint=False,
+                        idempotent_hint=True,
+                        open_world_hint=False,
+                    ),
+                ),
             ]
         )
 
     async def call_tool(ctx, params):
-        if params.name != "get_business_state":
+        handlers = {
+            "get_business_state": reader.get_business_state,
+            "get_inventory_snapshot": reader.get_inventory_snapshot,
+            "register_recipe_candidate": reader.register_recipe_candidate,
+        }
+        if params.name not in handlers:
             raise MCPError(code=-32602, message="Ferramenta desconhecida.")
-        envelope = await asyncio.to_thread(reader.get_business_state, params.arguments or {})
+        started = perf_counter()
+        envelope = await asyncio.to_thread(handlers[params.name], params.arguments or {})
+        logging.getLogger(__name__).info(
+            json.dumps(
+                {
+                    "event": "mcp_call",
+                    "timestamp": datetime.now(UTC).isoformat(),
+                    "correlation_id": envelope["operation_id"] or str(uuid4()),
+                    "workspace_id": envelope["workspace_id"],
+                    "tool": params.name,
+                    "revision": envelope["revision"],
+                    "result": "SUCCESS" if envelope["ok"] else envelope["error"]["code"],
+                    "duration_ms": round((perf_counter() - started) * 1000, 3),
+                },
+                ensure_ascii=False,
+            )
+        )
         return CallToolResult(
             content=[TextContent(type="text", text=json.dumps(envelope, ensure_ascii=False))],
             structured_content=envelope,
-            is_error=True,
+            is_error=not envelope["ok"],
         )
 
     return Server(
@@ -64,11 +114,18 @@ async def serve(database: Path) -> None:
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     database = os.environ.get("DONA_MARIA_DB_PATH")
     if not database:
         raise SystemExit("Configure DONA_MARIA_DB_PATH antes de iniciar o servidor.")
-    logging.getLogger(__name__).info("Servidor Dona Maria iniciado em stdio, somente leitura S00.")
+    logging.getLogger(__name__).info(
+        json.dumps(
+            {
+                "event": "startup",
+                "message": "Servidor Dona Maria iniciado em stdio.",
+            }
+        )
+    )
     asyncio.run(serve(Path(database)))
 
 
