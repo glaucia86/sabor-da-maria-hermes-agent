@@ -1,8 +1,9 @@
-"""Serviço público de consulta, produção e aceite, sem precificação."""
+"""Serviço público de consulta, produção, aceite e precificação determinística."""
 
 import sqlite3
 from collections.abc import Callable
 from datetime import UTC, datetime
+from decimal import DecimalException
 from typing import Literal
 from uuid import UUID
 
@@ -10,7 +11,8 @@ from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 
 from dona_maria.candidates import RegisterCandidateRequest
 from dona_maria.persistence import BusinessRuleError, SQLiteWorkspaceRepository
-from dona_maria.planning import evaluate_plan
+from dona_maria.planning import evaluate_plan, pricing_view
+from dona_maria.pricing import CalculatePricingRequest, SaveMenuDecisionRequest
 from dona_maria.production import (
     AcceptanceRequest,
     FeasibilityRequest,
@@ -82,6 +84,14 @@ class BusinessStateReader:
     def accept_recipe(self, arguments: dict[str, object]) -> dict[str, object]:
         return self._production_command("accept_recipe", AcceptanceRequest, arguments)
 
+    def calculate_pricing_scenarios(self, arguments: dict[str, object]) -> dict[str, object]:
+        return self._production_command(
+            "calculate_pricing_scenarios", CalculatePricingRequest, arguments
+        )
+
+    def save_menu_decision(self, arguments: dict[str, object]) -> dict[str, object]:
+        return self._production_command("save_menu_decision", SaveMenuDecisionRequest, arguments)
+
     def evaluate_recipe_feasibility(self, arguments: dict[str, object]) -> dict[str, object]:
         return self._production_query(FeasibilityRequest, self.repository.feasibility, arguments)
 
@@ -114,7 +124,7 @@ class BusinessStateReader:
                 error=ReadError(
                     code=exc.code,
                     message=exc.message,
-                    details={},
+                    details=exc.details,
                     retryable=False,
                     next_action="CORRECT_INPUT",
                 ),
@@ -140,6 +150,18 @@ class BusinessStateReader:
             ).model_dump(mode="json")
         try:
             return self.repository.production_command(tool, request, self.clock())
+        except DecimalException:
+            return ReadErrorEnvelope(
+                workspace_id=request.workspace_id,
+                operation_id=request.operation_id,
+                error=ReadError(
+                    code="CALCULATION_ERROR",
+                    message="Não foi possível calcular com os custos e limites atuais.",
+                    details={},
+                    retryable=False,
+                    next_action="CHECK_PRICING_INPUTS",
+                ),
+            ).model_dump(mode="json")
         except BusinessRuleError as exc:
             return ReadErrorEnvelope(
                 workspace_id=request.workspace_id,
@@ -147,7 +169,7 @@ class BusinessStateReader:
                 error=ReadError(
                     code=exc.code,
                     message=exc.message,
-                    details={},
+                    details=exc.details,
                     retryable=False,
                     next_action="RELOAD_STATE" if exc.code == "STALE_REVISION" else "CORRECT_INPUT",
                 ),
@@ -279,6 +301,7 @@ class BusinessStateReader:
                 }
                 for acceptance in state.acceptances
             ]
+            prices = pricing_view(state, evaluation)
             candidates = [candidate.public() for candidate in state.candidates]
             for candidate in candidates:
                 feedback = next(
@@ -321,6 +344,13 @@ class BusinessStateReader:
                     for a in acceptances
                 ):
                     candidate["status"] = "ACCEPTED"
+                if any(
+                    c["recipe_id"] == candidate["id"] and c["validity"] == "VALID"
+                    for c in prices["pricing_calculations"]
+                ):
+                    candidate["status"] = "PRICED"
+                if any(d["recipe_id"] == candidate["id"] for d in prices["menu"]):
+                    candidate["status"] = "MENU_SELECTED"
                 if candidate["interest"] == "REJECTED":
                     candidate["status"] = "REJECTED"
             return ReadErrorEnvelope(
@@ -335,14 +365,19 @@ class BusinessStateReader:
                     else "80.00",
                     "candidates": candidates,
                     "acceptances": acceptances,
+                    **prices,
                     "evaluation": evaluation,
                     "plan": state.plan.model_dump(mode="json") if state.plan else None,
                     "kitchen_facts": [fact.model_dump(mode="json") for fact in state.kitchen_facts],
                     "next_action": (
                         "ASK_EXPLICIT_ACCEPTANCE"
                         if any(c.get("status") == "READY_FOR_ACCEPTANCE" for c in candidates)
+                        else "ASK_PRICE_CHOICE"
+                        if any(c.get("status") == "PRICED" for c in candidates)
                         else "REVIEW_ACCEPTED_RECIPES"
-                        if any(a["validity"] == "VALID" for a in acceptances)
+                        if any(c.get("status") == "ACCEPTED" for c in candidates)
+                        else "REVIEW_MENU"
+                        if prices["menu"]
                         else "CLARIFY_CANDIDATE_GAPS"
                         if any(c["interest"] != "REJECTED" for c in candidates)
                         else "RESEARCH_CANDIDATE"

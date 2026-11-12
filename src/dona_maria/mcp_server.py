@@ -23,6 +23,7 @@ from dona_maria.business_state import (
 )
 from dona_maria.candidates import RegisterCandidateRequest
 from dona_maria.persistence import SQLiteWorkspaceRepository
+from dona_maria.pricing import CalculatePricingRequest, SaveMenuDecisionRequest
 from dona_maria.production import (
     AcceptanceRequest,
     FeasibilityRequest,
@@ -67,6 +68,18 @@ PRODUCTION_TOOLS = [
         AcceptanceRequest,
         False,
         "Aceita somente após resumo atual e manifestação inequívoca.",
+    ),
+    (
+        "calculate_pricing_scenarios",
+        CalculatePricingRequest,
+        False,
+        "Persiste CMV, mínimo e cenários com aceite vigente; não escolhe preço.",
+    ),
+    (
+        "save_menu_decision",
+        SaveMenuDecisionRequest,
+        False,
+        "Registra somente escolha humana de cenário ou preço em centavos acima do piso.",
     ),
 ]
 

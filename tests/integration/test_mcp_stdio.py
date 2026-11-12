@@ -70,6 +70,8 @@ async def test_official_client_discovers_and_calls_the_real_stdio_server(tmp_pat
                     "evaluate_recipe_feasibility",
                     "evaluate_purchase_plan",
                     "accept_recipe",
+                    "calculate_pricing_scenarios",
+                    "save_menu_decision",
                 ]
                 tool = tools[0]
                 assert tool.input_schema["additionalProperties"] is False

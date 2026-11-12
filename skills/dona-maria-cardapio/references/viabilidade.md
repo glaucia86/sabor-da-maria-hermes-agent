@@ -12,6 +12,9 @@
    disponibilidade/habilidade, decimal textual e unidade para capacidade/tempo,
    ou texto controlado correspondente à condição explícita. Uma substituição
    informa `replaces_fact_id` atual. Nunca envie status `CONFIRMED`.
+   Em `EXPLICIT_CONDITION`, confira o `value` esperado no requisito: um texto
+   confirmado exige esse mesmo texto controlado, sem trocar por `true`.
+   A evidência preserva a fala humana original, separada do valor tipado.
 4. Apresente lotes e porções antes de `set_production_plan`. A lista substitui
    o plano inteiro, incluindo rascunhos. Peça confirmação inequívoca da produção;
    a forma conservadora suportada começa com “Confirmo ...”. Para pedido de
@@ -48,4 +51,5 @@ consentimento. Fonte web nunca confirma fato, produção ou aceite.
 
 Aceite não compra, não debita estoque físico e não escolhe preço. Se faltar
 insumo, explique a pendência; cotação e preço dependem de ferramentas próprias.
-Encerre a etapa no aceite enquanto essas ferramentas não estiverem disponíveis.
+Após aceite vigente, siga [CMV e escolha de preço](precificacao.md) quando as
+ferramentas estiverem disponíveis; caso contrário, explique a limitação e aguarde.
