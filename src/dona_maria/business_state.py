@@ -10,6 +10,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 
 from dona_maria.candidates import RegisterCandidateRequest
+from dona_maria.ingredients import ConversionRequest, ResolveIngredientRequest
 from dona_maria.persistence import BusinessRuleError, SQLiteWorkspaceRepository
 from dona_maria.planning import evaluate_plan, pricing_view
 from dona_maria.pricing import CalculatePricingRequest, SaveMenuDecisionRequest
@@ -74,6 +75,16 @@ class BusinessStateReader:
 
     def record_recipe_feedback(self, arguments: dict[str, object]) -> dict[str, object]:
         return self._production_command("record_recipe_feedback", FeedbackRequest, arguments)
+
+    def record_ingredient_conversion(self, arguments: dict[str, object]) -> dict[str, object]:
+        return self._production_command(
+            "record_ingredient_conversion", ConversionRequest, arguments
+        )
+
+    def resolve_recipe_ingredient(self, arguments: dict[str, object]) -> dict[str, object]:
+        return self._production_command(
+            "resolve_recipe_ingredient", ResolveIngredientRequest, arguments
+        )
 
     def set_production_plan(self, arguments: dict[str, object]) -> dict[str, object]:
         return self._production_command("set_production_plan", PlanRequest, arguments)
@@ -290,6 +301,7 @@ class BusinessStateReader:
                 snapshot,
                 state.pricing_policy_version,
                 revision,
+                conversions=state.ingredient_conversions,
             )
             acceptances = [
                 acceptance.model_dump(mode="json")
@@ -364,6 +376,12 @@ class BusinessStateReader:
                     if state.plan and state.plan.items
                     else "80.00",
                     "candidates": candidates,
+                    "ingredient_conversions": [
+                        c.model_dump(mode="json") for c in state.ingredient_conversions
+                    ],
+                    "ingredient_resolutions": [
+                        r.model_dump(mode="json") for r in state.ingredient_resolutions
+                    ],
                     "acceptances": acceptances,
                     **prices,
                     "evaluation": evaluation,
