@@ -5,6 +5,7 @@ import sqlite3
 import threading
 from contextlib import closing, contextmanager
 from datetime import datetime
+from decimal import Decimal
 from pathlib import Path
 from uuid import UUID, uuid4
 
@@ -182,7 +183,7 @@ class SQLiteWorkspaceRepository:
                     or allocation.source_version != snapshot.import_policy_version
                     or allocation.unit != stock.dimension
                     or allocation.acquisition_total != str(stock.acquisition_total)
-                    or allocation.purchase_quantity_base != str(stock.purchase_quantity_base)
+                    or Decimal(allocation.purchase_quantity_base) != stock.purchase_quantity_base
                     or stock.purchase_source is None
                     or allocation.source != stock.purchase_source.model_dump(mode="json")
                 ):

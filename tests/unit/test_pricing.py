@@ -85,6 +85,46 @@ def test_explicit_scenario_choice_survives_reopening_and_replay(pricing_workspac
     assert state["data"]["next_action"] == "REVIEW_MENU"
 
 
+@pytest.mark.parametrize("purchased", ["1E+3", "1.00E+3"])
+def test_scientific_purchase_quantity_allows_reopening_and_choosing_price(
+    pricing_workspace, purchased
+):
+    service, workspace, recipe, acceptance, command, database = pricing_workspace(
+        purchased=purchased
+    )
+    result = command(
+        "calculate_pricing_scenarios", recipe_id=recipe["id"], acceptance_id=acceptance["id"]
+    )
+    assert result["ok"], result
+    calculation = result["data"]["calculation"]
+    assert calculation["allocations"][0]["purchase_quantity_base"] == "1000"
+    assert Decimal(calculation["cmv_per_serving"]) == Decimal("1.00")
+
+    reopened = BusinessStateReader(SQLiteWorkspaceRepository(database))
+    recovered = reopened.get_business_state({"workspace_id": workspace})
+    assert recovered["ok"], recovered
+    assert recovered["data"]["pricing_calculations"] == [calculation]
+    saved = reopened.save_menu_decision(
+        dict(
+            workspace_id=workspace,
+            operation_id=str(uuid4()),
+            expected_revision=recovered["revision"],
+            recipe_id=recipe["id"],
+            acceptance_id=acceptance["id"],
+            calculation_id=calculation["id"],
+            scenario_id="M20",
+            evidence=evidence("Escolho M20."),
+        )
+    )
+    assert saved["ok"], saved
+    state = BusinessStateReader(SQLiteWorkspaceRepository(database)).get_business_state(
+        {"workspace_id": workspace}
+    )
+    assert state["ok"], state
+    assert state["data"]["menu"] == [saved["data"]["decision"]]
+    assert state["data"]["menu"][0]["price"] == "1.43"
+
+
 @pytest.mark.parametrize(
     "price, code",
     [
