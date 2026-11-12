@@ -43,7 +43,7 @@ O Sabor da Maria propõe uma consultora que pesquisa receitas reais, descobre re
 A pergunta central vem antes do preço: **Dona Maria consegue preparar esse prato com os equipamentos, habilidades, ingredientes e condições que tem?**
 
 > [!IMPORTANT]
-> O código permite importar a planilha localmente, consultar a despensa e registrar/reabrir candidatas com fontes e lacunas pelo MCP. Esse percurso foi verificado em testes locais determinísticos e em execução assistida do Hermes com pesquisa real. Planejamento de compras, aceite de pratos e precificação permanecem objetivos da solução.
+> O código permite importar a planilha, registrar candidatas, verificar produção e aceite e calcular/registrar preços pelo MCP. O percurso sem compras foi verificado em testes locais e no Hermes com pesquisa real, aceite, escolha e retomada. A execução foi assistida, com despensa e custos sintéticos e consumo imediato; compras e operação de delivery permanecem objetivos da solução.
 
 <a id="experiencia"></a>
 ## 💬 Entenda a experiência
@@ -108,6 +108,15 @@ preço mínimo = CMV / 0,90
 Para **CMV de R$ 18,00 por porção**, o preço mínimo é **R$ 20,00**. Vendendo por R$ 25,00, a taxa é R$ 2,50 e restam R$ 4,50 após taxa e ingredientes. É um exemplo didático, sem receita ou cálculo executado pela aplicação.
 
 O denominador do custo é a **quantidade comprada**, e não o estoque atual. O desembolso com complementos deve respeitar o orçamento agregado; ingredientes já adquiridos continuam compondo o CMV. Outros custos, como gás, embalagem e mão de obra, exigem dados próprios para estimar lucro líquido.
+
+Após aceite, `calculate_pricing_scenarios` registra a memória de cálculo,
+o mínimo e cenários de margem 10/20/30%. `save_menu_decision` exige escolha
+humana explícita de cenário ou preço personalizado em centavos ≥ mínimo.
+Para o caso sintético CMV R$ 10,00, os testes verificam mínimo R$ 11,12 e
+cenários R$ 12,50, R$ 14,29 e R$ 16,67. Valores exibidos são aproximações
+didáticas; a validação usa valores técnicos com Decimal e 34 dígitos.
+Na retomada, `get_business_state` recupera cálculos e escolhas vigentes,
+preservando o histórico invalidado, o estoque e o orçamento.
 
 <a id="preparacao"></a>
 ## 🧰 Prepare seu ambiente

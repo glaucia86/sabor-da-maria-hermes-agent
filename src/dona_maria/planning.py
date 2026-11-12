@@ -12,6 +12,16 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, model_validator
 
 from dona_maria.candidates import CandidateInput, RecipeCandidate
 from dona_maria.inventory import InventorySnapshot
+from dona_maria.pricing import (
+    FINANCIAL_CONTEXT,
+    CalculatePricingRequest,
+    MenuDecision,
+    PricingCalculation,
+    SaveMenuDecisionRequest,
+    calculate_pricing,
+    explicit_price_choice,
+    price_option,
+)
 from dona_maria.production import (
     AcceptanceRequest,
     FeedbackRequest,
@@ -42,6 +52,8 @@ class WorkspaceState(BaseModel):
     kitchen_facts: list[KitchenFact] = []
     acceptances: list[RecipeAcceptance] = []
     invalidated_acceptance_ids: list[UUID] = []
+    pricing_calculations: list[PricingCalculation] = []
+    menu_decisions: list[MenuDecision] = []
 
     @model_validator(mode="after")
     def valid_references(self):
@@ -52,6 +64,8 @@ class WorkspaceState(BaseModel):
             [(fact.category, fact.key) for fact in self.kitchen_facts],
             [fact.id for fact in self.kitchen_facts],
             [acceptance.id for acceptance in self.acceptances],
+            [calculation.id for calculation in self.pricing_calculations],
+            [decision.id for decision in self.menu_decisions],
             self.invalidated_acceptance_ids,
         ]
         if self.plan:
@@ -102,6 +116,41 @@ class WorkspaceState(BaseModel):
                 or item.batches != acceptance.batches
             ):
                 raise ValueError("Aceite não corresponde ao item/escala do plano.")
+        acceptances = {a.id: a for a in self.acceptances}
+        calculations = {c.id: c for c in self.pricing_calculations}
+        for calculation in self.pricing_calculations:
+            acceptance = acceptances.get(calculation.acceptance_id)
+            if acceptance is None or (
+                calculation.recipe_id,
+                calculation.fingerprint,
+                calculation.batches,
+            ) != (acceptance.recipe_id, acceptance.fingerprint, acceptance.batches):
+                raise ValueError("Cálculo sem aceite/escala correspondente.")
+            if any(
+                a.recipe_id != calculation.recipe_id or a.plan_item_id != acceptance.plan_item_id
+                for a in calculation.allocations
+            ):
+                raise ValueError("Alocação não pertence ao cálculo.")
+        for decision in self.menu_decisions:
+            calculation = calculations.get(decision.calculation_id)
+            if calculation is None or (
+                decision.recipe_id,
+                decision.acceptance_id,
+                decision.fingerprint,
+            ) != (calculation.recipe_id, calculation.acceptance_id, calculation.fingerprint):
+                raise ValueError("Decisão sem cálculo correspondente.")
+            option = next(
+                (s for s in calculation.scenarios if s.scenario_id == decision.scenario_id), None
+            )
+            if (decision.scenario_id is None) == (decision.custom_price is None):
+                raise ValueError("Decisão precisa de exatamente uma escolha.")
+            if decision.price != (
+                option.price if option else decision.custom_price
+            ) or not explicit_price_choice(decision):
+                raise ValueError("Preço não corresponde à escolha humana.")
+            with localcontext(FINANCIAL_CONTEXT):
+                if Decimal(decision.price) < Decimal(calculation.minimum.price):
+                    raise ValueError("Decisão abaixo do piso técnico.")
         return self
 
 
@@ -114,9 +163,172 @@ def fingerprint(value: object) -> str:
 
 
 class BusinessRuleError(Exception):
-    def __init__(self, code: str, message: str) -> None:
+    def __init__(self, code: str, message: str, *, details: dict | None = None) -> None:
         self.code, self.message = code, message
+        self.details = details or {}
         super().__init__(message)
+
+
+def _calculate_pricing(state, request: CalculatePricingRequest, snapshot, revision, now):
+    evaluation = evaluate_plan(
+        state.candidates,
+        state.plan,
+        state.kitchen_facts,
+        state.feedback,
+        snapshot,
+        state.pricing_policy_version,
+        revision,
+    )
+    acceptance = next(
+        (
+            a
+            for a in state.acceptances
+            if a.id == request.acceptance_id and a.recipe_id == request.recipe_id
+        ),
+        None,
+    )
+    if acceptance is None:
+        raise BusinessRuleError(
+            "ACCEPTANCE_REQUIRED", "Aceite vigente necessário antes do cálculo."
+        )
+    if (
+        acceptance.id in state.invalidated_acceptance_ids
+        or acceptance.fingerprint != evaluation["fingerprint"]
+    ):
+        raise BusinessRuleError("STALE_EVALUATION", "Reconfirme o resumo atual antes de calcular.")
+    recipe = next(r for r in state.candidates if r.id == request.recipe_id)
+    item = next(i for i in state.plan.items if i.plan_item_id == acceptance.plan_item_id)
+    calculation = next(
+        (
+            c
+            for c in state.pricing_calculations
+            if c.acceptance_id == acceptance.id
+            and c.fingerprint == evaluation["fingerprint"]
+            and c.pricing_policy_version == state.pricing_policy_version
+        ),
+        None,
+    )
+    if calculation is None:
+        calculation = calculate_pricing(
+            recipe, item, acceptance, snapshot, state.pricing_policy_version, now
+        )
+        state.pricing_calculations.append(calculation)
+    return {"calculation": calculation.model_dump(mode="json") | {"validity": "VALID"}}
+
+
+def _save_menu_decision(state, request: SaveMenuDecisionRequest, snapshot, revision, now):
+    evaluation = evaluate_plan(
+        state.candidates,
+        state.plan,
+        state.kitchen_facts,
+        state.feedback,
+        snapshot,
+        state.pricing_policy_version,
+        revision,
+    )
+    acceptance = next(
+        (
+            a
+            for a in state.acceptances
+            if a.id == request.acceptance_id and a.recipe_id == request.recipe_id
+        ),
+        None,
+    )
+    if acceptance is None:
+        raise BusinessRuleError(
+            "ACCEPTANCE_REQUIRED", "Aceite vigente necessário antes da escolha."
+        )
+    calculation = next(
+        (
+            c
+            for c in state.pricing_calculations
+            if c.id == request.calculation_id
+            and c.acceptance_id == acceptance.id
+            and c.recipe_id == request.recipe_id
+        ),
+        None,
+    )
+    if (
+        calculation is None
+        or acceptance.id in state.invalidated_acceptance_ids
+        or acceptance.fingerprint != evaluation["fingerprint"]
+        or calculation.fingerprint != evaluation["fingerprint"]
+    ):
+        raise BusinessRuleError("STALE_EVALUATION", "Apresente cálculo vigente antes da escolha.")
+    with localcontext(FINANCIAL_CONTEXT):
+        cost = Decimal(calculation.cmv_per_serving)
+        if request.custom_price is not None:
+            option = price_option(cost, Decimal(request.custom_price), Decimal("0"), "CUSTOM")
+            if Decimal("0.90") * Decimal(request.custom_price) < cost:
+                raise BusinessRuleError(
+                    "PRICE_BELOW_MINIMUM",
+                    "Preço não cobre taxa e ingredientes.",
+                    details={
+                        "minimum_price": calculation.minimum.price,
+                        "result_theoretical": option.result_theoretical,
+                    },
+                )
+        else:
+            option = next(s for s in calculation.scenarios if s.scenario_id == request.scenario_id)
+    if not explicit_price_choice(request):
+        raise BusinessRuleError(
+            "USER_CONFIRMATION_REQUIRED", "Peça escolha inequívoca do cenário ou preço exato."
+        )
+    decision = MenuDecision(
+        id=str(uuid4()),
+        recipe_id=str(request.recipe_id),
+        acceptance_id=str(acceptance.id),
+        calculation_id=str(calculation.id),
+        scenario_id=request.scenario_id,
+        custom_price=request.custom_price,
+        price=option.price,
+        evidence=request.evidence,
+        fingerprint=calculation.fingerprint,
+        decided_at=now,
+    )
+    state.menu_decisions.append(decision)
+    public = decision.model_dump(mode="json") | {"validity": "VALID"}
+    return {
+        "decision": public,
+        "menu": pricing_view(state, evaluation)["menu"],
+        "chosen_option": option.model_dump(mode="json"),
+    }
+
+
+def pricing_view(state: WorkspaceState, evaluation: dict) -> dict:
+    accepted = {
+        a.id
+        for a in state.acceptances
+        if a.id not in state.invalidated_acceptance_ids
+        and a.fingerprint == evaluation["fingerprint"]
+    }
+    calculations = [
+        c.model_dump(mode="json")
+        | {
+            "validity": "VALID"
+            if c.acceptance_id in accepted
+            and c.fingerprint == evaluation["fingerprint"]
+            and c.pricing_policy_version == state.pricing_policy_version
+            else "INVALIDATED"
+        }
+        for c in state.pricing_calculations
+    ]
+    current_calculations = {c["id"] for c in calculations if c["validity"] == "VALID"}
+    latest = {d.recipe_id: d.id for d in state.menu_decisions}
+    decisions = [
+        d.model_dump(mode="json")
+        | {
+            "validity": "VALID"
+            if str(d.calculation_id) in current_calculations and d.id == latest[d.recipe_id]
+            else "INVALIDATED"
+        }
+        for d in state.menu_decisions
+    ]
+    return dict(
+        pricing_calculations=calculations,
+        menu_decisions=decisions,
+        menu=[d for d in decisions if d["validity"] == "VALID"],
+    )
 
 
 def evaluate_feasibility(

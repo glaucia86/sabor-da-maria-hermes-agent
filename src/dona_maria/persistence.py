@@ -15,13 +15,16 @@ from dona_maria.planning import (
     WorkspaceState,
     _accept_recipe,
     _apply_production_command,
+    _calculate_pricing,
     _invalidate_acceptances,
+    _save_menu_decision,
     _validate_ingredient_references,
     canonical_json,
     evaluate_feasibility,
     evaluate_plan,
     fingerprint,
 )
+from dona_maria.pricing import CalculatePricingRequest, SaveMenuDecisionRequest, calculate_pricing
 from dona_maria.production import (
     AcceptanceRequest,
     FeasibilityRequest,
@@ -148,7 +151,60 @@ class SQLiteWorkspaceRepository:
                 _validate_ingredient_references(snapshot, candidate)
         except BusinessRuleError as exc:
             raise sqlite3.DatabaseError("Referência de candidata inválida.") from exc
+        SQLiteWorkspaceRepository._validate_pricing(state, snapshot, row["revision"])
         return row["revision"], state, snapshot
+
+    @staticmethod
+    def _validate_pricing(
+        state: WorkspaceState, snapshot: InventorySnapshot, revision: int
+    ) -> None:
+        if not state.pricing_calculations:
+            return
+        stocks = {item.id: item for item in snapshot.items}
+        recipes = {recipe.id: recipe for recipe in state.candidates}
+        acceptances = {acceptance.id: acceptance for acceptance in state.acceptances}
+        plan_items = {item.plan_item_id: item for item in state.plan.items} if state.plan else {}
+        current_fingerprint = evaluate_plan(
+            state.candidates,
+            state.plan,
+            state.kitchen_facts,
+            state.feedback,
+            snapshot,
+            state.pricing_policy_version,
+            revision,
+        )["fingerprint"]
+        for calculation in state.pricing_calculations:
+            for allocation in calculation.allocations:
+                stock = stocks.get(allocation.ingredient_id)
+                if (
+                    stock is None
+                    or allocation.source_id != snapshot.id
+                    or allocation.source_version != snapshot.import_policy_version
+                    or allocation.unit != stock.dimension
+                    or allocation.acquisition_total != str(stock.acquisition_total)
+                    or allocation.purchase_quantity_base != str(stock.purchase_quantity_base)
+                    or stock.purchase_source is None
+                    or allocation.source != stock.purchase_source.model_dump(mode="json")
+                ):
+                    raise sqlite3.DatabaseError("Origem do cálculo não corresponde à aquisição.")
+            if (
+                calculation.acceptance_id in state.invalidated_acceptance_ids
+                or calculation.fingerprint != current_fingerprint
+            ):
+                continue
+            acceptance = acceptances[calculation.acceptance_id]
+            recomputed = calculate_pricing(
+                recipes[calculation.recipe_id],
+                plan_items[acceptance.plan_item_id],
+                acceptance,
+                snapshot,
+                state.pricing_policy_version,
+                calculation.calculated_at,
+            )
+            if calculation.model_dump(exclude={"id", "calculated_at"}) != recomputed.model_dump(
+                exclude={"id", "calculated_at"}
+            ):
+                raise sqlite3.DatabaseError("Cálculo não corresponde à receita e produção aceitas.")
 
     @staticmethod
     def load_snapshot(db: sqlite3.Connection, snapshot_id: str) -> InventorySnapshot:
@@ -378,7 +434,12 @@ class SQLiteWorkspaceRepository:
     def production_command(
         self,
         tool: str,
-        request: FeedbackRequest | PlanRequest | KitchenFactsRequest | AcceptanceRequest,
+        request: FeedbackRequest
+        | PlanRequest
+        | KitchenFactsRequest
+        | AcceptanceRequest
+        | CalculatePricingRequest
+        | SaveMenuDecisionRequest,
         now: datetime,
     ) -> dict:
         workspace_id, operation_id = str(request.workspace_id), str(request.operation_id)
@@ -400,7 +461,11 @@ class SQLiteWorkspaceRepository:
             if revision != request.expected_revision:
                 raise BusinessRuleError("STALE_REVISION", "Recarregue o workspace.")
             previously_invalid = set(state.invalidated_acceptance_ids)
-            if isinstance(request, AcceptanceRequest):
+            if isinstance(request, SaveMenuDecisionRequest):
+                data = _save_menu_decision(state, request, snapshot, revision, now)
+            elif isinstance(request, CalculatePricingRequest):
+                data = _calculate_pricing(state, request, snapshot, revision, now)
+            elif isinstance(request, AcceptanceRequest):
                 evaluation = evaluate_plan(
                     state.candidates,
                     state.plan,
