@@ -2,6 +2,7 @@
 
 import json
 import sqlite3
+from copy import deepcopy
 from decimal import Decimal, Inexact, localcontext
 from uuid import uuid4
 
@@ -178,6 +179,85 @@ def test_recipe_measure_is_scoped_to_one_line_and_its_preparation_basis(clarific
     assert original["preparation_basis"] == "COOKED"
 
 
+@pytest.mark.parametrize("change", ["title", "value", "unit", "basis"])
+def test_recipe_revision_preserves_conversion_only_when_measure_is_unchanged(clarification, change):
+    service, workspace, command, candidate, *_ = clarification
+    candidate["ingredients"] = candidate["ingredients"][:1]
+    line = candidate["ingredients"][0]
+    line.update(quantity=None, quantity_gap="Medida pendente.")
+    line["original_measure"].update(value="1", unit_label="xícara", raw_text="1 xícara")
+    recipe = command("register_recipe_candidate", candidate=candidate)["data"]["candidate"]
+    item = plan(command, recipe)["data"]["plan"]["items"][0]
+    converted = command(
+        "record_ingredient_conversion",
+        ingredient_id=line["ingredient_id"],
+        from_unit="xícara",
+        to_unit="g",
+        factor="100",
+        context="Xícara desta receita",
+        scope="RECIPE_MEASURE",
+        recipe_id=recipe["id"],
+        recipe_version=1,
+        line_id=recipe["ingredients"][0]["line_id"],
+        evidence=evidence("Esta xícara tem 100 g."),
+    )
+    assert converted["ok"], converted
+    command(
+        "record_recipe_feedback",
+        recipe_id=recipe["id"],
+        feedback="INTERESTED",
+        evidence=evidence("Tenho interesse."),
+    )
+    evaluation = service.evaluate_purchase_plan({"workspace_id": workspace})["data"]
+    accepted = command(
+        "accept_recipe",
+        recipe_id=recipe["id"],
+        plan_item_id=item["plan_item_id"],
+        evaluation_id=evaluation["evaluation_id"],
+        evidence=evidence("Aceito este prato."),
+    )
+    assert accepted["ok"], accepted
+    calculated = command(
+        "calculate_pricing_scenarios",
+        recipe_id=recipe["id"],
+        acceptance_id=accepted["data"]["acceptance"]["id"],
+    )
+    assert calculated["ok"], calculated
+    before = service.get_business_state({"workspace_id": workspace})["data"]
+
+    revised = deepcopy(candidate)
+    revised["title"] = "Titulo corrigido da fixture"
+    if change == "value":
+        revised["ingredients"][0]["original_measure"]["value"] = "2"
+    elif change == "unit":
+        revised["ingredients"][0]["original_measure"]["unit_label"] = "colher"
+    elif change == "basis":
+        revised["ingredients"][0]["preparation_basis"] = "COOKED"
+    for review in revised["category_reviews"]:
+        review["method_version"] = 2
+    result = command(
+        "register_recipe_candidate",
+        recipe_id=recipe["id"],
+        expected_recipe_version=1,
+        candidate=revised,
+    )
+    assert result["ok"], result
+    recovered = service.get_business_state({"workspace_id": workspace})
+    assert recovered["ok"], recovered
+    after = recovered["data"]
+    if change == "title":
+        assert after["evaluation"]["fingerprint"] == before["evaluation"]["fingerprint"]
+        assert after["evaluation"]["purchase_status"] == "CONFIRMED"
+        assert after["acceptances"] == before["acceptances"]
+        assert after["pricing_calculations"] == before["pricing_calculations"]
+    else:
+        assert after["evaluation"]["fingerprint"] != before["evaluation"]["fingerprint"]
+        assert after["evaluation"]["purchase_status"] == "PENDING"
+        assert after["acceptances"][0]["validity"] == "INVALIDATED"
+        assert after["pricing_calculations"][0]["validity"] == "INVALIDATED"
+    assert after["ingredient_conversions"] == before["ingredient_conversions"]
+
+
 @pytest.mark.parametrize(
     "factor", [0, True, "0", "-1", "NaN", "Infinity", "1e3", " 1000", "1.1234567"]
 )
@@ -218,6 +298,47 @@ def test_overlay_reopening_preserves_factor_and_effective_state_under_low_precis
     reopened = BusinessStateReader(SQLiteWorkspaceRepository(database))
     with localcontext() as caller:
         caller.prec = 2
+        after = reopened.get_business_state({"workspace_id": workspace})
+    assert after == before
+
+
+@pytest.mark.parametrize("trap_inexact", [False, True])
+def test_priced_historical_overlay_reopens_under_low_caller_precision(clarification, trap_inexact):
+    service, workspace, command, candidate, chocolate, *_, database = clarification
+    candidate["ingredients"] = candidate["ingredients"][1:]
+    recipe = command("register_recipe_candidate", candidate=candidate)["data"]["candidate"]
+    item = plan(command, recipe)["data"]["plan"]["items"][0]
+    converted = command("record_ingredient_conversion", **historical(chocolate, "1234.567891"))
+    assert converted["ok"], converted
+    command(
+        "record_recipe_feedback",
+        recipe_id=recipe["id"],
+        feedback="INTERESTED",
+        evidence=evidence("Tenho interesse."),
+    )
+    evaluation = service.evaluate_purchase_plan({"workspace_id": workspace})["data"]
+    accepted = command(
+        "accept_recipe",
+        recipe_id=recipe["id"],
+        plan_item_id=item["plan_item_id"],
+        evaluation_id=evaluation["evaluation_id"],
+        evidence=evidence("Aceito este prato."),
+    )
+    assert accepted["ok"], accepted
+    calculated = command(
+        "calculate_pricing_scenarios",
+        recipe_id=recipe["id"],
+        acceptance_id=accepted["data"]["acceptance"]["id"],
+    )
+    assert calculated["ok"], calculated
+    allocation = calculated["data"]["calculation"]["allocations"][0]
+    assert allocation["purchase_quantity_base"] == "1234.567891"
+    before = service.get_business_state({"workspace_id": workspace})
+    assert before["ok"], before
+    reopened = BusinessStateReader(SQLiteWorkspaceRepository(database))
+    with localcontext() as caller:
+        caller.prec = 2
+        caller.traps[Inexact] = trap_inexact
         after = reopened.get_business_state({"workspace_id": workspace})
     assert after == before
 

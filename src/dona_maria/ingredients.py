@@ -104,6 +104,19 @@ def current_conversions(conversions):
     return list(latest.values())
 
 
+def recipe_conversion_applies(conversion: ConversionRequest, recipe: RecipeCandidate) -> bool:
+    """Linhas preservadas ligam a conversão a revisões sem mudança material."""
+    return (
+        recipe.id == conversion.recipe_id
+        and conversion.recipe_version is not None
+        and recipe.version >= conversion.recipe_version
+        and any(
+            line.line_id == conversion.line_id and line.ingredient_id == conversion.ingredient_id
+            for line in recipe.ingredients
+        )
+    )
+
+
 def validate_conversion_measure(
     conversion: ConversionRequest, stock: InventoryItem, recipe: RecipeCandidate | None = None
 ) -> None:
@@ -130,7 +143,9 @@ def validate_conversion_measure(
     else:
         if recipe is None:
             raise ValueError("Receita da conversão ausente.")
-        if recipe.version != conversion.recipe_version:
+        if recipe.version != conversion.recipe_version and not recipe_conversion_applies(
+            conversion, recipe
+        ):
             return  # A medida original de uma versão histórica não está mais disponível.
         line = next(
             (line for line in recipe.ingredients if line.line_id == conversion.line_id), None
@@ -201,7 +216,7 @@ def apply_overlays(candidates, snapshot, conversions):
                 stock.dimension = conversion.to_unit
             else:
                 recipe = next((r for r in recipes if r.id == conversion.recipe_id), None)
-                if recipe is None or recipe.version != conversion.recipe_version:
+                if recipe is None or not recipe_conversion_applies(conversion, recipe):
                     continue
                 line = next(
                     (i for i in recipe.ingredients if i.line_id == conversion.line_id), None

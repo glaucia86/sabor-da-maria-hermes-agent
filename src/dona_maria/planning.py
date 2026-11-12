@@ -16,6 +16,7 @@ from dona_maria.ingredients import (
     IngredientResolution,
     apply_overlays,
     current_conversions,
+    recipe_conversion_applies,
     validate_conversion_measure,
 )
 from dona_maria.inventory import InventorySnapshot
@@ -502,16 +503,7 @@ def evaluate_plan(
         if c.ingredient_id in ingredient_ids
         and (
             c.scope == "HISTORICAL_PACKAGE"
-            or any(
-                r.id == c.recipe_id
-                and r.id in active_ids
-                and r.version == c.recipe_version
-                and any(
-                    i.line_id == c.line_id and i.ingredient_id == c.ingredient_id
-                    for i in r.ingredients
-                )
-                for r in candidates
-            )
+            or any(r.id in active_ids and recipe_conversion_applies(c, r) for r in candidates)
         )
     ]
     if relevant_conversions:

@@ -5,7 +5,7 @@ import sqlite3
 import threading
 from contextlib import closing, contextmanager
 from datetime import datetime
-from decimal import Decimal
+from decimal import Decimal, localcontext
 from pathlib import Path
 from uuid import UUID, uuid4
 
@@ -33,7 +33,12 @@ from dona_maria.planning import (
     record_conversion,
     resolve_ingredient,
 )
-from dona_maria.pricing import CalculatePricingRequest, SaveMenuDecisionRequest, calculate_pricing
+from dona_maria.pricing import (
+    FINANCIAL_CONTEXT,
+    CalculatePricingRequest,
+    SaveMenuDecisionRequest,
+    calculate_pricing,
+)
 from dona_maria.production import (
     AcceptanceRequest,
     FeasibilityRequest,
@@ -191,11 +196,12 @@ class SQLiteWorkspaceRepository:
             for allocation in calculation.allocations:
                 stock = stocks.get(allocation.ingredient_id)
                 bases = [(stock.dimension, stock.purchase_quantity_base)] if stock else []
-                bases.extend(
-                    (c.to_unit, stock.purchase_quantity_base * Decimal(c.factor))
-                    for c in state.ingredient_conversions
-                    if stock and c.ingredient_id == stock.id and c.scope == "HISTORICAL_PACKAGE"
-                )
+                with localcontext(FINANCIAL_CONTEXT):
+                    bases.extend(
+                        (c.to_unit, stock.purchase_quantity_base * Decimal(c.factor))
+                        for c in state.ingredient_conversions
+                        if stock and c.ingredient_id == stock.id and c.scope == "HISTORICAL_PACKAGE"
+                    )
                 if (
                     stock is None
                     or allocation.source_id != snapshot.id
