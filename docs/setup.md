@@ -110,7 +110,8 @@ hermes -p sabor-da-maria skills list --enabled-only
 O MCP deve descobrir `get_business_state`, `get_inventory_snapshot`,
 `register_recipe_candidate`, `record_recipe_feedback`, `record_kitchen_facts`,
 `set_production_plan`, `evaluate_recipe_feasibility`, `evaluate_purchase_plan`
-e `accept_recipe`, e a listagem de skills deve
+e `accept_recipe`, além de `calculate_pricing_scenarios`, `save_menu_decision`,
+`resolve_recipe_ingredient` e `record_ingredient_conversion`. A listagem de skills deve
 incluir `dona-maria-cardapio`. Descoberta não comprova que o corpo da skill foi
 carregado; a invocação explícita abaixo é o caminho de verificação.
 
@@ -168,7 +169,7 @@ viabilidade, aceite, compras ou preço.
 | Banco indisponível | Confira caminho, permissões e versão do schema; banco corrompido ou mais novo é recusado e preservado. Registros precisam de permissão de escrita e do diretório do SQLite. |
 | Skill ausente | Confira `skills.external_dirs`, o caminho de `skills/` e a listagem no perfil correto. |
 | Sessão sem resposta | Confira modelo, provedor e conectividade no Hermes; não substitua uma chamada pendente por um resultado simulado. |
-| Ferramentas inesperadas | Revise catálogo e filtros: o servidor expõe 11 ferramentas de consulta, candidata, produção, aceite e precificação; web pertence ao host. |
+| Ferramentas inesperadas | Revise catálogo e filtros: o servidor expõe 13 ferramentas de consulta, candidata, esclarecimento, produção, aceite e precificação; web pertence ao host. |
 | Catálogo antigo após atualizar o servidor | No gateway, `/reload-mcp` pode preservar conexões já registradas. No perfil dedicado, desabilite somente `mcp_servers.dona_maria.enabled`, recarregue, reabilite e recarregue novamente. Confira nomes e workspace antes de pesquisar. |
 
 A ausência de ferramentas perigosas deve ser conferida no catálogo efetivo.

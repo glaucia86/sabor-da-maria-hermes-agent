@@ -11,6 +11,13 @@ from uuid import UUID, uuid4
 from pydantic import AwareDatetime, BaseModel, ConfigDict, model_validator
 
 from dona_maria.candidates import CandidateInput, RecipeCandidate
+from dona_maria.ingredients import (
+    IngredientConversion,
+    IngredientResolution,
+    apply_overlays,
+    current_conversions,
+    validate_conversion_measure,
+)
 from dona_maria.inventory import InventorySnapshot
 from dona_maria.pricing import (
     FINANCIAL_CONTEXT,
@@ -54,6 +61,8 @@ class WorkspaceState(BaseModel):
     invalidated_acceptance_ids: list[UUID] = []
     pricing_calculations: list[PricingCalculation] = []
     menu_decisions: list[MenuDecision] = []
+    ingredient_conversions: list[IngredientConversion] = []
+    ingredient_resolutions: list[IngredientResolution] = []
 
     @model_validator(mode="after")
     def valid_references(self):
@@ -178,6 +187,7 @@ def _calculate_pricing(state, request: CalculatePricingRequest, snapshot, revisi
         snapshot,
         state.pricing_policy_version,
         revision,
+        conversions=state.ingredient_conversions,
     )
     acceptance = next(
         (
@@ -209,8 +219,12 @@ def _calculate_pricing(state, request: CalculatePricingRequest, snapshot, revisi
         None,
     )
     if calculation is None:
+        recipes, effective = apply_overlays(
+            state.candidates, snapshot, state.ingredient_conversions
+        )
+        recipe = next(r for r in recipes if r.id == request.recipe_id)
         calculation = calculate_pricing(
-            recipe, item, acceptance, snapshot, state.pricing_policy_version, now
+            recipe, item, acceptance, effective, state.pricing_policy_version, now
         )
         state.pricing_calculations.append(calculation)
     return {"calculation": calculation.model_dump(mode="json") | {"validity": "VALID"}}
@@ -225,6 +239,7 @@ def _save_menu_decision(state, request: SaveMenuDecisionRequest, snapshot, revis
         snapshot,
         state.pricing_policy_version,
         revision,
+        conversions=state.ingredient_conversions,
     )
     acceptance = next(
         (
@@ -445,7 +460,11 @@ def evaluate_plan(
     snapshot: InventorySnapshot,
     policy_version: str,
     revision: int,
+    *,
+    conversions=(),
 ) -> dict:
+    original_snapshot = snapshot
+    candidates, snapshot = apply_overlays(candidates, snapshot, conversions)
     active_ids = {item.recipe_id for item in plan.items} if plan else set()
     relevant_keys = {
         (r.category, r.key) for c in candidates if c.id in active_ids for r in c.requirements
@@ -471,9 +490,35 @@ def evaluate_plan(
         feedback=[
             item.model_dump(mode="json") for item in feedback if item.recipe_id in active_ids
         ],
-        snapshot=snapshot.model_dump(mode="json"),
+        snapshot=original_snapshot.model_dump(mode="json"),
         pricing_policy_version=policy_version,
     )
+    ingredient_ids = {
+        i.ingredient_id for r in candidates if r.id in active_ids for i in r.ingredients
+    }
+    relevant_conversions = [
+        c
+        for c in conversions
+        if c.ingredient_id in ingredient_ids
+        and (
+            c.scope == "HISTORICAL_PACKAGE"
+            or any(
+                r.id == c.recipe_id
+                and r.id in active_ids
+                and r.version == c.recipe_version
+                and any(
+                    i.line_id == c.line_id and i.ingredient_id == c.ingredient_id
+                    for i in r.ingredients
+                )
+                for r in candidates
+            )
+        )
+    ]
+    if relevant_conversions:
+        inputs["conversions"] = [c.model_dump(mode="json") for c in relevant_conversions]
+        inputs["effective_inventory"] = [
+            i.model_dump(mode="json") for i in snapshot.items if i.id in ingredient_ids
+        ]
     if inputs["plan"]:
         for item in inputs["plan"]["items"]:
             item["recipe_version"] = item["business_recipe_version"]
@@ -498,6 +543,11 @@ def evaluate_plan(
                     )
                     continue
                 quantity = ingredient.quantity
+                stock = next(s for s in snapshot.items if s.id == ingredient.ingredient_id)
+                dimension = {"kg": "g", "L": "ml"}.get(quantity.unit, quantity.unit)
+                if dimension != stock.dimension:
+                    gaps.append(f"UNIT_CONVERSION_REQUIRED: {ingredient.line_id}")
+                    continue
                 amount = Decimal(quantity.value) * item.batches
                 if quantity.unit in {"kg", "L"}:
                     amount *= 1000
@@ -729,20 +779,104 @@ def _invalidate_acceptances(state: WorkspaceState) -> None:
             state.invalidated_acceptance_ids.append(acceptance.id)
 
 
+def record_conversion(state, request, snapshot, now):
+    def current_evaluation():
+        return evaluate_plan(
+            state.candidates,
+            state.plan,
+            state.kitchen_facts,
+            state.feedback,
+            snapshot,
+            state.pricing_policy_version,
+            0,
+            conversions=state.ingredient_conversions,
+        )
+
+    before = current_evaluation()["fingerprint"]
+    stock = next((i for i in snapshot.items if i.id == request.ingredient_id), None)
+    if stock is None:
+        raise BusinessRuleError("NOT_FOUND", "Ingrediente não pertence ao workspace.")
+    recipe = None
+    if request.scope == "RECIPE_MEASURE":
+        recipe = next((r for r in state.candidates if r.id == request.recipe_id), None)
+        if recipe is None:
+            raise BusinessRuleError("NOT_FOUND", "Receita não pertence ao workspace.")
+        if recipe.version != request.recipe_version:
+            raise BusinessRuleError("STALE_REVISION", "Recarregue a receita atual.")
+        line = next((i for i in recipe.ingredients if i.line_id == request.line_id), None)
+        if line is None or line.ingredient_id != request.ingredient_id:
+            raise BusinessRuleError("NOT_FOUND", "Linha/ingrediente não corresponde à receita.")
+    try:
+        validate_conversion_measure(request, stock, recipe)
+    except ValueError as exc:
+        raise BusinessRuleError("UNIT_CONVERSION_REQUIRED", str(exc)) from exc
+    key = (request.ingredient_id, request.scope, request.recipe_id, request.line_id)
+    previous = next(
+        (c for c in current_conversions(state.ingredient_conversions) if c.key() == key), None
+    )
+    if (previous.id if previous else None) != request.replaces_conversion_id:
+        raise BusinessRuleError("STALE_REVISION", "Substituição exige ID da conversão vigente.")
+    conversion = IngredientConversion(
+        **request.model_dump(mode="json"),
+        id=str(uuid4()),
+        version=previous.version + 1 if previous else 1,
+        recorded_at=now,
+    )
+    state.ingredient_conversions.append(conversion)
+    evaluation = current_evaluation()
+    if evaluation["fingerprint"] != before:
+        _invalidate_acceptances(state)
+    _, effective = apply_overlays(state.candidates, snapshot, state.ingredient_conversions)
+    ingredient = next(i for i in effective.items if i.id == request.ingredient_id)
+    return {
+        "conversion": conversion.model_dump(mode="json"),
+        "effective_ingredient": ingredient.model_dump(mode="json"),
+        "remaining_gaps": evaluation["gaps"],
+    }
+
+
+def resolve_ingredient(state, request, snapshot, now):
+    if not any(i.id == request.existing_ingredient_id for i in snapshot.items):
+        raise BusinessRuleError("NOT_FOUND", "Identidade não pertence ao workspace.")
+    recipe = next((r for r in state.candidates if r.id == request.recipe_id), None)
+    if recipe is None:
+        raise BusinessRuleError("NOT_FOUND", "Receita não pertence ao workspace.")
+    if recipe.version != request.recipe_version:
+        raise BusinessRuleError("STALE_REVISION", "Recarregue a versão da receita.")
+    line = next((i for i in recipe.ingredients if i.line_id == request.line_id), None)
+    if line is None:
+        raise BusinessRuleError("NOT_FOUND", "Linha não pertence à receita.")
+    state.ingredient_resolutions.append(
+        IngredientResolution(
+            recipe_id=str(recipe.id),
+            line_id=str(line.line_id),
+            ingredient_id=str(request.existing_ingredient_id),
+            alias=line.description,
+            evidence=request.evidence,
+            recorded_at=now,
+        )
+    )
+    line.ingredient_id = request.existing_ingredient_id
+    for review in recipe.category_reviews:
+        if review.method_version == recipe.version:
+            review.method_version += 1
+    recipe.version += 1
+    recipe.business_version += 1
+    recipe.recorded_at = now
+    if state.plan and any(item.recipe_id == recipe.id for item in state.plan.items):
+        _invalidate_acceptances(state)
+    return {"ingredient_id": str(line.ingredient_id), "candidate": recipe.public()}
+
+
 def _validate_ingredient_references(snapshot: InventorySnapshot, candidate: CandidateInput) -> None:
     items = {item.id: item for item in snapshot.items}
     if isinstance(candidate, RecipeCandidate) and (
         len({item.line_id for item in candidate.ingredients}) != len(candidate.ingredients)
     ):
         raise BusinessRuleError("VALIDATION_ERROR", "Linhas de ingredientes duplicadas.")
-    dimensions = {"g": "g", "kg": "g", "ml": "ml", "L": "ml", "un": "un"}
     for ingredient in candidate.ingredients:
         if ingredient.ingredient_id is None:
             continue
         item = items.get(ingredient.ingredient_id)
         if item is None:
             raise BusinessRuleError("NOT_FOUND", "Ingrediente não pertence ao workspace.")
-        if ingredient.quantity and dimensions[ingredient.quantity.unit] != item.dimension:
-            raise BusinessRuleError(
-                "UNIT_CONVERSION_REQUIRED", "Medida exige conversão sustentada."
-            )

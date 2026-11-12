@@ -162,3 +162,46 @@ def pricing_workspace(tmp_path, inventory_file, recipe_candidate):
         return service, workspace, recipe, acceptance["data"]["acceptance"], command, database
 
     return create
+
+
+def s04_evidence(statement):
+    return dict(turn_ref="synthetic-s04-user", statement=statement,
+                captured_at="2026-11-12T12:00:00Z")
+
+
+@pytest.fixture
+def clarification(tmp_path, inventory_file, recipe_candidate):
+    book = load_workbook(inventory_file)
+    book["Despensa"].append(["Cobertura de chocolate", 1, "un"])
+    book["Precos"].append(["Cobertura de chocolate", 1, "un", "79.90"])
+    book.save(inventory_file)
+    book.close()
+    database = tmp_path / "clarification.sqlite3"
+    workspace = bootstrap_workspace(database, inventory_file, allowed_directory=tmp_path)[
+        "workspace_id"
+    ]
+    service = BusinessStateReader(SQLiteWorkspaceRepository(database))
+    stock = service.get_inventory_snapshot({"workspace_id": workspace})["data"]
+    rice = next(i for i in stock["items"] if i["name_original"] == "Arroz")
+    chocolate = next(i for i in stock["items"] if i["name_original"] != "Arroz")
+    recipe_candidate["ingredients"][0]["ingredient_id"] = rice["id"]
+    line = deepcopy(recipe_candidate["ingredients"][0])
+    line.update(description="Cobertura", ingredient_id=chocolate["id"])
+    recipe_candidate["ingredients"].append(line)
+    source = recipe_candidate["sources"][0]
+    recipe_candidate.pop("yield_gap")
+    recipe_candidate.pop("context_gap")
+    recipe_candidate.update(
+        yield_per_batch=dict(servings_per_batch=2, sale_unit_label="porção", source=source),
+        operational_context="Fixture de preparo manual em um recipiente.", context_source=source,
+        category_reviews=[dict(category=c, requirement_keys=[], method_version=1, source=source,
+                               not_applicable_reason="Fixture sem requisito nesta categoria.")
+                          for c in ("EQUIPMENT", "SKILL", "OPERATION")],
+    )
+
+    def command(tool, **payload):
+        revision = service.get_business_state({"workspace_id": workspace})["revision"]
+        return getattr(service, tool)(dict(workspace_id=workspace, operation_id=str(uuid4()),
+                                         expected_revision=revision) | payload)
+
+    return service, workspace, command, recipe_candidate, chocolate, stock, inventory_file, database

@@ -10,6 +10,12 @@ from pathlib import Path
 from uuid import UUID, uuid4
 
 from dona_maria.candidates import RecipeCandidate, RegisterCandidateRequest
+from dona_maria.ingredients import (
+    ConversionRequest,
+    ResolveIngredientRequest,
+    apply_overlays,
+    validate_overlay_references,
+)
 from dona_maria.inventory import InventorySnapshot
 from dona_maria.planning import (
     BusinessRuleError,
@@ -24,6 +30,8 @@ from dona_maria.planning import (
     evaluate_feasibility,
     evaluate_plan,
     fingerprint,
+    record_conversion,
+    resolve_ingredient,
 )
 from dona_maria.pricing import CalculatePricingRequest, SaveMenuDecisionRequest, calculate_pricing
 from dona_maria.production import (
@@ -148,9 +156,10 @@ class SQLiteWorkspaceRepository:
             raise sqlite3.DatabaseError("Candidatas duplicadas no agregado.")
         snapshot = SQLiteWorkspaceRepository.load_snapshot(db, row["snapshot_id"])
         try:
+            validate_overlay_references(state, snapshot)
             for candidate in state.candidates:
                 _validate_ingredient_references(snapshot, candidate)
-        except BusinessRuleError as exc:
+        except (BusinessRuleError, ValueError) as exc:
             raise sqlite3.DatabaseError("Referência de candidata inválida.") from exc
         SQLiteWorkspaceRepository._validate_pricing(state, snapshot, row["revision"])
         return row["revision"], state, snapshot
@@ -161,8 +170,11 @@ class SQLiteWorkspaceRepository:
     ) -> None:
         if not state.pricing_calculations:
             return
+        effective_recipes, effective = apply_overlays(
+            state.candidates, snapshot, state.ingredient_conversions
+        )
         stocks = {item.id: item for item in snapshot.items}
-        recipes = {recipe.id: recipe for recipe in state.candidates}
+        recipes = {recipe.id: recipe for recipe in effective_recipes}
         acceptances = {acceptance.id: acceptance for acceptance in state.acceptances}
         plan_items = {item.plan_item_id: item for item in state.plan.items} if state.plan else {}
         current_fingerprint = evaluate_plan(
@@ -173,17 +185,23 @@ class SQLiteWorkspaceRepository:
             snapshot,
             state.pricing_policy_version,
             revision,
+            conversions=state.ingredient_conversions,
         )["fingerprint"]
         for calculation in state.pricing_calculations:
             for allocation in calculation.allocations:
                 stock = stocks.get(allocation.ingredient_id)
+                bases = [(stock.dimension, stock.purchase_quantity_base)] if stock else []
+                bases.extend(
+                    (c.to_unit, stock.purchase_quantity_base * Decimal(c.factor))
+                    for c in state.ingredient_conversions
+                    if stock and c.ingredient_id == stock.id and c.scope == "HISTORICAL_PACKAGE"
+                )
                 if (
                     stock is None
                     or allocation.source_id != snapshot.id
                     or allocation.source_version != snapshot.import_policy_version
-                    or allocation.unit != stock.dimension
+                    or (allocation.unit, Decimal(allocation.purchase_quantity_base)) not in bases
                     or allocation.acquisition_total != str(stock.acquisition_total)
-                    or Decimal(allocation.purchase_quantity_base) != stock.purchase_quantity_base
                     or stock.purchase_source is None
                     or allocation.source != stock.purchase_source.model_dump(mode="json")
                 ):
@@ -198,7 +216,7 @@ class SQLiteWorkspaceRepository:
                 recipes[calculation.recipe_id],
                 plan_items[acceptance.plan_item_id],
                 acceptance,
-                snapshot,
+                effective,
                 state.pricing_policy_version,
                 calculation.calculated_at,
             )
@@ -440,7 +458,9 @@ class SQLiteWorkspaceRepository:
         | KitchenFactsRequest
         | AcceptanceRequest
         | CalculatePricingRequest
-        | SaveMenuDecisionRequest,
+        | SaveMenuDecisionRequest
+        | ConversionRequest
+        | ResolveIngredientRequest,
         now: datetime,
     ) -> dict:
         workspace_id, operation_id = str(request.workspace_id), str(request.operation_id)
@@ -462,7 +482,11 @@ class SQLiteWorkspaceRepository:
             if revision != request.expected_revision:
                 raise BusinessRuleError("STALE_REVISION", "Recarregue o workspace.")
             previously_invalid = set(state.invalidated_acceptance_ids)
-            if isinstance(request, SaveMenuDecisionRequest):
+            if isinstance(request, ResolveIngredientRequest):
+                data = resolve_ingredient(state, request, snapshot, now)
+            elif isinstance(request, ConversionRequest):
+                data = record_conversion(state, request, snapshot, now)
+            elif isinstance(request, SaveMenuDecisionRequest):
                 data = _save_menu_decision(state, request, snapshot, revision, now)
             elif isinstance(request, CalculatePricingRequest):
                 data = _calculate_pricing(state, request, snapshot, revision, now)
@@ -475,6 +499,7 @@ class SQLiteWorkspaceRepository:
                     snapshot,
                     state.pricing_policy_version,
                     revision,
+                    conversions=state.ingredient_conversions,
                 )
                 data = _accept_recipe(state, request, evaluation, now)
             else:
@@ -525,8 +550,9 @@ class SQLiteWorkspaceRepository:
             loaded = self.load_state(db, str(request.workspace_id))
             if loaded is None:
                 raise BusinessRuleError("NOT_FOUND", "Workspace não encontrado.")
-            revision, state, _snapshot = loaded
-            recipe = next((r for r in state.candidates if r.id == request.recipe_id), None)
+            revision, state, snapshot = loaded
+            recipes, _ = apply_overlays(state.candidates, snapshot, state.ingredient_conversions)
+            recipe = next((r for r in recipes if r.id == request.recipe_id), None)
             item = (
                 next(
                     (
@@ -553,7 +579,7 @@ class SQLiteWorkspaceRepository:
                 warnings=[],
                 error=None,
                 data=evaluate_feasibility(
-                    recipe, item, state.kitchen_facts, plan=state.plan, candidates=state.candidates
+                    recipe, item, state.kitchen_facts, plan=state.plan, candidates=recipes
                 ),
             )
 
@@ -573,6 +599,7 @@ class SQLiteWorkspaceRepository:
                 snapshot,
                 state.pricing_policy_version,
                 revision,
+                conversions=state.ingredient_conversions,
             )
             return dict(
                 schema_version="1.0",

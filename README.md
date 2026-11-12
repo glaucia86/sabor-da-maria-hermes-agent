@@ -118,6 +118,12 @@ didáticas; a validação usa valores técnicos com Decimal e 34 dígitos.
 Na retomada, `get_business_state` recupera cálculos e escolhas vigentes,
 preservando o histórico invalidado, o estoque e o orçamento.
 
+Identidades ambíguas podem ser vinculadas a ingredientes existentes após
+confirmação. Conversões com evidência ficam em overlays por ingrediente e
+contexto, separados da fotografia original. Esclarecer a embalagem histórica
+recalcula disponibilidade e custo; uma medida da receita não altera essa
+compra. Mudanças materiais invalidam decisões dependentes e preservam o histórico.
+
 <a id="preparacao"></a>
 ## 🧰 Prepare seu ambiente
 

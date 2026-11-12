@@ -57,6 +57,10 @@ pedem pergunta e pausa; nunca transforme uma tentativa recusada em sucesso.
 Após aceite vigente, siga [CMV e escolha de preço](references/precificacao.md).
 Explique somente números do MCP e aguarde a escolha humana antes de gravar.
 
+Quando houver identidade ou unidade pendente, siga
+[esclarecimento de ingredientes](references/ingredientes.md). A medida da receita
+e o conteúdo da embalagem histórica têm escopos distintos; nunca invente fator.
+
 Siga a orientação curta do projeto. Não carregue documentos de engenharia,
 skills de desenvolvimento ou páginas completas no atendimento habitual.
 Fatos pessoais e decisões não pertencem a esta skill.

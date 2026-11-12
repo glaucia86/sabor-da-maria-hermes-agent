@@ -212,7 +212,7 @@ async def test_replay_does_not_duplicate_and_recipe_revision_requires_current_ve
 
 
 @pytest.mark.anyio
-async def test_candidate_identity_and_unit_are_validated_against_its_workspace(
+async def test_candidate_identity_is_validated_against_its_workspace(
     tmp_path, inventory_file, recipe_candidate
 ):
     created = bootstrap_workspace(
@@ -228,17 +228,8 @@ async def test_candidate_identity_and_unit_are_validated_against_its_workspace(
         async with stdio_client(server) as (read, write):
             async with ClientSession(read, write) as session:
                 await session.initialize()
-                inventory = (
-                    await session.call_tool(
-                        "get_inventory_snapshot",
-                        {
-                            "workspace_id": created["workspace_id"],
-                        },
-                    )
-                ).structured_content["data"]
                 for ingredient_id, unit, code in [
                     (str(uuid4()), "g", "NOT_FOUND"),
-                    (inventory["items"][0]["id"], "L", "UNIT_CONVERSION_REQUIRED"),
                 ]:
                     candidate = deepcopy(recipe_candidate)
                     candidate["ingredients"][0].update(

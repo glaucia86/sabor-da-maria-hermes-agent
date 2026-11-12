@@ -22,6 +22,7 @@ from dona_maria.business_state import (
     ReadErrorEnvelope,
 )
 from dona_maria.candidates import RegisterCandidateRequest
+from dona_maria.ingredients import ConversionRequest, ResolveIngredientRequest
 from dona_maria.persistence import SQLiteWorkspaceRepository
 from dona_maria.pricing import CalculatePricingRequest, SaveMenuDecisionRequest
 from dona_maria.production import (
@@ -33,6 +34,18 @@ from dona_maria.production import (
 )
 
 PRODUCTION_TOOLS = [
+    (
+        "resolve_recipe_ingredient",
+        ResolveIngredientRequest,
+        False,
+        "Resolve uma linha para identidade existente com evidência humana; preserva a origem.",
+    ),
+    (
+        "record_ingredient_conversion",
+        ConversionRequest,
+        False,
+        "Registra conversão por ingrediente/contexto/escopo; compra histórica exige fala humana.",
+    ),
     (
         "record_recipe_feedback",
         FeedbackRequest,
