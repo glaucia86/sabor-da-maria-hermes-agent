@@ -2,7 +2,8 @@
 
 Execute os comandos na raiz do checkout. Use Python 3.13 para reproduzir o
 ambiente da aplicação e mantenha o runtime gerenciado do Hermes separado.
-Este guia usa o contrato de leitura existente, sem criar estado de negócio.
+O smoke de leitura usa um banco vazio; o bootstrap opcional importa a despensa
+e cria estado de negócio em outro banco.
 
 ## 1. Instale a aplicação
 
@@ -30,6 +31,8 @@ uv run --locked --no-sync python -c "from pathlib import Path; import sqlite3; p
 Guarde o caminho absoluto impresso. A preparação cria somente um arquivo
 SQLite vazio, sem tabelas, migrações, despensa ou confirmação humana.
 As consultas abrem esse banco em modo somente leitura e não o criam por conta própria.
+
+### Bootstrap opcional para usar a despensa
 
 Para usar a despensa, coloque o anexo recebido em
 `artifacts/private/input/despensa_dona_maria.xlsx` e execute a importação local:
@@ -170,7 +173,7 @@ viabilidade, aceite, compras ou preço.
 | Banco indisponível | Confira caminho, permissões e versão do schema; banco corrompido ou mais novo é recusado e preservado. Registros precisam de permissão de escrita e do diretório do SQLite. |
 | Skill ausente | Confira `skills.external_dirs`, o caminho de `skills/` e a listagem no perfil correto. |
 | Sessão sem resposta | Confira modelo, provedor e conectividade no Hermes; não substitua uma chamada pendente por um resultado simulado. |
-| Ferramentas inesperadas | Revise catálogo e filtros: o servidor expõe 13 ferramentas de consulta, candidata, esclarecimento, produção, aceite e precificação; web pertence ao host. |
+| Ferramentas inesperadas | Compare o catálogo efetivo com a lista do passo 4 e revise os filtros do perfil; web pertence ao host. |
 | Catálogo antigo após atualizar o servidor | No gateway, `/reload-mcp` pode preservar conexões já registradas. No perfil dedicado, desabilite somente `mcp_servers.dona_maria.enabled`, recarregue, reabilite e recarregue novamente. Confira nomes e workspace antes de pesquisar. |
 
 A ausência de ferramentas perigosas deve ser conferida no catálogo efetivo.

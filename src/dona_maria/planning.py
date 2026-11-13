@@ -581,12 +581,14 @@ def evaluate_plan(
     feasibility = []
     gaps = [] if plan and plan.items else ["Confirme o plano de produção."]
     demand = {}
+    consumption = []
     with localcontext(FINANCIAL_CONTEXT):
         for item in plan.items if plan else []:
             recipe = next(recipe for recipe in candidates if recipe.id == item.recipe_id)
             feasibility.append(
                 evaluate_feasibility(recipe, item, facts, plan=plan, candidates=candidates)
             )
+            item_demand = {}
             for ingredient in recipe.ingredients:
                 if not ingredient.quantity or not ingredient.ingredient_id:
                     gaps.append(f"MISSING_INFORMATION: {ingredient.line_id}")
@@ -607,6 +609,22 @@ def evaluate_plan(
                     amount *= 1000
                 key = str(ingredient.ingredient_id)
                 demand[key] = demand.get(key, Decimal("0")) + amount
+                item_demand[key] = item_demand.get(key, Decimal("0")) + amount
+            consumption.append(
+                dict(
+                    recipe_id=str(recipe.id),
+                    plan_item_id=str(item.plan_item_id),
+                    position=item.position,
+                    ingredients=[
+                        dict(
+                            ingredient_id=key,
+                            unit=next(s.dimension for s in snapshot.items if str(s.id) == key),
+                            required=format(amount, "f"),
+                        )
+                        for key, amount in sorted(item_demand.items())
+                    ],
+                )
+            )
         lines = []
         for ingredient_id, amount in sorted(demand.items()):
             stock = next(stock for stock in snapshot.items if str(stock.id) == ingredient_id)
@@ -648,6 +666,7 @@ def evaluate_plan(
         fingerprint=digest,
         workspace_revision=revision,
         feasibility_by_recipe=feasibility,
+        consumption_by_recipe=consumption,
         demand=lines,
         gaps=gaps,
         purchase_status="OVER_BUDGET"

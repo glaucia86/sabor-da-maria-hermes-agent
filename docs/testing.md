@@ -1,9 +1,11 @@
 # Testes e verificação
 
 Consulte ao implementar comportamento, escolher o nível de teste ou verificar
-uma alteração. Fontes canônicas: seção **Testes / Verification** da fatia no
-[plano](../doc-specs/implementation-slices.md) e seções pertinentes de
-**6. Estratégia de automação de testes** na [SPEC](../doc-specs/spec.md).
+uma alteração. Os comandos públicos estão no [README](../README.md#validar)
+e no [workflow de CI](../.github/workflows/ci.yml). Quando disponíveis, o plano
+em `doc-specs/implementation-slices.md` e a SPEC em `doc-specs/spec.md`
+fornecem contexto local de desenvolvimento; não são necessários para executar
+a suíte pública.
 
 ## TDD e pontos de teste
 
@@ -34,29 +36,43 @@ decisão indevida persistida. Leia apenas os casos pertinentes à mudança.
 
 ## Comandos e resultados
 
-O recorte S00 possui manifesto, lock e testes locais comprovados em Windows
-com Python 3.13.15. Instale pelo lock com
-`uv sync --locked --cache-dir .venv/uv-cache` e execute a partir da raiz:
+Instale pelo lock e execute a partir da raiz, com Python 3.13 como ambiente
+de referência:
 
 ```text
-uv run --locked --cache-dir .venv/uv-cache python -X utf8 -m pytest tests/unit tests/integration -q -s
-.venv/Scripts/python.exe -m ruff check src tests/unit tests/integration
-.venv/Scripts/python.exe -m ruff format --check src tests/unit tests/integration
+uv sync --locked --python 3.13
+uv run --locked --no-sync python -X utf8 -B -m pytest tests/unit tests/integration -q
+uv run --locked --no-sync ruff check src tests/unit tests/integration
+uv run --locked --no-sync ruff format --check src tests/unit tests/integration
 ```
 
-São 20 casos de leitura segura/MCP stdio, sem provas de Hermes, web ou regras
-dos próximos slices; detalhes em [s00-smoke.md](s00-smoke.md). Hypothesis e
-Agent Evals permanecem pendentes dos comportamentos correspondentes.
+A suíte cobre importação e diagnósticos, leitura sem mutação, candidatas,
+viabilidade, aceite, cotações e confirmação, orçamento agregado, custos por
+origem, precificação, invalidação e retomada. Hypothesis exercita invariantes
+de alocação, pacotes, permutação e confirmação. Integrações usam SQLite
+temporário e MCP stdio real, incluindo replay, rollback e reinício.
+
+Para listar os casos atuais sem executá-los:
+
+```text
+uv run --locked --no-sync python -X utf8 -B -m pytest tests/unit tests/integration --collect-only -q
+```
+
+Coleta não comprova execução. Pytest não executa Agent Evals nem comprova
+pesquisa web real ou qualidade do diálogo no Hermes. A planilha original não
+é distribuída; a suíte usa fixtures sintéticas e indica como ignorada a
+conferência adicional do anexo quando ele não está disponível.
 
 Execute as verificações pertinentes à alteração e registre comando,
 versões, resultados reais e limitações no handoff. Para evals, use `PASS`,
 `FAIL`, `NOT_RUN` ou `ERROR`, incluindo número de execuções e fontes.
 Falha de instalação ou teste não executado nunca equivale a aprovação.
 
-## Harness operacional
+## Harness operacional e Agent Evals locais (opcionais)
 
-O verificador local usa somente biblioteca padrão e tem testes separados da
-aplicação. Execute a partir da raiz:
+O Harness e seus registros não integram o checkout público. Se o bundle local
+estiver disponível, seu verificador usa somente biblioteca padrão e tem
+testes separados da aplicação. Execute a partir da raiz somente nesse caso:
 
 ```text
 python -X utf8 -B -m unittest discover -s tests/harness -v
@@ -64,11 +80,13 @@ python -X utf8 -B tools/harness_check.py
 ```
 
 Esses comandos verificam integridade dos registros, índice, Source IDs e
-dependências; não provam domínio, Hermes/MCP ou Agent Evals. Consulte
-[.harness/verification.md](../.harness/verification.md) para resultados reais e
-[.harness/tools.md](../.harness/tools.md) para limites e regeneração do índice.
+dependências; não provam domínio, Hermes/MCP ou Agent Evals. Os registros
+locais `.harness/verification.md` e `.harness/tools.md`, quando disponíveis,
+descrevem resultados, limites e regeneração do índice.
 
-A [CI](ci.md) usa somente a suíte pública com fixtures sintéticas em
-temporários, sem depender dos documentos ignorados. A verificação do bundle
-real continua local. Os comandos anteriores em .harness/ permanecem como
-entradas de compatibilidade para a implementação e suíte públicas.
+A CI usa somente a suíte pública com fixtures sintéticas em temporários,
+sem depender dos documentos ignorados. Agent Evals exigem host/modelo real,
+cenário e evidências de chamadas e estado; seus roteiros e registros locais
+não são uma reprodução pública. Registre resultados sanitizados e mantenha
+traces privados fora da entrega. Um eval anterior aprovado não valida uma
+alteração nova de orientação.

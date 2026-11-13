@@ -2,6 +2,7 @@
 
 import json
 import sqlite3
+from copy import deepcopy
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal, Inexact, localcontext
 from uuid import uuid4
@@ -179,6 +180,117 @@ def revise_and_select(p, **changes):
     )
     assert result["ok"], result
     p["plan"] = result["data"]["plan"]
+
+
+@pytest.mark.parametrize(
+    "extra,conditions,status,spend,balance",
+    [
+        (
+            "7.50",
+            "Frete único de R$ 15,00: parcela de R$ 7,50 para mel e R$ 7,50 para sal",
+            "CONFIRMED",
+            "75.00",
+            "5.00",
+        ),
+        (
+            "15.00",
+            "Frete independente de R$ 15,00 por ingrediente",
+            "OVER_BUDGET",
+            "90.00",
+            "-10.00",
+        ),
+        (None, "Frete único de R$ 15,00; atribuição ainda desconhecida", "PENDING", None, None),
+    ],
+)
+def test_acquisition_charges_follow_explicit_assignment_without_automatic_deduplication(
+    purchase, extra, conditions, status, spend, balance
+):
+    p = purchase
+    candidate = deepcopy(p["candidate_payload"])
+    candidate["ingredients"][0].update(description="Sal", ingredient_id=None)
+    recipe = p["command"]("register_recipe_candidate", candidate=candidate)["data"]["candidate"]
+    resolved = p["command"](
+        "resolve_recipe_ingredient",
+        recipe_id=recipe["id"],
+        recipe_version=recipe["version"],
+        line_id=recipe["ingredients"][0]["line_id"],
+        new_ingredient=dict(name="Sal", dimension="g"),
+        evidence=evidence("O ingrediente é sal."),
+    )
+    assert resolved["ok"], resolved
+    recipe = resolved["data"]["candidate"]
+    assert p["command"](
+        "record_recipe_feedback",
+        recipe_id=recipe["id"],
+        feedback="INTERESTED",
+        evidence=evidence("Tenho interesse neste prato."),
+    )["ok"]
+    selections = []
+    for ingredient in (p["quote"]["ingredient_id"], resolved["data"]["ingredient_id"]):
+        payload = p["quote_payload"] | dict(
+            ingredient_id=ingredient,
+            package_price="30.00",
+            purchase_extra_total=extra,
+            extra_conditions=conditions,
+        )
+        if extra is None:
+            payload["purchase_extra_total_gap"] = "Falta atribuição humana das parcelas do frete"
+        result = p["command"]("register_complement_quote", quote=payload)
+        assert result["ok"], result
+        quote = result["data"]["quote"]
+        selections.append(
+            dict(ingredient_id=ingredient, quote_id=quote["id"], quote_version=quote["version"])
+        )
+        before = p["service"].get_business_state({"workspace_id": p["workspace"]})
+        result = p["command"](
+            "confirm_complement_quote",
+            quote_id=quote["id"],
+            quote_version=quote["version"],
+            scope=p["scope"]
+            | dict(
+                package_price="30.00",
+                purchase_extra_total=extra or "15.00",
+                extra_conditions=conditions,
+            ),
+            evidence=evidence(
+                f"Confirmo 1 pacote de 1000 g a R$ 30,00 por pacote, "
+                f"encargos R$ {(extra or '15.00').replace('.', ',')}, {conditions}, "
+                "disponível em Fornecedor sintético: Retirada hoje."
+            ),
+        )
+        if extra is None:
+            assert result["ok"] is False
+            assert result["error"]["code"] == "MISSING_INFORMATION"
+            assert p["service"].get_business_state({"workspace_id": p["workspace"]}) == before
+        else:
+            assert result["ok"], result
+    result = p["command"](
+        "set_production_plan",
+        items=[
+            dict(recipe_id=r["id"], recipe_version=r["version"], position=i, batches=1)
+            for i, r in enumerate((p["recipe"], recipe))
+        ],
+        quote_selections=selections,
+        evidence=evidence("Confirmo esta produção."),
+    )
+    assert result["ok"], result
+    evaluation = evaluate(p)
+    assert evaluation["purchase_status"] == status
+    assert evaluation["disbursement"] == spend
+    assert evaluation["remaining_budget"] == balance
+    assert [line["purchase"]["packages"] for line in evaluation["demand"]] == [1, 1]
+    assert [line["purchase"]["purchase_extra_total"] for line in evaluation["demand"]] == [
+        extra,
+        extra,
+    ]
+    assert all(
+        Decimal(line["purchase"]["consumed_ingredient_cost"]) == Decimal("6.00")
+        for line in evaluation["demand"]
+    )
+    assert (
+        p["service"].get_inventory_snapshot({"workspace_id": p["workspace"]})["data"]
+        == p["original"]
+    )
 
 
 @pytest.mark.parametrize(
