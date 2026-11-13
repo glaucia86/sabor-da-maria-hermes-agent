@@ -21,7 +21,7 @@ from dona_maria.production import (
     KitchenFactsRequest,
     PlanRequest,
 )
-from dona_maria.quotes import RegisterQuoteRequest
+from dona_maria.quotes import ConfirmQuoteRequest, RegisterQuoteRequest, current_confirmation
 
 
 class GetBusinessStateRequest(BaseModel):
@@ -95,6 +95,9 @@ class BusinessStateReader:
             "register_complement_quote", RegisterQuoteRequest, arguments
         )
 
+    def confirm_complement_quote(self, arguments: dict[str, object]) -> dict[str, object]:
+        return self._production_command("confirm_complement_quote", ConfirmQuoteRequest, arguments)
+
     def record_kitchen_facts(self, arguments: dict[str, object]) -> dict[str, object]:
         return self._production_command("record_kitchen_facts", KitchenFactsRequest, arguments)
 
@@ -115,7 +118,9 @@ class BusinessStateReader:
     def evaluate_purchase_plan(self, arguments: dict[str, object]) -> dict[str, object]:
         return self._production_query(
             GetBusinessStateRequest,
-            lambda request: self.repository.purchase_evaluation(str(request.workspace_id)),
+            lambda request: self.repository.purchase_evaluation(
+                str(request.workspace_id), self.clock()
+            ),
             arguments,
         )
 
@@ -299,6 +304,7 @@ class BusinessStateReader:
             return _storage_unavailable(workspace_id)
         if loaded is not None:
             revision, state, snapshot = loaded
+            now = self.clock()
             evaluation = evaluate_plan(
                 state.candidates,
                 state.plan,
@@ -310,6 +316,8 @@ class BusinessStateReader:
                 conversions=state.ingredient_conversions,
                 complement_ingredients=state.complement_ingredients,
                 quotes=state.complement_quotes,
+                confirmations=state.quote_confirmations,
+                now=now,
             )
             acceptances = [
                 acceptance.model_dump(mode="json")
@@ -317,6 +325,7 @@ class BusinessStateReader:
                     "validity": "VALID"
                     if acceptance.id not in state.invalidated_acceptance_ids
                     and acceptance.fingerprint == evaluation["fingerprint"]
+                    and evaluation["purchase_status"] == "CONFIRMED"
                     else "INVALIDATED",
                 }
                 for acceptance in state.acceptances
@@ -387,7 +396,10 @@ class BusinessStateReader:
                     "complement_ingredients": [
                         i.model_dump(mode="json") for i in state.complement_ingredients
                     ],
-                    "complement_quotes": [quote.public() for quote in state.complement_quotes],
+                    "complement_quotes": [
+                        quote.public(current_confirmation(quote, state.quote_confirmations), now)
+                        for quote in state.complement_quotes
+                    ],
                     "ingredient_conversions": [
                         c.model_dump(mode="json") for c in state.ingredient_conversions
                     ],

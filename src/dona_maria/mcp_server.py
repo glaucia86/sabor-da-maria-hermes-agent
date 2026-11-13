@@ -32,7 +32,7 @@ from dona_maria.production import (
     KitchenFactsRequest,
     PlanRequest,
 )
-from dona_maria.quotes import RegisterQuoteRequest
+from dona_maria.quotes import ConfirmQuoteRequest, RegisterQuoteRequest
 
 PRODUCTION_TOOLS = [
     (
@@ -40,6 +40,13 @@ PRODUCTION_TOOLS = [
         RegisterQuoteRequest,
         False,
         "Registra oferta pesquisada e lacunas como estimativa; não confirma preço nem compra.",
+    ),
+    (
+        "confirm_complement_quote",
+        ConfirmQuoteRequest,
+        False,
+        "Confirma versão, quantidade, embalagem, preço, encargos e disponibilidade "
+        "com fala humana específica; não compra.",
     ),
     (
         "resolve_recipe_ingredient",

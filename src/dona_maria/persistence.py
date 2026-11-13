@@ -15,6 +15,7 @@ from dona_maria.ingredients import (
     ResolveIngredientRequest,
     apply_overlays,
     validate_overlay_references,
+    with_complements,
 )
 from dona_maria.inventory import InventorySnapshot
 from dona_maria.planning import (
@@ -27,9 +28,11 @@ from dona_maria.planning import (
     _save_menu_decision,
     _validate_ingredient_references,
     canonical_json,
+    confirm_quote,
     evaluate_feasibility,
     evaluate_plan,
     fingerprint,
+    invalidate_expired_acceptances,
     record_conversion,
     register_quote,
     resolve_ingredient,
@@ -38,6 +41,7 @@ from dona_maria.pricing import (
     FINANCIAL_CONTEXT,
     CalculatePricingRequest,
     SaveMenuDecisionRequest,
+    allocate_plan_costs,
     calculate_pricing,
 )
 from dona_maria.production import (
@@ -47,7 +51,7 @@ from dona_maria.production import (
     KitchenFactsRequest,
     PlanRequest,
 )
-from dona_maria.quotes import RegisterQuoteRequest, validate_quote_references
+from dona_maria.quotes import ConfirmQuoteRequest, RegisterQuoteRequest, validate_quote_references
 
 
 def _decode_json(text: str) -> dict:
@@ -196,9 +200,34 @@ class SQLiteWorkspaceRepository:
             conversions=state.ingredient_conversions,
             complement_ingredients=state.complement_ingredients,
             quotes=state.complement_quotes,
+            confirmations=state.quote_confirmations,
         )["fingerprint"]
         for calculation in state.pricing_calculations:
             for allocation in calculation.allocations:
+                if allocation.origin == "QUOTE":
+                    quote = next(
+                        (
+                            q
+                            for q in state.complement_quotes
+                            if q.id == allocation.source_id
+                            and str(q.version) == allocation.source_version
+                        ),
+                        None,
+                    )
+                    if (
+                        quote is None
+                        or quote.ingredient_id != allocation.ingredient_id
+                        or quote.package_quantity is None
+                        or allocation.unit != quote.package_quantity.unit
+                        or Decimal(allocation.purchase_quantity_base)
+                        != Decimal(quote.package_quantity.value)
+                        or allocation.acquisition_total != quote.package_price
+                        or allocation.source != quote.source.model_dump(mode="json")
+                    ):
+                        raise sqlite3.DatabaseError(
+                            "Origem da alocação não corresponde à cotação histórica."
+                        )
+                    continue
                 stock = stocks.get(allocation.ingredient_id)
                 bases = [(stock.dimension, stock.purchase_quantity_base)] if stock else []
                 with localcontext(FINANCIAL_CONTEXT):
@@ -230,6 +259,18 @@ class SQLiteWorkspaceRepository:
                 effective,
                 state.pricing_policy_version,
                 calculation.calculated_at,
+                allocations=[
+                    a
+                    for a in allocate_plan_costs(
+                        effective_recipes,
+                        state.plan,
+                        with_complements(effective, state.complement_ingredients),
+                        state.complement_quotes,
+                    )
+                    if a.recipe_id == calculation.recipe_id
+                ]
+                if state.plan.quote_selections
+                else None,
             )
             if calculation.model_dump(exclude={"id", "calculated_at"}) != recomputed.model_dump(
                 exclude={"id", "calculated_at"}
@@ -394,6 +435,7 @@ class SQLiteWorkspaceRepository:
                 candidate.ingredients = previous.ingredients
                 candidate.requirements = previous.requirements
             previously_invalid = set(state.invalidated_acceptance_ids)
+            invalidate_expired_acceptances(state, snapshot, revision, now)
             if (
                 previous
                 and material_change
@@ -474,7 +516,8 @@ class SQLiteWorkspaceRepository:
         | SaveMenuDecisionRequest
         | ConversionRequest
         | ResolveIngredientRequest
-        | RegisterQuoteRequest,
+        | RegisterQuoteRequest
+        | ConfirmQuoteRequest,
         now: datetime,
     ) -> dict:
         workspace_id, operation_id = str(request.workspace_id), str(request.operation_id)
@@ -496,7 +539,10 @@ class SQLiteWorkspaceRepository:
             if revision != request.expected_revision:
                 raise BusinessRuleError("STALE_REVISION", "Recarregue o workspace.")
             previously_invalid = set(state.invalidated_acceptance_ids)
-            if isinstance(request, RegisterQuoteRequest):
+            invalidate_expired_acceptances(state, snapshot, revision, now)
+            if isinstance(request, ConfirmQuoteRequest):
+                data = confirm_quote(state, request, now)
+            elif isinstance(request, RegisterQuoteRequest):
                 data = register_quote(state, request, snapshot, now)
             elif isinstance(request, ResolveIngredientRequest):
                 data = resolve_ingredient(state, request, snapshot, now)
@@ -518,6 +564,8 @@ class SQLiteWorkspaceRepository:
                     conversions=state.ingredient_conversions,
                     complement_ingredients=state.complement_ingredients,
                     quotes=state.complement_quotes,
+                    confirmations=state.quote_confirmations,
+                    now=now,
                 )
                 data = _accept_recipe(state, request, evaluation, now)
             else:
@@ -601,7 +649,7 @@ class SQLiteWorkspaceRepository:
                 ),
             )
 
-    def purchase_evaluation(self, workspace_id: str) -> dict:
+    def purchase_evaluation(self, workspace_id: str, now: datetime | None = None) -> dict:
         with closing(self._connect("ro")) as db:
             db.execute("BEGIN")
             self.check_schema(db)
@@ -620,6 +668,8 @@ class SQLiteWorkspaceRepository:
                 conversions=state.ingredient_conversions,
                 complement_ingredients=state.complement_ingredients,
                 quotes=state.complement_quotes,
+                confirmations=state.quote_confirmations,
+                now=now,
             )
             return dict(
                 schema_version="1.0",

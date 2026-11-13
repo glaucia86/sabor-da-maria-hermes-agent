@@ -188,8 +188,15 @@ O servidor também registra interesse, fatos da cozinha, produção em lotes int
 e aceite explícito vinculado à avaliação atual. Os testes cobrem categorias
 omitidas, condições desconhecidas ou bloqueadas, insuficiência agregada de
 ingredientes, invalidação, retomada e sequências geradas com Hypothesis.
-Aceitar um prato preserva estoque físico e orçamento inicial. Cotação de
-complementos, cálculo de preços e escolha do cardápio ainda não estão expostos.
+Aceitar um prato preserva estoque físico e orçamento inicial. Ofertas de
+complementos podem ser pesquisadas, selecionadas e confirmadas com evidência
+humana específica de embalagem, quantidade, preço, encargos e disponibilidade.
+O limite inclusivo de R$ 80,00 considera o desembolso integral; o CMV usa somente
+os ingredientes consumidos, com custo separado por origem. A confirmação vale
+até o menor prazo entre 24 horas da manifestação e o vencimento da oferta.
+Mudanças ou expiração retiram a vigência das decisões dependentes, inclusive
+após retomada. Com aceite vigente, o MCP calcula os cenários e registra a
+escolha explícita de preço; nenhuma dessas etapas executa uma compra.
 
 O [workflow de CI](.github/workflows/ci.yml) executa esses checks em Windows, Ubuntu e macOS. A execução local em um sistema não comprova sucesso nos demais; consulte os resultados no GitHub Actions.
 

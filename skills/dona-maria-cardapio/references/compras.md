@@ -1,4 +1,4 @@
-# Complementos: pesquisa e simulação
+# Complementos: pesquisa, confirmação e orçamento
 
 Leia `get_business_state`, a candidata interessada e o plano completo. Se houver
 identidade pendente, siga [ingredientes](ingredientes.md) e use o ID devolvido
@@ -43,6 +43,34 @@ O limite agregado é R$ 80,00, incluindo os encargos informados.
 Quando `is_simulation=true` ou `purchase_status=PENDING`, apresente tudo como
 estimativa e exponha as lacunas. Pergunte pela confirmação específica de
 embalagem, preço, encargos e disponibilidade; encerre o turno aguardando.
-Se `confirm_complement_quote` não estiver disponível, explique que a confirmação
-ainda não pode ser registrada. Não use `accept_recipe` para contornar a pendência,
-não aprove orçamento e não efetue compra. Uma cotação pesquisada não é consentimento.
+Uma cotação pesquisada não é consentimento. Não use `accept_recipe` para
+contornar pendências e não efetue compras.
+
+Com a oferta completa, receba uma fala humana específica antes de chamar
+`confirm_complement_quote`. Envie `quote_id`, `quote_version`, `evidence`
+(`turn_ref`, fala literal e `captured_at` real do turno) e `scope` contendo:
+`package_quantity`, `package_price`, `purchase_extra_total`, `extra_conditions`,
+`supplier`, `availability_context` e `packages` (limite de pacotes confirmados).
+Os dados devem corresponder à versão atual registrada. Dados novos exigem
+revisar a oferta e selecionar sua nova versão antes da confirmação.
+
+O guard aceita uma manifestação explícita completa, por exemplo:
+“Confirmo 1 pacote de 1000 g a R$ 20,00 por pacote, encargos R$ 0,00,
+Retirada gratuita, disponível em Fornecedor: Retirada hoje.”
+Use os valores e condições reais da oferta; peça esclarecimento se a fala não
+cobrir esse escopo. Nunca reescreva uma fala parcial como confirmação completa.
+
+Reavalie após confirmar: R$ 80,00 é permitido; R$ 80,01 ou mais retorna
+`OVER_BUDGET`. Explique desembolso, saldo/diferença e aguarde a pessoa decidir
+sobre redução ou outra oferta. Não escolha a solução por ela.
+Somente avaliação confirmada e viabilidade elegível permitem pedir o aceite
+do prato; depois siga [precificação](precificacao.md) e aguarde escolha de preço.
+
+A confirmação vale por no máximo 24 horas, ou até o vencimento comercial
+anterior. Esse prazo operacional não é garantia do fornecedor. Expiração,
+mudança da oferta ou mais pacotes que os confirmados exigem nova confirmação.
+Na retomada, aceite/cálculo/preço antigos podem estar invalidados; não os
+apresente como vigentes nem repita decisões humanas automaticamente.
+Estoque histórico é alocado primeiro, com seu custo; o complemento usa seu
+próprio preço. Encargos aparecem no desembolso e ficam separados do CMV de
+ingredientes. Confirmar não compra, congela preço nem baixa estoque físico.

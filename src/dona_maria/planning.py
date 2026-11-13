@@ -28,6 +28,7 @@ from dona_maria.pricing import (
     MenuDecision,
     PricingCalculation,
     SaveMenuDecisionRequest,
+    allocate_plan_costs,
     calculate_pricing,
     explicit_price_choice,
     price_option,
@@ -44,7 +45,14 @@ from dona_maria.production import (
     RecipeFeedback,
     explicit_acceptance,
 )
-from dona_maria.quotes import ComplementQuote, simulate_purchases
+from dona_maria.quotes import (
+    ComplementQuote,
+    QuoteConfirmation,
+    create_confirmation,
+    explicit_quote_confirmation,
+    scope_matches_quote,
+    simulate_purchases,
+)
 
 
 class WorkspaceState(BaseModel):
@@ -69,6 +77,7 @@ class WorkspaceState(BaseModel):
     ingredient_resolutions: list[IngredientResolution] = []
     complement_ingredients: list[ComplementIngredient] = []
     complement_quotes: list[ComplementQuote] = []
+    quote_confirmations: list[QuoteConfirmation] = []
 
     @model_validator(mode="after")
     def valid_references(self):
@@ -196,6 +205,8 @@ def _calculate_pricing(state, request: CalculatePricingRequest, snapshot, revisi
         conversions=state.ingredient_conversions,
         complement_ingredients=state.complement_ingredients,
         quotes=state.complement_quotes,
+        confirmations=state.quote_confirmations,
+        now=now,
     )
     acceptance = next(
         (
@@ -212,6 +223,7 @@ def _calculate_pricing(state, request: CalculatePricingRequest, snapshot, revisi
     if (
         acceptance.id in state.invalidated_acceptance_ids
         or acceptance.fingerprint != evaluation["fingerprint"]
+        or evaluation["purchase_status"] != "CONFIRMED"
     ):
         raise BusinessRuleError("STALE_EVALUATION", "Reconfirme o resumo atual antes de calcular.")
     recipe = next(r for r in state.candidates if r.id == request.recipe_id)
@@ -232,7 +244,24 @@ def _calculate_pricing(state, request: CalculatePricingRequest, snapshot, revisi
         )
         recipe = next(r for r in recipes if r.id == request.recipe_id)
         calculation = calculate_pricing(
-            recipe, item, acceptance, effective, state.pricing_policy_version, now
+            recipe,
+            item,
+            acceptance,
+            effective,
+            state.pricing_policy_version,
+            now,
+            allocations=[
+                a
+                for a in allocate_plan_costs(
+                    recipes,
+                    state.plan,
+                    with_complements(effective, state.complement_ingredients),
+                    state.complement_quotes,
+                )
+                if a.recipe_id == recipe.id
+            ]
+            if state.plan.quote_selections
+            else None,
         )
         state.pricing_calculations.append(calculation)
     return {"calculation": calculation.model_dump(mode="json") | {"validity": "VALID"}}
@@ -250,6 +279,8 @@ def _save_menu_decision(state, request: SaveMenuDecisionRequest, snapshot, revis
         conversions=state.ingredient_conversions,
         complement_ingredients=state.complement_ingredients,
         quotes=state.complement_quotes,
+        confirmations=state.quote_confirmations,
+        now=now,
     )
     acceptance = next(
         (
@@ -278,6 +309,7 @@ def _save_menu_decision(state, request: SaveMenuDecisionRequest, snapshot, revis
         or acceptance.id in state.invalidated_acceptance_ids
         or acceptance.fingerprint != evaluation["fingerprint"]
         or calculation.fingerprint != evaluation["fingerprint"]
+        or evaluation["purchase_status"] != "CONFIRMED"
     ):
         raise BusinessRuleError("STALE_EVALUATION", "Apresente cálculo vigente antes da escolha.")
     with localcontext(FINANCIAL_CONTEXT):
@@ -326,6 +358,7 @@ def pricing_view(state: WorkspaceState, evaluation: dict) -> dict:
         for a in state.acceptances
         if a.id not in state.invalidated_acceptance_ids
         and a.fingerprint == evaluation["fingerprint"]
+        and evaluation["purchase_status"] == "CONFIRMED"
     }
     calculations = [
         c.model_dump(mode="json")
@@ -474,6 +507,8 @@ def evaluate_plan(
     conversions=(),
     complement_ingredients=(),
     quotes=(),
+    confirmations=(),
+    now=None,
 ) -> dict:
     original_snapshot = snapshot
     candidates, snapshot = apply_overlays(candidates, snapshot, conversions)
@@ -526,6 +561,11 @@ def evaluate_plan(
     if plan and plan.quote_selections:
         selected_ids = {s.quote_id for s in plan.quote_selections}
         inputs["quotes"] = [q.model_dump(mode="json") for q in quotes if q.id in selected_ids]
+        relevant_confirmations = [
+            c.model_dump(mode="json") for c in confirmations if c.quote_id in selected_ids
+        ]
+        if relevant_confirmations:
+            inputs["quote_confirmations"] = relevant_confirmations
     if relevant_conversions:
         inputs["conversions"] = [c.model_dump(mode="json") for c in relevant_conversions]
         inputs["effective_inventory"] = [
@@ -590,10 +630,10 @@ def evaluate_plan(
             if identity:
                 lines[-1]["availability_basis"] = identity.availability_basis
                 lines[-1]["availability_note"] = identity.availability_note
-    disbursement = simulate_purchases(lines, plan.quote_selections if plan else [], quotes, gaps)
-    sufficient = not gaps and all(
-        line["shortage"] is not None and Decimal(line["shortage"]) == 0 for line in lines
+    disbursement = simulate_purchases(
+        lines, plan.quote_selections if plan else [], quotes, gaps, confirmations, now
     )
+    sufficient = not gaps
     with localcontext(FINANCIAL_CONTEXT):
         remaining = (
             format(Decimal("80.00") - Decimal(disbursement), ".2f")
@@ -610,7 +650,11 @@ def evaluate_plan(
         feasibility_by_recipe=feasibility,
         demand=lines,
         gaps=gaps,
-        purchase_status="CONFIRMED" if sufficient else "PENDING",
+        purchase_status="OVER_BUDGET"
+        if sufficient and remaining is not None and Decimal(remaining) < 0
+        else "CONFIRMED"
+        if sufficient
+        else "PENDING",
         is_simulation=not sufficient,
         disbursement=disbursement,
         remaining_budget=remaining,
@@ -648,6 +692,20 @@ def _accept_recipe(
     if "PENDING" in statuses:
         raise BusinessRuleError("MISSING_INFORMATION", "Esclareça as condições do plano ativo.")
     if evaluation["purchase_status"] != "CONFIRMED":
+        if evaluation["purchase_status"] == "OVER_BUDGET":
+            raise BusinessRuleError(
+                "BUDGET_EXCEEDED",
+                "Desembolso ultrapassa o limite inclusivo de R$ 80,00.",
+                details={key: evaluation[key] for key in ("disbursement", "remaining_budget")},
+            )
+        if any("QUOTE_EXPIRED:" in gap for gap in evaluation["gaps"]):
+            raise BusinessRuleError(
+                "QUOTE_EXPIRED", "Confirme novamente as condições da cotação expirada."
+            )
+        if any("PRICE_UNCONFIRMED:" in gap for gap in evaluation["gaps"]):
+            raise BusinessRuleError(
+                "PRICE_UNCONFIRMED", "Confirme embalagem, preço, encargos e disponibilidade."
+            )
         raise BusinessRuleError(
             "MISSING_INFORMATION", "Ingredientes insuficientes ou sem medida sustentada."
         )
@@ -818,6 +876,27 @@ def _invalidate_acceptances(state: WorkspaceState) -> None:
             state.invalidated_acceptance_ids.append(acceptance.id)
 
 
+def invalidate_expired_acceptances(state, snapshot, revision, now):
+    if not state.acceptances or not state.quote_confirmations:
+        return
+    evaluation = evaluate_plan(
+        state.candidates,
+        state.plan,
+        state.kitchen_facts,
+        state.feedback,
+        snapshot,
+        state.pricing_policy_version,
+        revision,
+        conversions=state.ingredient_conversions,
+        complement_ingredients=state.complement_ingredients,
+        quotes=state.complement_quotes,
+        confirmations=state.quote_confirmations,
+        now=now,
+    )
+    if any("QUOTE_EXPIRED:" in gap for gap in evaluation["gaps"]):
+        _invalidate_acceptances(state)
+
+
 def record_conversion(state, request, snapshot, now):
     def current_evaluation():
         return evaluate_plan(
@@ -831,6 +910,8 @@ def record_conversion(state, request, snapshot, now):
             conversions=state.ingredient_conversions,
             complement_ingredients=state.complement_ingredients,
             quotes=state.complement_quotes,
+            confirmations=state.quote_confirmations,
+            now=now,
         )
 
     before = current_evaluation()["fingerprint"]
@@ -979,6 +1060,44 @@ def register_quote(state, request, snapshot, now):
     if state.plan and any(s.quote_id == quote.id for s in state.plan.quote_selections):
         _invalidate_acceptances(state)
     return {"quote": quote.public()}
+
+
+def confirm_quote(state, request, now):
+    quote = next((q for q in reversed(state.complement_quotes) if q.id == request.quote_id), None)
+    if quote is None:
+        raise BusinessRuleError("NOT_FOUND", "Cotação não pertence ao workspace.")
+    if quote.version != request.quote_version:
+        raise BusinessRuleError("STALE_REVISION", "Confirme a versão atual da cotação.")
+    if quote.valid_until and now >= quote.valid_until:
+        raise BusinessRuleError(
+            "QUOTE_EXPIRED", "Oferta vencida exige pesquisa e revisão antes de confirmar."
+        )
+    if not scope_matches_quote(request.scope, quote):
+        raise BusinessRuleError(
+            "MISSING_INFORMATION",
+            "Oferta completa e escopo compatível de embalagem, preço, encargos "
+            "e disponibilidade são necessários.",
+        )
+    if not explicit_quote_confirmation(request):
+        raise BusinessRuleError(
+            "USER_CONFIRMATION_REQUIRED",
+            "Confirme quantidade de pacotes, conteúdo, preço por pacote, encargos, "
+            "fornecedor e disponibilidade específicos.",
+        )
+    if request.evidence.captured_at > now:
+        raise BusinessRuleError(
+            "USER_CONFIRMATION_REQUIRED",
+            "Informe o horário real da manifestação humana, sem data futura.",
+        )
+    confirmation = create_confirmation(quote, request)
+    if now >= confirmation.confirmation_valid_until:
+        raise BusinessRuleError(
+            "QUOTE_EXPIRED", "Peça uma nova confirmação humana; a fala anterior venceu."
+        )
+    if state.plan and any(s.quote_id == quote.id for s in state.plan.quote_selections):
+        _invalidate_acceptances(state)
+    state.quote_confirmations.append(confirmation)
+    return {"confirmation": confirmation.model_dump(mode="json")}
 
 
 def _validate_ingredient_references(

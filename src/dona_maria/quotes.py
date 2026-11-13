@@ -1,6 +1,6 @@
 """Ofertas comerciais pesquisadas; registro não representa confirmação nem compra."""
 
-from datetime import UTC
+from datetime import UTC, datetime, timedelta
 from decimal import ROUND_CEILING, Decimal, localcontext
 from typing import Annotated, Literal
 
@@ -8,7 +8,7 @@ from pydantic import AwareDatetime, Field, StrictInt, field_validator, model_val
 
 from dona_maria.candidates import CandidateModel, Note, Quantity, ShortText, UUIDText, WebSource
 from dona_maria.pricing import FINANCIAL_CONTEXT
-from dona_maria.production import CommandMeta
+from dona_maria.production import CommandMeta, UserEvidence
 
 MoneyText = Annotated[str, Field(pattern=r"^[0-9]{1,12}(\.[0-9]{1,2})?$")]
 
@@ -100,16 +100,100 @@ class RegisterQuoteRequest(CommandMeta):
         return self
 
 
+class ConfirmationScope(CandidateModel):
+    package_quantity: PackageQuantity
+    package_price: MoneyText
+    purchase_extra_total: MoneyText
+    extra_conditions: Note
+    availability_context: Note
+    supplier: ShortText
+    packages: Annotated[StrictInt, Field(gt=0)]
+
+
+class ConfirmQuoteRequest(CommandMeta):
+    quote_id: UUIDText
+    quote_version: Annotated[StrictInt, Field(gt=0)]
+    scope: ConfirmationScope
+    evidence: UserEvidence
+
+
+class QuoteConfirmation(CandidateModel):
+    quote_id: UUIDText
+    quote_version: Annotated[StrictInt, Field(gt=0)]
+    scope: ConfirmationScope
+    evidence: UserEvidence
+    confirmed_at: AwareDatetime
+    confirmation_valid_until: AwareDatetime
+
+    def status_at(self, now: datetime) -> Literal["ESTIMATED", "EXPIRED", "CONFIRMED"]:
+        if now < self.confirmed_at:
+            return "ESTIMATED"
+        return "EXPIRED" if now >= self.confirmation_valid_until else "CONFIRMED"
+
+
+def _confirmation_deadline(confirmed_at: datetime, valid_until: datetime | None) -> datetime:
+    try:
+        operational_deadline = confirmed_at + timedelta(hours=24)
+    except OverflowError as exc:
+        raise ValueError("Data de confirmação fora do intervalo de validade suportado.") from exc
+    return min(operational_deadline, valid_until) if valid_until else operational_deadline
+
+
+def explicit_quote_confirmation(request):
+    scope = request.scope
+    price = format(Decimal(scope.package_price), ".2f").replace(".", ",")
+    extra = format(Decimal(scope.purchase_extra_total), ".2f").replace(".", ",")
+    expected = (
+        f"Confirmo {scope.packages} pacote{'s' if scope.packages != 1 else ''} de "
+        f"{scope.package_quantity.value} {scope.package_quantity.unit} a R$ {price} por pacote, "
+        f"encargos R$ {extra}, {scope.extra_conditions}, disponível em "
+        f"{scope.supplier}: {scope.availability_context}"
+    )
+
+    def normalized(text):
+        return " ".join(text.casefold().strip().rstrip(".! ").split())
+
+    return normalized(request.evidence.statement) == normalized(expected)
+
+
+def create_confirmation(quote, request):
+    confirmed_at = request.evidence.captured_at
+    return QuoteConfirmation(
+        quote_id=str(quote.id),
+        quote_version=quote.version,
+        scope=request.scope,
+        evidence=request.evidence,
+        confirmed_at=confirmed_at,
+        confirmation_valid_until=_confirmation_deadline(confirmed_at, quote.valid_until),
+    )
+
+
+def scope_matches_quote(scope, quote):
+    return (
+        not quote.public()["gaps"]
+        and quote.availability == "AVAILABLE"
+        and (quote.max_packages is None or scope.packages <= quote.max_packages)
+        and scope.package_quantity == quote.package_quantity
+        and Decimal(scope.package_price) == Decimal(quote.package_price)
+        and Decimal(scope.purchase_extra_total) == Decimal(quote.purchase_extra_total)
+        and all(
+            getattr(scope, field) == getattr(quote, field)
+            for field in ("extra_conditions", "availability_context", "supplier")
+        )
+    )
+
+
 class ComplementQuote(QuoteInput):
     source: WebSource
     id: UUIDText
     version: Annotated[StrictInt, Field(gt=0)]
     recorded_at: AwareDatetime
 
-    def public(self):
+    def public(self, confirmation=None, now=None):
+        now = now or datetime.now(UTC)
         return self.model_dump(mode="json") | {
-            "status": "ESTIMATED",
-            "confirmation": None,
+            "status": confirmation.status_at(now) if confirmation else "ESTIMATED",
+            "confirmation": confirmation.model_dump(mode="json") if confirmation else None,
             "gaps": [
                 field
                 for field in ("package_quantity", "package_price", "purchase_extra_total")
@@ -117,6 +201,17 @@ class ComplementQuote(QuoteInput):
             ]
             + (["availability"] if self.availability == "UNKNOWN" else []),
         }
+
+
+def current_confirmation(quote, confirmations):
+    return next(
+        (
+            c
+            for c in reversed(confirmations)
+            if c.quote_id == quote.id and c.quote_version == quote.version
+        ),
+        None,
+    )
 
 
 def validate_quote_references(state, snapshot):
@@ -132,6 +227,19 @@ def validate_quote_references(state, snapshot):
             raise ValueError("Histórico/referência de cotação inválido.")
         history[quote.id, quote.version] = quote
         latest[quote.id] = quote
+    for confirmation in state.quote_confirmations:
+        quote = history.get((confirmation.quote_id, confirmation.quote_version))
+        if quote is None:
+            raise ValueError("Confirmação referencia oferta inexistente.")
+        deadline = _confirmation_deadline(confirmation.confirmed_at, quote.valid_until)
+        if (
+            not scope_matches_quote(confirmation.scope, quote)
+            or not explicit_quote_confirmation(confirmation)
+            or confirmation.confirmation_valid_until != deadline
+            or confirmation.confirmed_at != confirmation.evidence.captured_at
+            or deadline <= confirmation.confirmed_at
+        ):
+            raise ValueError("Confirmação não corresponde à oferta/validade histórica.")
     selected = set()
     for selection in state.plan.quote_selections if state.plan else []:
         quote = history.get((selection.quote_id, selection.quote_version))
@@ -144,7 +252,8 @@ def validate_quote_references(state, snapshot):
         selected.add(selection.ingredient_id)
 
 
-def simulate_purchases(lines, selections, quotes, gaps):
+def simulate_purchases(lines, selections, quotes, gaps, confirmations=(), now=None):
+    now = now or datetime.now(UTC)
     total = Decimal("0")
     totals_known = not gaps
     selections_by_ingredient = {str(s.ingredient_id): s for s in selections}
@@ -175,6 +284,8 @@ def simulate_purchases(lines, selections, quotes, gaps):
                 gaps.append(f"MISSING_INFORMATION: selecione cotação para {line['ingredient_id']}")
                 totals_known = False
                 continue
+            confirmation = current_confirmation(quote, confirmations)
+            source = quote.public(confirmation, now)
             purchase = dict(
                 quote_id=str(quote.id),
                 quote_version=quote.version,
@@ -183,13 +294,16 @@ def simulate_purchases(lines, selections, quotes, gaps):
                 planned_surplus=None,
                 disbursement=None,
                 consumed_ingredient_cost=None,
-                confirmation=None,
-                source=quote.public(),
+                confirmation=source["confirmation"],
+                source=source,
             )
             line["purchase"] = purchase
             for gap in purchase["source"]["gaps"]:
                 gaps.append(f"MISSING_INFORMATION: {gap} de {quote.id}")
-            gaps.append(f"PRICE_UNCONFIRMED: {quote.id}")
+            if source["status"] == "ESTIMATED":
+                gaps.append(f"PRICE_UNCONFIRMED: {quote.id}")
+            elif source["status"] == "EXPIRED":
+                gaps.append(f"QUOTE_EXPIRED: {quote.id}")
             if quote.package_quantity is None:
                 totals_known = False
                 continue
@@ -199,6 +313,11 @@ def simulate_purchases(lines, selections, quotes, gaps):
                 continue
             content = Decimal(quote.package_quantity.value)
             packages = int((shortage / content).to_integral_value(rounding=ROUND_CEILING))
+            if confirmation and packages > confirmation.scope.packages:
+                gaps.append(
+                    f"CONFIRMATION_INSUFFICIENT: {quote.id}; necessários {packages}; "
+                    f"confirmados {confirmation.scope.packages}"
+                )
             purchased = content * packages
             purchase.update(
                 packages=packages,

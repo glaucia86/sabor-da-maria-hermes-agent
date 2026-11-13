@@ -32,7 +32,7 @@ async def test_estimated_complement_roundtrip_and_replay_over_stdio(clarificatio
                 await session.initialize()
                 tools = {t.name: t for t in (await session.list_tools()).tools}
                 assert "register_complement_quote" in tools
-                assert "confirm_complement_quote" not in tools
+                assert "confirm_complement_quote" in tools
                 tool = tools["register_complement_quote"]
                 assert tool.input_schema["additionalProperties"] is False
                 assert tool.annotations.read_only_hint is False

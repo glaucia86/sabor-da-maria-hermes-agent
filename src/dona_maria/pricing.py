@@ -91,7 +91,7 @@ class CostAllocation(CandidateModel):
     ingredient_id: UUIDText
     plan_item_id: UUIDText
     recipe_id: UUIDText
-    origin: Literal["INVENTORY"] = "INVENTORY"
+    origin: Literal["INVENTORY", "QUOTE"] = "INVENTORY"
     source_id: UUIDText
     source_version: str
     quantity: str
@@ -229,10 +229,13 @@ def calculate_pricing(
     snapshot: InventorySnapshot,
     policy: str,
     now: datetime,
+    *,
+    allocations: list[CostAllocation] | None = None,
 ) -> PricingCalculation:
     with localcontext(FINANCIAL_CONTEXT):
-        allocations = []
-        for ingredient in recipe.ingredients:
+        supplied = allocations is not None
+        allocations = list(allocations or [])
+        for ingredient in [] if supplied else recipe.ingredients:
             stock = next(stock for stock in snapshot.items if stock.id == ingredient.ingredient_id)
             if (
                 stock.acquisition_total is None
@@ -320,3 +323,61 @@ def calculate_pricing(
                 "piso e margem usam os valores técnicos."
             )
         return calculation
+
+
+def allocate_plan_costs(candidates, plan, snapshot, quotes):
+    """Aloca estoque primeiro; excedente usa a oferta selecionada, sem encargos no CMV."""
+    allocations = []
+    remaining = {stock.id: stock.stock_quantity_base for stock in snapshot.items}
+    selected = {(s.ingredient_id): (s.quote_id, s.quote_version) for s in plan.quote_selections}
+    offers = {(q.id, q.version): q for q in quotes}
+    with localcontext(FINANCIAL_CONTEXT):
+        for item in sorted(plan.items, key=lambda i: i.position):
+            recipe = next(r for r in candidates if r.id == item.recipe_id)
+            for ingredient in recipe.ingredients:
+                stock = next(s for s in snapshot.items if s.id == ingredient.ingredient_id)
+                quantity = Decimal(ingredient.quantity.value) * item.batches
+                if ingredient.quantity.unit in {"kg", "L"}:
+                    quantity *= 1000
+                used = min(quantity, remaining[stock.id])
+                remaining[stock.id] -= used
+                for origin, amount in (("INVENTORY", used), ("QUOTE", quantity - used)):
+                    if not amount:
+                        continue
+                    if origin == "INVENTORY":
+                        total, base = stock.acquisition_total, stock.purchase_quantity_base
+                        source_id, version = snapshot.id, snapshot.import_policy_version
+                        source = (
+                            stock.purchase_source.model_dump(mode="json")
+                            if stock.purchase_source
+                            else None
+                        )
+                    else:
+                        quote = offers[selected[stock.id]]
+                        total, base = (
+                            Decimal(quote.package_price),
+                            Decimal(quote.package_quantity.value),
+                        )
+                        source_id, version = quote.id, str(quote.version)
+                        source = quote.source.model_dump(mode="json")
+                    if total is None or base is None or min(total, base) <= 0 or source is None:
+                        raise InvalidOperation("Custo de aquisição da origem está incompleto.")
+                    unit_cost = total / base
+                    allocations.append(
+                        CostAllocation(
+                            ingredient_id=str(stock.id),
+                            plan_item_id=str(item.plan_item_id),
+                            recipe_id=str(recipe.id),
+                            origin=origin,
+                            source_id=str(source_id),
+                            source_version=version,
+                            quantity=format(amount, "f"),
+                            unit=stock.dimension,
+                            acquisition_total=format(total, "f"),
+                            purchase_quantity_base=format(base, "f"),
+                            unit_cost=format(unit_cost, "f"),
+                            subtotal=format(amount * unit_cost, "f"),
+                            source=source,
+                        )
+                    )
+    return allocations

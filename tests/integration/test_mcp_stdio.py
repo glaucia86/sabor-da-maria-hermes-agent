@@ -65,6 +65,7 @@ async def test_official_client_discovers_and_calls_the_real_stdio_server(tmp_pat
                     "get_inventory_snapshot",
                     "register_recipe_candidate",
                     "register_complement_quote",
+                    "confirm_complement_quote",
                     "resolve_recipe_ingredient",
                     "record_ingredient_conversion",
                     "record_recipe_feedback",
