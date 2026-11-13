@@ -40,6 +40,36 @@ consumidos e encargos separados. Sobra planejada não é estoque físico. Oferta
 insuficiente pede outra oferta ou quantidade; faltante zero não provoca compra.
 O limite agregado é R$ 80,00, incluindo os encargos informados.
 
+## Encargos entre ofertas de ingredientes diferentes
+
+Antes de confirmar várias ofertas, esclareça se os encargos são independentes
+ou compartilhados; pergunte se isso ainda não estiver explícito. Despesas
+independentes são somadas integralmente. Não
+deduza compartilhamento por fornecedor, URL, descrição ou valores iguais.
+
+Para um frete único compartilhado, peça à pessoa o total e a atribuição de
+parcelas por oferta, sem escolher o rateio por ela. Por exemplo, se a pessoa
+atribuir R$ 7,50 ao mel e R$ 7,50 ao sal para um frete único de R$ 15,00,
+registre `purchase_extra_total="7.50"` em cada oferta. Em `extra_conditions`
+de ambas, descreva o total único e a atribuição completa. Confira que as
+parcelas somam o total informado e peça confirmação humana específica de
+cada oferta com sua parcela e condições, antes de `confirm_complement_quote`.
+Dois pacotes de R$ 30,00 com essas parcelas totalizam R$ 75,00 de desembolso.
+
+Se a atribuição ainda não for conhecida, mantenha `purchase_extra_total=null`
+e `purchase_extra_total_gap` explicando a lacuna; revise a oferta se necessário.
+Não confirme a oferta até esclarecer e receber a confirmação completa.
+Nunca repita o frete total em cada oferta nem use zero para fechar o orçamento;
+ausência ou isenção de encargo também exige evidência. Dados novos exigem nova
+versão selecionada e confirmação correspondente.
+
+Essa verificação depende da conversa: o servidor soma os campos recebidos,
+sem identificar ou deduplicar um frete comum entre cotações. Duas confirmações
+de R$ 15,00 continuam somando R$ 30,00 de encargos. Encargos ficam no desembolso,
+separados do CMV dos ingredientes consumidos.
+
+## Confirmação e revalidação
+
 Quando `is_simulation=true` ou `purchase_status=PENDING`, apresente tudo como
 estimativa e exponha as lacunas. Pergunte pela confirmação específica de
 embalagem, preço, encargos e disponibilidade; encerre o turno aguardando.
@@ -74,3 +104,22 @@ apresente como vigentes nem repita decisões humanas automaticamente.
 Estoque histórico é alocado primeiro, com seu custo; o complemento usa seu
 próprio preço. Encargos aparecem no desembolso e ficam separados do CMV de
 ingredientes. Confirmar não compra, congela preço nem baixa estoque físico.
+
+## Vários pratos na mesma rodada
+
+Mostre a ordem explícita `position` e `summary.consumption_by_recipe` devolvidos
+por `set_production_plan`; `evaluate_purchase_plan` e o estado retomado expõem
+a mesma matriz normalizada de consumo. A demanda e a compra são agregadas antes
+de calcular pacotes: dois pratos podem compartilhar um pacote e sua sobra,
+com um único desembolso. Não some compras calculadas isoladamente por prato.
+
+Inclusão, retirada, escala ou reordenação invalidam os aceites e preços anteriores.
+Informe `invalidated_decisions` e peça reconfirmação de sequência, capacidade e
+tempo para a versão atual do plano, conforme [viabilidade](viabilidade.md).
+Um rascunho pendente ou bloqueado impede aceitar qualquer prato do conjunto.
+Após reavaliação favorável, peça novos aceites e escolhas de preço.
+
+O estoque histórico vai primeiro para o prato de menor `position`; o excedente
+usa a cotação. Reordenar pode mudar o CMV individual, preservando o total e a
+compra. Explique os custos por origem dos cálculos MCP após o aceite. Retirar
+um prato recalcula tudo: não carregue um gasto que deixou de ser necessário.

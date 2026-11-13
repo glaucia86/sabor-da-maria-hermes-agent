@@ -573,6 +573,21 @@ class SQLiteWorkspaceRepository:
             state.updated_at = now
             state = WorkspaceState.model_validate_json(state.model_dump_json())
             revision += 1
+            if isinstance(request, PlanRequest):
+                data["summary"] = evaluate_plan(
+                    state.candidates,
+                    state.plan,
+                    state.kitchen_facts,
+                    state.feedback,
+                    snapshot,
+                    state.pricing_policy_version,
+                    revision,
+                    conversions=state.ingredient_conversions,
+                    complement_ingredients=state.complement_ingredients,
+                    quotes=state.complement_quotes,
+                    confirmations=state.quote_confirmations,
+                    now=now,
+                )
             data["invalidated_decisions"] = [
                 str(identifier)
                 for identifier in state.invalidated_acceptance_ids

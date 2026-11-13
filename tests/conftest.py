@@ -205,3 +205,117 @@ def clarification(tmp_path, inventory_file, recipe_candidate):
                                          expected_revision=revision) | payload)
 
     return service, workspace, command, recipe_candidate, chocolate, stock, inventory_file, database
+
+@pytest.fixture
+def shared_plan(clarification):
+    """Dois pratos sintéticos, uma origem e uma oferta confirmada, pela API pública."""
+    service, workspace, command, candidate, _, stock, path, database = clarification
+    stamp = datetime.now(UTC).isoformat()
+    evidence = dict(
+        turn_ref="synthetic-s07-user", statement="Confirmo esta produção.", captured_at=stamp
+    )
+
+    def create(*, amounts=("4000", "3000"), complement=False, extra="0.00", minutes=None):
+        recipes = []
+        ingredient_id = candidate["ingredients"][0]["ingredient_id"]
+        for index, amount in enumerate(amounts):
+            payload = deepcopy(candidate)
+            payload["title"] = f"Prato {index + 1} — fixture S07"
+            payload["ingredients"] = payload["ingredients"][:1]
+            payload["ingredients"][0].update(
+                description="Mel" if complement else "Arroz",
+                ingredient_id=None if complement and index == 0 else ingredient_id,
+                quantity=dict(value=amount, unit="g"),
+            )
+            if minutes:
+                payload["requirements"] = [
+                    dict(
+                        category="OPERATION",
+                        key="time",
+                        condition="MIN_AVAILABLE_TIME",
+                        value=str(minutes[index]),
+                        unit="min",
+                        reason="Tempo da fixture.",
+                        source=payload["sources"][0],
+                    )
+                ]
+                review = next(
+                    r for r in payload["category_reviews"] if r["category"] == "OPERATION"
+                )
+                review.update(requirement_keys=["time"], not_applicable_reason=None)
+            result = command("register_recipe_candidate", candidate=payload)
+            assert result["ok"], result
+            recipe = result["data"]["candidate"]
+            if complement and index == 0:
+                result = command(
+                    "resolve_recipe_ingredient",
+                    recipe_id=recipe["id"],
+                    recipe_version=1,
+                    line_id=recipe["ingredients"][0]["line_id"],
+                    new_ingredient=dict(name="Mel", dimension="g"),
+                    evidence=evidence,
+                )
+                assert result["ok"], result
+                recipe = result["data"]["candidate"]
+                ingredient_id = result["data"]["ingredient_id"]
+            recipes.append(recipe)
+            assert command(
+                "record_recipe_feedback",
+                recipe_id=recipe["id"],
+                feedback="INTERESTED",
+                evidence=evidence,
+            )["ok"]
+        content, price = ("1000", "20.00") if complement else ("5000", "30.00")
+        quote = command(
+            "register_complement_quote",
+            quote=dict(
+                ingredient_id=ingredient_id,
+                description="Oferta sintética S07",
+                package_quantity=dict(value=content, unit="g"),
+                package_price=price,
+                purchase_extra_total=extra,
+                extra_conditions="Retirada com encargos informados",
+                availability="AVAILABLE",
+                availability_context="Retirada hoje",
+                max_packages=100,
+                supplier="Fornecedor sintético",
+                source=candidate["sources"][0],
+            ),
+        )
+        assert quote["ok"], quote
+        quote = quote["data"]["quote"]
+        result = command(
+            "confirm_complement_quote",
+            quote_id=quote["id"],
+            quote_version=1,
+            scope=dict(
+                package_quantity=dict(value=content, unit="g"),
+                package_price=price,
+                purchase_extra_total=extra,
+                extra_conditions=quote["extra_conditions"],
+                availability_context=quote["availability_context"],
+                supplier=quote["supplier"],
+                packages=100,
+            ),
+            evidence=evidence
+            | {
+                "statement": f"Confirmo 100 pacotes de {content} g a R$ {price.replace('.', ',')} "
+                f"por pacote, encargos R$ {extra.replace('.', ',')}, "
+                "Retirada com encargos informados, disponível em "
+                "Fornecedor sintético: Retirada hoje."
+            },
+        )
+        assert result["ok"], result
+        return dict(
+            service=service,
+            workspace=workspace,
+            command=command,
+            recipes=recipes,
+            quote=quote,
+            evidence=evidence,
+            original=stock,
+            path=path,
+            database=database,
+        )
+
+    return create

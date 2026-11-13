@@ -129,8 +129,9 @@ Complementos ausentes recebem identidade pelo servidor, sem alterar a planilha.
 `set_production_plan` seleciona uma oferta por ingrediente. A avaliação mostra
 pacotes, desembolso integral, custo consumido, encargos e sobra planejada.
 Preço, embalagem ou frete desconhecidos permanecem pendentes. O aceite continua
-bloqueado enquanto as compras necessárias não estiverem confirmadas; o registro
-de confirmação de cotação ainda não está disponível.
+bloqueado enquanto as compras necessárias não estiverem confirmadas.
+`confirm_complement_quote` registra a confirmação humana específica da oferta
+vigente; isso confirma premissas do planejamento, sem efetuar uma compra.
 
 <a id="preparacao"></a>
 ## 🧰 Prepare seu ambiente
@@ -197,6 +198,13 @@ até o menor prazo entre 24 horas da manifestação e o vencimento da oferta.
 Mudanças ou expiração retiram a vigência das decisões dependentes, inclusive
 após retomada. Com aceite vigente, o MCP calcula os cenários e registra a
 escolha explícita de preço; nenhuma dessas etapas executa uma compra.
+
+Vários pratos compartilham demanda, estoque e compras na mesma rodada. O plano
+expõe a ordem e o consumo por prato; estoque histórico é alocado primeiro e
+o complemento cobre o excedente, sem duplicar pacotes ou gastos. Inclusão,
+retirada, escala e reordenação exigem revalidação e novos aceites/preços.
+A operação conjunta precisa de confirmação de capacidade e tempo; o arranjo
+suportado é sequencial, sem comprovar capacidade física ou operação de delivery.
 
 O [workflow de CI](.github/workflows/ci.yml) executa esses checks em Windows, Ubuntu e macOS. A execução local em um sistema não comprova sucesso nos demais; consulte os resultados no GitHub Actions.
 
