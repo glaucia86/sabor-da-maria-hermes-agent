@@ -7,6 +7,7 @@ from pydantic import AwareDatetime, Field, StrictInt, field_validator, model_val
 
 from dona_maria.candidates import (
     CandidateModel,
+    Note,
     Quantity,
     QuantityText,
     RecipeCandidate,
@@ -14,7 +15,7 @@ from dona_maria.candidates import (
     UUIDText,
     WebSource,
 )
-from dona_maria.inventory import InventoryItem
+from dona_maria.inventory import InventoryItem, InventorySnapshot, normalize_name
 from dona_maria.production import CommandMeta, UserEvidence
 
 _CONVERSION_CONTEXT = Context(prec=34, traps=[DivisionByZero, InvalidOperation, Overflow])
@@ -80,12 +81,74 @@ class IngredientConversion(ConversionRequest):
         return self.ingredient_id, self.scope, self.recipe_id, self.line_id
 
 
+class NewIngredient(CandidateModel):
+    name: ShortText
+    dimension: Literal["g", "ml", "un"]
+
+    @field_validator("name")
+    @classmethod
+    def nonblank_name(cls, value):
+        if not value.strip():
+            raise ValueError("Nome do complemento obrigatório.")
+        return value
+
+
+class ComplementIngredient(CandidateModel):
+    id: UUIDText
+    name_original: ShortText
+    name_normalized: ShortText
+    dimension: Literal["g", "ml", "un"]
+    origin: Literal["COMPLEMENT"] = "COMPLEMENT"
+    stock_quantity_base: Literal["0"] = "0"
+    availability_basis: Literal["ABSENT_FROM_SNAPSHOT"] = "ABSENT_FROM_SNAPSHOT"
+    availability_note: Note = (
+        "Ausente da fotografia; pergunte sobre estoque adicional antes de comprar."
+    )
+    acquisition_total: None = None
+    evidence: UserEvidence | WebSource
+
+
+def with_complements(snapshot: InventorySnapshot, ingredients) -> InventorySnapshot:
+    """Disponibilidade registrada por ausência; nunca altera o snapshot original."""
+    result = snapshot.model_copy(deep=True)
+    result.items.extend(
+        InventoryItem(
+            id=ingredient.id,
+            name_original=ingredient.name_original,
+            name_normalized=ingredient.name_normalized,
+            stock_quantity_original=None,
+            purchase_quantity_original=None,
+            stock_unit_original=None,
+            purchase_unit_original=None,
+            stock_quantity_base=Decimal("0"),
+            purchase_quantity_base=None,
+            dimension=ingredient.dimension,
+            acquisition_total=None,
+            unit_cost=None,
+            issues=[],
+            stock_source=None,
+            purchase_source=None,
+        )
+        for ingredient in ingredients
+    )
+    return result
+
+
 class ResolveIngredientRequest(CommandMeta):
     recipe_id: UUIDText
     recipe_version: Annotated[StrictInt, Field(gt=0)]
     line_id: UUIDText
-    existing_ingredient_id: UUIDText
-    evidence: UserEvidence
+    existing_ingredient_id: UUIDText | None = None
+    new_ingredient: NewIngredient | None = None
+    evidence: UserEvidence | WebSource
+
+    @model_validator(mode="after")
+    def exactly_one_identity(self):
+        if (self.existing_ingredient_id is None) == (self.new_ingredient is None):
+            raise ValueError("Informe exatamente uma identidade existente ou novo complemento.")
+        if self.existing_ingredient_id is not None and not isinstance(self.evidence, UserEvidence):
+            raise ValueError("Equivalência exige evidência humana.")
+        return self
 
 
 class IngredientResolution(CandidateModel):
@@ -93,7 +156,7 @@ class IngredientResolution(CandidateModel):
     line_id: UUIDText
     ingredient_id: UUIDText
     alias: ShortText
-    evidence: UserEvidence
+    evidence: UserEvidence | WebSource
     recorded_at: AwareDatetime
 
 
@@ -173,7 +236,19 @@ def validate_conversion_measure(
 
 
 def validate_overlay_references(state, snapshot):
-    stocks = {i.id: i for i in snapshot.items}
+    identifiers = {i.id for i in snapshot.items}
+    names = {i.name_normalized for i in snapshot.items}
+    for ingredient in state.complement_ingredients:
+        if (
+            ingredient.id in identifiers
+            or ingredient.name_normalized in names
+            or ingredient.name_normalized != normalize_name(ingredient.name_original)
+            or not ingredient.name_normalized
+        ):
+            raise ValueError("Identidade complementar inválida ou em colisão.")
+        identifiers.add(ingredient.id)
+        names.add(ingredient.name_normalized)
+    stocks = {i.id: i for i in with_complements(snapshot, state.complement_ingredients).items}
     recipes = {r.id: r for r in state.candidates}
     previous = {}
     identifiers = set()

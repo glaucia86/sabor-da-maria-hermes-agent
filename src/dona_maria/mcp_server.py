@@ -32,13 +32,20 @@ from dona_maria.production import (
     KitchenFactsRequest,
     PlanRequest,
 )
+from dona_maria.quotes import RegisterQuoteRequest
 
 PRODUCTION_TOOLS = [
+    (
+        "register_complement_quote",
+        RegisterQuoteRequest,
+        False,
+        "Registra oferta pesquisada e lacunas como estimativa; não confirma preço nem compra.",
+    ),
     (
         "resolve_recipe_ingredient",
         ResolveIngredientRequest,
         False,
-        "Resolve uma linha para identidade existente com evidência humana; preserva a origem.",
+        "Resolve identidade ou cria complemento sem colisão; devolve ID e preserva origem.",
     ),
     (
         "record_ingredient_conversion",

@@ -12,14 +12,16 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, model_validator
 
 from dona_maria.candidates import CandidateInput, RecipeCandidate
 from dona_maria.ingredients import (
+    ComplementIngredient,
     IngredientConversion,
     IngredientResolution,
     apply_overlays,
     current_conversions,
     recipe_conversion_applies,
     validate_conversion_measure,
+    with_complements,
 )
-from dona_maria.inventory import InventorySnapshot
+from dona_maria.inventory import InventorySnapshot, normalize_name
 from dona_maria.pricing import (
     FINANCIAL_CONTEXT,
     CalculatePricingRequest,
@@ -42,6 +44,7 @@ from dona_maria.production import (
     RecipeFeedback,
     explicit_acceptance,
 )
+from dona_maria.quotes import ComplementQuote, simulate_purchases
 
 
 class WorkspaceState(BaseModel):
@@ -64,6 +67,8 @@ class WorkspaceState(BaseModel):
     menu_decisions: list[MenuDecision] = []
     ingredient_conversions: list[IngredientConversion] = []
     ingredient_resolutions: list[IngredientResolution] = []
+    complement_ingredients: list[ComplementIngredient] = []
+    complement_quotes: list[ComplementQuote] = []
 
     @model_validator(mode="after")
     def valid_references(self):
@@ -189,6 +194,8 @@ def _calculate_pricing(state, request: CalculatePricingRequest, snapshot, revisi
         state.pricing_policy_version,
         revision,
         conversions=state.ingredient_conversions,
+        complement_ingredients=state.complement_ingredients,
+        quotes=state.complement_quotes,
     )
     acceptance = next(
         (
@@ -241,6 +248,8 @@ def _save_menu_decision(state, request: SaveMenuDecisionRequest, snapshot, revis
         state.pricing_policy_version,
         revision,
         conversions=state.ingredient_conversions,
+        complement_ingredients=state.complement_ingredients,
+        quotes=state.complement_quotes,
     )
     acceptance = next(
         (
@@ -463,9 +472,12 @@ def evaluate_plan(
     revision: int,
     *,
     conversions=(),
+    complement_ingredients=(),
+    quotes=(),
 ) -> dict:
     original_snapshot = snapshot
     candidates, snapshot = apply_overlays(candidates, snapshot, conversions)
+    snapshot = with_complements(snapshot, complement_ingredients)
     active_ids = {item.recipe_id for item in plan.items} if plan else set()
     relevant_keys = {
         (r.category, r.key) for c in candidates if c.id in active_ids for r in c.requirements
@@ -506,20 +518,30 @@ def evaluate_plan(
             or any(r.id in active_ids and recipe_conversion_applies(c, r) for r in candidates)
         )
     ]
+    relevant_complements = [i for i in complement_ingredients if i.id in ingredient_ids]
+    if relevant_complements:
+        inputs["complement_ingredients"] = [
+            i.model_dump(mode="json", exclude={"availability_note"}) for i in relevant_complements
+        ]
+    if plan and plan.quote_selections:
+        selected_ids = {s.quote_id for s in plan.quote_selections}
+        inputs["quotes"] = [q.model_dump(mode="json") for q in quotes if q.id in selected_ids]
     if relevant_conversions:
         inputs["conversions"] = [c.model_dump(mode="json") for c in relevant_conversions]
         inputs["effective_inventory"] = [
             i.model_dump(mode="json") for i in snapshot.items if i.id in ingredient_ids
         ]
     if inputs["plan"]:
+        if not inputs["plan"]["quote_selections"]:
+            # Campo aditivo vazio não muda as entradas de decisões já persistidas.
+            inputs["plan"].pop("quote_selections")
         for item in inputs["plan"]["items"]:
             item["recipe_version"] = item["business_recipe_version"]
     digest = fingerprint(inputs)
     feasibility = []
     gaps = [] if plan and plan.items else ["Confirme o plano de produção."]
     demand = {}
-    with localcontext() as context:
-        context.prec = 34
+    with localcontext(FINANCIAL_CONTEXT):
         for item in plan.items if plan else []:
             recipe = next(recipe for recipe in candidates if recipe.id == item.recipe_id)
             feasibility.append(
@@ -564,9 +586,22 @@ def evaluate_plan(
                     source=stock.model_dump(mode="json"),
                 )
             )
+            identity = next((i for i in complement_ingredients if str(i.id) == ingredient_id), None)
+            if identity:
+                lines[-1]["availability_basis"] = identity.availability_basis
+                lines[-1]["availability_note"] = identity.availability_note
+    disbursement = simulate_purchases(lines, plan.quote_selections if plan else [], quotes, gaps)
     sufficient = not gaps and all(
         line["shortage"] is not None and Decimal(line["shortage"]) == 0 for line in lines
     )
+    with localcontext(FINANCIAL_CONTEXT):
+        remaining = (
+            format(Decimal("80.00") - Decimal(disbursement), ".2f")
+            if disbursement is not None
+            else None
+        )
+        if remaining is not None and Decimal(remaining) < 0:
+            gaps.append("BUDGET_EXCEEDED: desembolso estimado ultrapassa R$ 80,00.")
     evaluation_id = hashlib.sha256(f"{digest}:{revision}".encode("ascii")).hexdigest()
     return dict(
         evaluation_id=evaluation_id,
@@ -576,8 +611,9 @@ def evaluate_plan(
         demand=lines,
         gaps=gaps,
         purchase_status="CONFIRMED" if sufficient else "PENDING",
-        disbursement="0.00" if sufficient else None,
-        remaining_budget="80.00" if sufficient else None,
+        is_simulation=not sufficient,
+        disbursement=disbursement,
+        remaining_budget=remaining,
     )
 
 
@@ -698,6 +734,16 @@ def _apply_production_command(
                 ]
                 state.plan.version += 1
         return {"feedback": feedback.model_dump(mode="json")}
+    for selection in request.quote_selections:
+        quote = next(
+            (q for q in reversed(state.complement_quotes) if q.id == selection.quote_id), None
+        )
+        if quote is None or quote.ingredient_id != selection.ingredient_id:
+            raise BusinessRuleError(
+                "NOT_FOUND", "Seleção não corresponde a uma cotação do ingrediente."
+            )
+        if quote.version != selection.quote_version:
+            raise BusinessRuleError("STALE_REVISION", "Selecione a versão atual da cotação.")
     items = []
     for item in sorted(request.items, key=lambda item: item.position):
         recipe = next((recipe for recipe in state.candidates if recipe.id == item.recipe_id), None)
@@ -761,6 +807,7 @@ def _apply_production_command(
         items=items,
         inventory_snapshot_id=str(state.inventory_snapshot_id),
         evidence=request.evidence,
+        quote_selections=request.quote_selections,
     )
     return {"plan": state.plan.model_dump(mode="json")}
 
@@ -782,6 +829,8 @@ def record_conversion(state, request, snapshot, now):
             state.pricing_policy_version,
             0,
             conversions=state.ingredient_conversions,
+            complement_ingredients=state.complement_ingredients,
+            quotes=state.complement_quotes,
         )
 
     before = current_evaluation()["fingerprint"]
@@ -828,8 +877,6 @@ def record_conversion(state, request, snapshot, now):
 
 
 def resolve_ingredient(state, request, snapshot, now):
-    if not any(i.id == request.existing_ingredient_id for i in snapshot.items):
-        raise BusinessRuleError("NOT_FOUND", "Identidade não pertence ao workspace.")
     recipe = next((r for r in state.candidates if r.id == request.recipe_id), None)
     if recipe is None:
         raise BusinessRuleError("NOT_FOUND", "Receita não pertence ao workspace.")
@@ -838,17 +885,43 @@ def resolve_ingredient(state, request, snapshot, now):
     line = next((i for i in recipe.ingredients if i.line_id == request.line_id), None)
     if line is None:
         raise BusinessRuleError("NOT_FOUND", "Linha não pertence à receita.")
+    ingredient = None
+    if request.new_ingredient:
+        normalized = normalize_name(request.new_ingredient.name)
+        if any(
+            i.name_normalized == normalized
+            for i in with_complements(snapshot, state.complement_ingredients).items
+        ):
+            raise BusinessRuleError(
+                "VALIDATION_ERROR", "Nome já possui identidade; esclareça e use o ID existente."
+            )
+        ingredient = ComplementIngredient(
+            id=str(uuid4()),
+            name_original=request.new_ingredient.name,
+            name_normalized=normalized,
+            dimension=request.new_ingredient.dimension,
+            evidence=request.evidence,
+        )
+        state.complement_ingredients.append(ingredient)
+        ingredient_id = ingredient.id
+    else:
+        ingredient_id = request.existing_ingredient_id
+        if not any(
+            i.id == ingredient_id
+            for i in with_complements(snapshot, state.complement_ingredients).items
+        ):
+            raise BusinessRuleError("NOT_FOUND", "Identidade não pertence ao workspace.")
     state.ingredient_resolutions.append(
         IngredientResolution(
             recipe_id=str(recipe.id),
             line_id=str(line.line_id),
-            ingredient_id=str(request.existing_ingredient_id),
+            ingredient_id=str(ingredient_id),
             alias=line.description,
             evidence=request.evidence,
             recorded_at=now,
         )
     )
-    line.ingredient_id = request.existing_ingredient_id
+    line.ingredient_id = ingredient_id
     for review in recipe.category_reviews:
         if review.method_version == recipe.version:
             review.method_version += 1
@@ -857,11 +930,61 @@ def resolve_ingredient(state, request, snapshot, now):
     recipe.recorded_at = now
     if state.plan and any(item.recipe_id == recipe.id for item in state.plan.items):
         _invalidate_acceptances(state)
-    return {"ingredient_id": str(line.ingredient_id), "candidate": recipe.public()}
+    return {
+        "ingredient_id": str(line.ingredient_id),
+        "candidate": recipe.public(),
+        "ingredient": ingredient.model_dump(mode="json") if ingredient else None,
+    }
 
 
-def _validate_ingredient_references(snapshot: InventorySnapshot, candidate: CandidateInput) -> None:
-    items = {item.id: item for item in snapshot.items}
+def register_quote(state, request, snapshot, now):
+    if request.quote.source is None:
+        raise BusinessRuleError("SOURCE_REQUIRED", "Cotação pesquisada exige fonte recuperada.")
+    _, effective = apply_overlays(state.candidates, snapshot, state.ingredient_conversions)
+    ingredient = next(
+        (
+            i
+            for i in with_complements(effective, state.complement_ingredients).items
+            if i.id == request.quote.ingredient_id
+        ),
+        None,
+    )
+    if ingredient is None:
+        raise BusinessRuleError("NOT_FOUND", "Ingrediente não pertence ao workspace.")
+    if (
+        request.quote.package_quantity
+        and request.quote.package_quantity.unit != ingredient.dimension
+    ):
+        raise BusinessRuleError(
+            "UNIT_CONVERSION_REQUIRED", "Embalagem não é compatível com a dimensão do ingrediente."
+        )
+    previous = next(
+        (q for q in reversed(state.complement_quotes) if q.id == request.quote_id), None
+    )
+    if request.quote_id and previous is None:
+        raise BusinessRuleError("NOT_FOUND", "Cotação não pertence ao workspace.")
+    if previous and previous.version != request.expected_quote_version:
+        raise BusinessRuleError("STALE_REVISION", "Recarregue a versão atual da cotação.")
+    if previous and previous.ingredient_id != request.quote.ingredient_id:
+        raise BusinessRuleError(
+            "VALIDATION_ERROR", "Revisão não pode trocar o ingrediente da oferta."
+        )
+    quote = ComplementQuote(
+        **request.quote.model_dump(mode="json"),
+        id=str(previous.id) if previous else str(uuid4()),
+        version=previous.version + 1 if previous else 1,
+        recorded_at=now,
+    )
+    state.complement_quotes.append(quote)
+    if state.plan and any(s.quote_id == quote.id for s in state.plan.quote_selections):
+        _invalidate_acceptances(state)
+    return {"quote": quote.public()}
+
+
+def _validate_ingredient_references(
+    snapshot: InventorySnapshot, candidate: CandidateInput, complement_ingredients=()
+) -> None:
+    items = {item.id: item for item in with_complements(snapshot, complement_ingredients).items}
     if isinstance(candidate, RecipeCandidate) and (
         len({item.line_id for item in candidate.ingredients}) != len(candidate.ingredients)
     ):

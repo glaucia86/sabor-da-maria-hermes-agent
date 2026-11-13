@@ -21,6 +21,7 @@ from dona_maria.production import (
     KitchenFactsRequest,
     PlanRequest,
 )
+from dona_maria.quotes import RegisterQuoteRequest
 
 
 class GetBusinessStateRequest(BaseModel):
@@ -88,6 +89,11 @@ class BusinessStateReader:
 
     def set_production_plan(self, arguments: dict[str, object]) -> dict[str, object]:
         return self._production_command("set_production_plan", PlanRequest, arguments)
+
+    def register_complement_quote(self, arguments: dict[str, object]) -> dict[str, object]:
+        return self._production_command(
+            "register_complement_quote", RegisterQuoteRequest, arguments
+        )
 
     def record_kitchen_facts(self, arguments: dict[str, object]) -> dict[str, object]:
         return self._production_command("record_kitchen_facts", KitchenFactsRequest, arguments)
@@ -302,6 +308,8 @@ class BusinessStateReader:
                 state.pricing_policy_version,
                 revision,
                 conversions=state.ingredient_conversions,
+                complement_ingredients=state.complement_ingredients,
+                quotes=state.complement_quotes,
             )
             acceptances = [
                 acceptance.model_dump(mode="json")
@@ -376,6 +384,10 @@ class BusinessStateReader:
                     if state.plan and state.plan.items
                     else "80.00",
                     "candidates": candidates,
+                    "complement_ingredients": [
+                        i.model_dump(mode="json") for i in state.complement_ingredients
+                    ],
+                    "complement_quotes": [quote.public() for quote in state.complement_quotes],
                     "ingredient_conversions": [
                         c.model_dump(mode="json") for c in state.ingredient_conversions
                     ],
