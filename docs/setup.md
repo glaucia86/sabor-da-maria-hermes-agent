@@ -111,7 +111,8 @@ O MCP deve descobrir `get_business_state`, `get_inventory_snapshot`,
 `register_recipe_candidate`, `record_recipe_feedback`, `record_kitchen_facts`,
 `set_production_plan`, `evaluate_recipe_feasibility`, `evaluate_purchase_plan`
 e `accept_recipe`, além de `calculate_pricing_scenarios`, `save_menu_decision`,
-`resolve_recipe_ingredient` e `record_ingredient_conversion`. A listagem de skills deve
+`resolve_recipe_ingredient`, `record_ingredient_conversion` e
+`register_complement_quote`. A listagem de skills deve
 incluir `dona-maria-cardapio`. Descoberta não comprova que o corpo da skill foi
 carregado; a invocação explícita abaixo é o caminho de verificação.
 

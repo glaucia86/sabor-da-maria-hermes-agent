@@ -7,8 +7,15 @@ preto não é carioquinha. Não confirme equivalência por semelhança textual.
 Se a identidade estiver ambígua, pergunte. Após fala humana inequívoca, use
 `resolve_recipe_ingredient` com receita/versão/linha, identidade existente e
 `UserEvidence` literal. A resposta fornece nova versão da receita. Reconfirme
-o plano quando a versão material mudar. Criar ingrediente novo ainda não é
-suportado por este contrato implementado.
+o plano quando a versão material mudar.
+
+Se o ingrediente não existir na fotografia nem nas identidades complementares
+de `get_business_state`, use `new_ingredient={name,dimension}` em vez de
+`existing_ingredient_id`, com evidência da identidade. Use exatamente um ramo.
+O servidor fornece o ID; nunca invente UUID nem altere a planilha. Colisão de
+nome pede esclarecimento e o ID existente. A disponibilidade zero significa
+somente ausência na fotografia; pergunte sobre estoque adicional antes de comprar.
+Para pesquisar o faltante e simular pacotes, siga [complementos](compras.md).
 
 `UNIT_CONVERSION_REQUIRED` pede medida sustentada e pausa, sem custo zero.
 Uma embalagem de cobertura registrada como `1 un` não informa gramas. Pergunte

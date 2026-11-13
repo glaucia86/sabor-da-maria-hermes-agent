@@ -66,8 +66,15 @@ class PlanItemInput(CandidateModel):
     requested_servings: Annotated[StrictInt, Field(gt=0)] | None = None
 
 
+class QuoteSelection(CandidateModel):
+    ingredient_id: UUIDText
+    quote_id: UUIDText
+    quote_version: Annotated[StrictInt, Field(gt=0)]
+
+
 class PlanRequest(CommandMeta):
     items: list[PlanItemInput]
+    quote_selections: list[QuoteSelection] = []
     evidence: UserEvidence
 
     @model_validator(mode="after")
@@ -75,6 +82,7 @@ class PlanRequest(CommandMeta):
         for values in (
             [item.recipe_id for item in self.items],
             [item.position for item in self.items],
+            [selection.ingredient_id for selection in self.quote_selections],
         ):
             if len(values) != len(set(values)):
                 raise ValueError("Receitas e posições do plano devem ser únicas.")
@@ -94,6 +102,7 @@ class ProductionPlan(CandidateModel):
     items: list[PlanItem]
     inventory_snapshot_id: UUIDText
     evidence: UserEvidence
+    quote_selections: list[QuoteSelection] = []
 
 
 class KitchenFactInput(CandidateModel):

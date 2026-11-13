@@ -124,6 +124,14 @@ contexto, separados da fotografia original. Esclarecer a embalagem histórica
 recalcula disponibilidade e custo; uma medida da receita não altera essa
 compra. Mudanças materiais invalidam decisões dependentes e preservam o histórico.
 
+Complementos ausentes recebem identidade pelo servidor, sem alterar a planilha.
+`register_complement_quote` registra ofertas com fonte e lacunas como estimativas;
+`set_production_plan` seleciona uma oferta por ingrediente. A avaliação mostra
+pacotes, desembolso integral, custo consumido, encargos e sobra planejada.
+Preço, embalagem ou frete desconhecidos permanecem pendentes. O aceite continua
+bloqueado enquanto as compras necessárias não estiverem confirmadas; o registro
+de confirmação de cotação ainda não está disponível.
+
 <a id="preparacao"></a>
 ## 🧰 Prepare seu ambiente
 

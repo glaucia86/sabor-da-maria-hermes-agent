@@ -61,6 +61,12 @@ Quando houver identidade ou unidade pendente, siga
 [esclarecimento de ingredientes](references/ingredientes.md). A medida da receita
 e o conteúdo da embalagem histórica têm escopos distintos; nunca invente fator.
 
+Para faltantes e ofertas, siga [complementos e simulação](references/compras.md).
+Cotação pesquisada é estimativa; seleção de oferta, confirmação e aceite são
+decisões distintas. Não apresente orçamento pendente como aprovado.
+Quando compras permanecerem `PENDING`, conclua a resposta com uma pergunta
+específica sobre os dados e confirmações ainda necessários, conforme a avaliação.
+
 Siga a orientação curta do projeto. Não carregue documentos de engenharia,
 skills de desenvolvimento ou páginas completas no atendimento habitual.
 Fatos pessoais e decisões não pertencem a esta skill.

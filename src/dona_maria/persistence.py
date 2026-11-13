@@ -31,6 +31,7 @@ from dona_maria.planning import (
     evaluate_plan,
     fingerprint,
     record_conversion,
+    register_quote,
     resolve_ingredient,
 )
 from dona_maria.pricing import (
@@ -46,6 +47,7 @@ from dona_maria.production import (
     KitchenFactsRequest,
     PlanRequest,
 )
+from dona_maria.quotes import RegisterQuoteRequest, validate_quote_references
 
 
 def _decode_json(text: str) -> dict:
@@ -162,8 +164,9 @@ class SQLiteWorkspaceRepository:
         snapshot = SQLiteWorkspaceRepository.load_snapshot(db, row["snapshot_id"])
         try:
             validate_overlay_references(state, snapshot)
+            validate_quote_references(state, snapshot)
             for candidate in state.candidates:
-                _validate_ingredient_references(snapshot, candidate)
+                _validate_ingredient_references(snapshot, candidate, state.complement_ingredients)
         except (BusinessRuleError, ValueError) as exc:
             raise sqlite3.DatabaseError("Referência de candidata inválida.") from exc
         SQLiteWorkspaceRepository._validate_pricing(state, snapshot, row["revision"])
@@ -191,6 +194,8 @@ class SQLiteWorkspaceRepository:
             state.pricing_policy_version,
             revision,
             conversions=state.ingredient_conversions,
+            complement_ingredients=state.complement_ingredients,
+            quotes=state.complement_quotes,
         )["fingerprint"]
         for calculation in state.pricing_calculations:
             for allocation in calculation.allocations:
@@ -363,7 +368,9 @@ class SQLiteWorkspaceRepository:
                 )
             if not request.candidate.sources:
                 raise BusinessRuleError("SOURCE_REQUIRED", "Candidata pesquisada exige fonte.")
-            _validate_ingredient_references(snapshot, request.candidate)
+            _validate_ingredient_references(
+                snapshot, request.candidate, state.complement_ingredients
+            )
             previous = next(
                 (item for item in state.candidates if item.id == request.recipe_id), None
             )
@@ -466,7 +473,8 @@ class SQLiteWorkspaceRepository:
         | CalculatePricingRequest
         | SaveMenuDecisionRequest
         | ConversionRequest
-        | ResolveIngredientRequest,
+        | ResolveIngredientRequest
+        | RegisterQuoteRequest,
         now: datetime,
     ) -> dict:
         workspace_id, operation_id = str(request.workspace_id), str(request.operation_id)
@@ -488,7 +496,9 @@ class SQLiteWorkspaceRepository:
             if revision != request.expected_revision:
                 raise BusinessRuleError("STALE_REVISION", "Recarregue o workspace.")
             previously_invalid = set(state.invalidated_acceptance_ids)
-            if isinstance(request, ResolveIngredientRequest):
+            if isinstance(request, RegisterQuoteRequest):
+                data = register_quote(state, request, snapshot, now)
+            elif isinstance(request, ResolveIngredientRequest):
                 data = resolve_ingredient(state, request, snapshot, now)
             elif isinstance(request, ConversionRequest):
                 data = record_conversion(state, request, snapshot, now)
@@ -506,6 +516,8 @@ class SQLiteWorkspaceRepository:
                     state.pricing_policy_version,
                     revision,
                     conversions=state.ingredient_conversions,
+                    complement_ingredients=state.complement_ingredients,
+                    quotes=state.complement_quotes,
                 )
                 data = _accept_recipe(state, request, evaluation, now)
             else:
@@ -606,6 +618,8 @@ class SQLiteWorkspaceRepository:
                 state.pricing_policy_version,
                 revision,
                 conversions=state.ingredient_conversions,
+                complement_ingredients=state.complement_ingredients,
+                quotes=state.complement_quotes,
             )
             return dict(
                 schema_version="1.0",
