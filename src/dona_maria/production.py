@@ -13,6 +13,7 @@ from dona_maria.candidates import (
     ShortText,
     UUIDText,
 )
+from dona_maria.inventory import normalize_name
 
 
 class UserEvidence(CandidateModel):
@@ -56,6 +57,38 @@ class RecipeFeedback(CandidateModel):
     recipe_id: UUIDText
     feedback: Literal["INTERESTED", "REJECTED", "UNDECIDED"]
     evidence: UserEvidence
+
+
+class PreferenceInput(CandidateModel):
+    category: Literal["INGREDIENT", "DISH_STYLE", "PREPARATION", "OTHER"]
+    term: ShortText
+    value: Literal["LIKE", "AVOID"]
+    evidence: UserEvidence
+    replaces_preference_id: UUIDText | None = None
+
+    @field_validator("term")
+    @classmethod
+    def nonblank_term(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Preferência exige termo com conteúdo.")
+        return value
+
+
+class PreferencesRequest(CommandMeta):
+    preferences: Annotated[list[PreferenceInput], Field(min_length=1)]
+
+    @model_validator(mode="after")
+    def unique_terms(self):
+        keys = [(p.category, normalize_name(p.term)) for p in self.preferences]
+        if len(keys) != len(set(keys)):
+            raise ValueError("Preferência duplicada no comando.")
+        return self
+
+
+class UserPreference(PreferenceInput):
+    id: UUIDText
+    version: Annotated[StrictInt, Field(gt=0)]
+    recorded_at: AwareDatetime
 
 
 class PlanItemInput(CandidateModel):

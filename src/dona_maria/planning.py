@@ -40,9 +40,11 @@ from dona_maria.production import (
     KitchenFactsRequest,
     PlanItem,
     PlanRequest,
+    PreferencesRequest,
     ProductionPlan,
     RecipeAcceptance,
     RecipeFeedback,
+    UserPreference,
     explicit_acceptance,
 )
 from dona_maria.quotes import (
@@ -69,6 +71,7 @@ class WorkspaceState(BaseModel):
     feedback: list[RecipeFeedback] = []
     plan: ProductionPlan | None = None
     kitchen_facts: list[KitchenFact] = []
+    preferences: list[UserPreference] = []
     acceptances: list[RecipeAcceptance] = []
     invalidated_acceptance_ids: list[UUID] = []
     pricing_calculations: list[PricingCalculation] = []
@@ -87,6 +90,7 @@ class WorkspaceState(BaseModel):
             [item.recipe_id for item in self.feedback],
             [(fact.category, fact.key) for fact in self.kitchen_facts],
             [fact.id for fact in self.kitchen_facts],
+            [preference.id for preference in self.preferences],
             [acceptance.id for acceptance in self.acceptances],
             [calculation.id for calculation in self.pricing_calculations],
             [decision.id for decision in self.menu_decisions],
@@ -123,6 +127,15 @@ class WorkspaceState(BaseModel):
                         raise ValueError("Rendimento derivado inconsistente.")
         if any(len(values) != len(set(values)) for values in collections):
             raise ValueError("Identidade ou chave duplicada no agregado.")
+        preferences = {}
+        for preference in self.preferences:
+            key = (preference.category, normalize_name(preference.term))
+            previous = preferences.get(key)
+            if preference.replaces_preference_id != (previous.id if previous else None) or (
+                preference.version != (previous.version + 1 if previous else 1)
+            ):
+                raise ValueError("Histórico de preferência inconsistente.")
+            preferences[key] = preference
         if any(item.recipe_id not in recipes for item in [*self.feedback, *self.acceptances]):
             raise ValueError("Decisão não pertence ao workspace.")
         if not set(self.invalidated_acceptance_ids) <= {a.id for a in self.acceptances}:
@@ -755,11 +768,122 @@ def _accept_recipe(
     }
 
 
+def preference_matches(preference: UserPreference, recipe: RecipeCandidate) -> bool:
+    # shortcut: termos literais não resolvem semântica; ampliar só com contrato de identidade.
+    texts = {
+        "INGREDIENT": [i.description for i in recipe.ingredients],
+        "DISH_STYLE": [recipe.title],
+        "PREPARATION": [recipe.method or ""],
+        "OTHER": [" ".join([recipe.title, recipe.method or "", recipe.operational_context or ""])],
+    }[preference.category]
+    pattern = r"(?<!\w)" + re.escape(normalize_name(preference.term)) + r"(?!\w)"
+    return any(re.search(pattern, normalize_name(text)) is not None for text in texts)
+
+
+def avoided_preference(state: WorkspaceState, recipe: RecipeCandidate) -> UserPreference | None:
+    current = {(p.category, normalize_name(p.term)): p for p in state.preferences}
+    return next(
+        (p for p in current.values() if p.value == "AVOID" and preference_matches(p, recipe)), None
+    )
+
+
+def correction_next_action(state: WorkspaceState, evaluation: dict) -> str:
+    active = {i.recipe_id for i in state.plan.items} if state.plan else set()
+    if not active:
+        return "RESEARCH_CANDIDATE"
+    if any(f["status"] != "ELIGIBLE" for f in evaluation["feasibility_by_recipe"]):
+        return "REVIEW_FEASIBILITY"
+    if evaluation["purchase_status"] != "CONFIRMED":
+        return "REVIEW_PURCHASE_PLAN"
+    interested = {f.recipe_id for f in state.feedback if f.feedback == "INTERESTED"}
+    if not active <= interested:
+        return "REVIEW_RECIPE_INTEREST"
+    accepted = {
+        a.recipe_id
+        for a in state.acceptances
+        if a.id not in state.invalidated_acceptance_ids
+        and a.fingerprint == evaluation["fingerprint"]
+    }
+    if not active <= accepted:
+        return "ASK_EXPLICIT_ACCEPTANCE"
+    prices = pricing_view(state, evaluation)
+    calculated = {
+        c["recipe_id"] for c in prices["pricing_calculations"] if c["validity"] == "VALID"
+    }
+    if not {str(i) for i in active} <= calculated:
+        return "REVIEW_ACCEPTED_RECIPES"
+    if not {str(i) for i in active} <= {d["recipe_id"] for d in prices["menu"]}:
+        return "ASK_PRICE_CHOICE"
+    return "REVIEW_MENU"
+
+
+def _record_feedback(state: WorkspaceState, feedback: RecipeFeedback) -> dict:
+    recipe = next((c for c in state.candidates if c.id == feedback.recipe_id), None)
+    if recipe is None:
+        raise BusinessRuleError("NOT_FOUND", "Candidata não pertence ao workspace.")
+    if feedback.feedback == "INTERESTED" and avoided_preference(state, recipe):
+        raise BusinessRuleError("CONSTRAINT_BLOCKED", "Reveja a preferência AVOID vigente.")
+    state.feedback = [item for item in state.feedback if item.recipe_id != feedback.recipe_id]
+    state.feedback.append(feedback)
+    if state.plan and any(item.recipe_id == feedback.recipe_id for item in state.plan.items):
+        _invalidate_acceptances(state)
+        if feedback.feedback == "REJECTED":
+            state.plan.items = [
+                item for item in state.plan.items if item.recipe_id != feedback.recipe_id
+            ]
+            state.plan.version += 1
+    return {"feedback": feedback.model_dump(mode="json")}
+
+
 def _apply_production_command(
     state: WorkspaceState,
-    request: FeedbackRequest | PlanRequest | KitchenFactsRequest,
+    request: FeedbackRequest | PlanRequest | KitchenFactsRequest | PreferencesRequest,
     now: datetime,
 ) -> dict:
+    if isinstance(request, PreferencesRequest):
+        saved = []
+        affected, removed = [], []
+        for new in request.preferences:
+            previous = next(
+                (
+                    p
+                    for p in reversed(state.preferences)
+                    if (p.category, normalize_name(p.term))
+                    == (new.category, normalize_name(new.term))
+                ),
+                None,
+            )
+            if new.replaces_preference_id != (previous.id if previous else None):
+                raise BusinessRuleError("STALE_REVISION", "Informe o ID da preferência atual.")
+            preference = UserPreference(
+                **new.model_dump(mode="json"),
+                id=str(uuid4()),
+                version=previous.version + 1 if previous else 1,
+                recorded_at=now,
+            )
+            state.preferences.append(preference)
+            saved.append(preference)
+            for recipe in state.candidates:
+                if not preference_matches(preference, recipe):
+                    continue
+                if str(recipe.id) not in affected:
+                    affected.append(str(recipe.id))
+                if preference.value == "AVOID":
+                    if state.plan and any(i.recipe_id == recipe.id for i in state.plan.items):
+                        removed.append(str(recipe.id))
+                    _record_feedback(
+                        state,
+                        RecipeFeedback(
+                            recipe_id=str(recipe.id),
+                            feedback="REJECTED",
+                            evidence=preference.evidence,
+                        ),
+                    )
+        return {
+            "preferences": [p.model_dump(mode="json") for p in saved],
+            "affected_recipe_ids": affected,
+            "removed_recipe_ids": removed,
+        }
     if isinstance(request, KitchenFactsRequest):
         active = {item.recipe_id for item in state.plan.items} if state.plan else set()
         relevant = {
@@ -794,23 +918,14 @@ def _apply_production_command(
             saved.append(fact.model_dump(mode="json"))
         return {"facts": saved}
     if isinstance(request, FeedbackRequest):
-        if not any(item.id == request.recipe_id for item in state.candidates):
-            raise BusinessRuleError("NOT_FOUND", "Candidata não pertence ao workspace.")
-        feedback = RecipeFeedback(
-            recipe_id=str(request.recipe_id),
-            feedback=request.feedback,
-            evidence=request.evidence,
+        return _record_feedback(
+            state,
+            RecipeFeedback(
+                recipe_id=str(request.recipe_id),
+                feedback=request.feedback,
+                evidence=request.evidence,
+            ),
         )
-        state.feedback = [item for item in state.feedback if item.recipe_id != request.recipe_id]
-        state.feedback.append(feedback)
-        if state.plan and any(item.recipe_id == request.recipe_id for item in state.plan.items):
-            _invalidate_acceptances(state)
-            if request.feedback == "REJECTED":
-                state.plan.items = [
-                    item for item in state.plan.items if item.recipe_id != request.recipe_id
-                ]
-                state.plan.version += 1
-        return {"feedback": feedback.model_dump(mode="json")}
     for selection in request.quote_selections:
         quote = next(
             (q for q in reversed(state.complement_quotes) if q.id == selection.quote_id), None
@@ -826,6 +941,8 @@ def _apply_production_command(
         recipe = next((recipe for recipe in state.candidates if recipe.id == item.recipe_id), None)
         if recipe is None:
             raise BusinessRuleError("NOT_FOUND", "Candidata não pertence ao workspace.")
+        if avoided_preference(state, recipe):
+            raise BusinessRuleError("CONSTRAINT_BLOCKED", "Reveja a preferência AVOID vigente.")
         if any(
             feedback.recipe_id == recipe.id and feedback.feedback == "REJECTED"
             for feedback in state.feedback
@@ -1122,7 +1239,9 @@ def confirm_quote(state, request, now):
 def _validate_ingredient_references(
     snapshot: InventorySnapshot, candidate: CandidateInput, complement_ingredients=()
 ) -> None:
-    items = {item.id: item for item in with_complements(snapshot, complement_ingredients).items}
+    ingredient_ids = {item.id for item in snapshot.items} | {
+        ingredient.id for ingredient in complement_ingredients
+    }
     if isinstance(candidate, RecipeCandidate) and (
         len({item.line_id for item in candidate.ingredients}) != len(candidate.ingredients)
     ):
@@ -1130,6 +1249,5 @@ def _validate_ingredient_references(
     for ingredient in candidate.ingredients:
         if ingredient.ingredient_id is None:
             continue
-        item = items.get(ingredient.ingredient_id)
-        if item is None:
+        if ingredient.ingredient_id not in ingredient_ids:
             raise BusinessRuleError("NOT_FOUND", "Ingrediente não pertence ao workspace.")

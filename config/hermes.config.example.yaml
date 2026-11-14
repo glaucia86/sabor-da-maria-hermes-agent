@@ -1,5 +1,6 @@
-# Merge these sections into the dedicated Hermes profile, replacing every path.
-# This is an example, not a full profile or an automatically expanded template.
+# Field reference for docs/setup.md; prefer config set and mcp add from that guide.
+# All paths are placeholders; they are not expanded automatically.
+# Do not replace the entire private profile with this example.
 # Provider credentials belong only in Hermes' private configuration.
 skills:
   external_dirs:
@@ -7,8 +8,10 @@ skills:
 
 mcp_servers:
   dona_maria:
+    # Windows executable; use .venv/bin/python on Linux/macOS.
     command: /ABSOLUTE/PATH/TO/CHECKOUT/.venv/Scripts/python.exe
     args: ["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"]
     env:
-      DONA_MARIA_DB_PATH: /ABSOLUTE/PATH/TO/CHECKOUT/artifacts/private/smoke/empty.sqlite3
+      # Imported database; the negative smoke uses an unregistered workspace ID.
+      DONA_MARIA_DB_PATH: /ABSOLUTE/PATH/TO/CHECKOUT/artifacts/private/quickstart/workspace.sqlite3
     connect_timeout: 15

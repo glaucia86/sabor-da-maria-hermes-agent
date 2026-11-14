@@ -26,8 +26,7 @@
 - [Entenda a experiência](#experiencia)
 - [Explore a arquitetura](#arquitetura)
 - [Entenda a precificação](#precificacao)
-- [Prepare seu ambiente](#preparacao)
-- [Execute o projeto](#executar)
+- [Quick Start](#executar)
 - [Verifique a implementação](#validar)
 - [Explore o repositório](#estrutura)
 - [Segurança e limites](#seguranca)
@@ -43,7 +42,7 @@ O Sabor da Maria propõe uma consultora que pesquisa receitas reais, descobre re
 A pergunta central vem antes do preço: **Dona Maria consegue preparar esse prato com os equipamentos, habilidades, ingredientes e condições que tem?**
 
 > [!IMPORTANT]
-> O código permite importar a planilha, registrar candidatas, verificar produção e aceite e calcular/registrar preços pelo MCP. O percurso sem compras foi verificado em testes locais e no Hermes com pesquisa real, aceite, escolha e retomada. A execução foi assistida, com despensa e custos sintéticos e consumo imediato; compras e operação de delivery permanecem objetivos da solução.
+> O código permite importar a planilha, registrar candidatas, planejar e confirmar premissas de complementos, verificar produção e aceite e calcular/registrar preços pelo MCP. O percurso sem compras foi verificado em testes locais e no Hermes com pesquisa real, aceite, escolha e retomada. A execução foi assistida, com despensa e custos sintéticos e consumo imediato; o planejamento não efetua compras nem comprova operação de delivery.
 
 <a id="experiencia"></a>
 ## 💬 Entenda a experiência
@@ -134,54 +133,72 @@ bloqueado enquanto as compras necessárias não estiverem confirmadas.
 vigente; isso confirma premissas do planejamento, sem efetuar uma compra.
 
 <a id="preparacao"></a>
-## 🧰 Prepare seu ambiente
+<a id="executar"></a>
+## 🚀 Quick Start
 
-| Ferramenta | Uso |
-| --- | --- |
-| [Git](https://git-scm.com/) | Obter o código. |
-| [Python 3.13+](https://www.python.org/downloads/) | Executar a aplicação; ambiente de referência: Python 3.13. |
-| [uv](https://docs.astral.sh/uv/getting-started/installation/) | Instalar dependências pelo `uv.lock`. |
-| [Hermes Agent](https://hermes-agent.nousresearch.com/docs/) | Executar a experiência conversacional, com modelo e pesquisa configurados. |
+Escolha o percurso que deseja verificar:
 
-Na pasta em que você guarda seus projetos:
+| Percurso | O que demonstra | Requisitos adicionais |
+| --- | --- | --- |
+| A — Testes locais | Regras e integração MCP stdio com SQLite temporário | Nenhum modelo, credencial ou anexo original |
+| B — Conversa real | Hermes consultando estado, pesquisando e conduzindo perguntas | Hermes, modelo com ferramentas e pesquisa web configurados |
+| C — Smoke negativo | Recusa de um workspace inexistente | Não representa uma despensa pronta para uso |
+| D — Demonstração sintética | Importação e conversa com dados fictícios identificados | XLSX sintético e requisitos do percurso B |
+| E — Anexo original | Importação da despensa recebida no desafio | Acesso autorizado ao arquivo original e requisitos do percurso B |
+
+### Obtenha o código e instale a aplicação
+
+Você precisa de Git e uv no PATH. Consulte os
+[pré-requisitos por sistema](docs/setup.md#dependencias) se ainda não os possui.
+
+Se o repositório for privado, sua conta precisa ter acesso autorizado.
+Use autenticação Git por HTTPS ou SSH já configurada; não coloque tokens na URL.
 
 ```sh
 git clone https://github.com/glaucia86/sabor-da-maria-hermes-agent.git
 cd sabor-da-maria-hermes-agent
+uv python install 3.13
 uv sync --locked --python 3.13
 ```
 
-Os testes locais usam SQLite temporário e dados sintéticos. Não exigem modelo, credenciais ou chamadas web. A instalação das dependências requer acesso ao registro de pacotes.
+A aplicação usa Python 3.13 em seu próprio ambiente. O runtime gerenciado
+do Hermes é separado. A instalação inicial requer downloads; os testes
+locais não fazem chamadas de modelo ou pesquisa web.
 
-<a id="executar"></a>
-## 🚀 Execute o projeto
+### Converse com a Dona Maria
 
-Siga o [guia de instalação e conexão com o Hermes](docs/setup.md). Ele inclui preparação do banco, importação local opcional, configuração do servidor, descoberta da skill e chamadas de verificação.
+Siga o [guia detalhado](docs/setup.md#despensa):
 
-A [configuração de exemplo](config/hermes.config.example.yaml) contém somente caminhos substituíveis e opções do projeto. Credenciais ficam no perfil privado do Hermes.
+1. Escolha o anexo original ou a demonstração sintética.
+2. Importe o XLSX para um SQLite isolado.
+3. Guarde o `workspace_id` real retornado pelo bootstrap.
+4. Configure perfil, modelo, web, MCP e skill.
+5. Inicie a conversa na raiz do checkout usando esse workspace.
 
-Para testar a leitura na conversa, envie:
+Não use o UUID fictício do smoke negativo para a conversa com sua despensa.
+Não é necessário preencher manualmente payloads MCP para conduzir o atendimento.
 
-```text
-Use o MCP dona_maria para chamar get_business_state com workspace_id
-"00000000-0000-4000-8000-000000000001".
-Informe o resultado observado, sem criar workspace ou simular dados.
-```
-
-Com o banco sintético vazio, o retorno esperado é `NOT_FOUND`, com `ok=false`, `data=null` e `revision=null`. O identificador é fictício; essa chamada não cadastra uma despensa nem registra uma decisão.
-
-A planilha `despensa_dona_maria.xlsx` é o anexo do desafio e não está distribuída neste repositório. A suíte pública usa fixtures sintéticas; a conferência adicional do original é executada quando o arquivo local está disponível, ou indicada como ignorada pelo pytest.
+A [configuração de exemplo](config/hermes.config.example.yaml) contém somente
+campos e caminhos substituíveis. Credenciais ficam no perfil privado do Hermes.
 
 <a id="validar"></a>
 ## ✅ Verifique a implementação
 
-Depois de `uv sync`, execute na raiz:
+Após instalar as dependências, execute na raiz:
 
 ```sh
 uv run --locked --no-sync python -X utf8 -B -m pytest tests/unit tests/integration -q
-uv run --locked --no-sync ruff check src tests/unit tests/integration
-uv run --locked --no-sync ruff format --check src tests/unit tests/integration
+uv run --locked --no-sync ruff check src tests/unit tests/integration evals
+uv run --locked --no-sync ruff format --check src tests/unit tests/integration evals
 ```
+
+A suíte usa dados sintéticos e bancos temporários. O teste adicional do anexo
+original é ignorado quando esse arquivo privado não está no caminho esperado
+pelo teste; veja a [distinção no guia](docs/setup.md#teste-do-original).
+
+Passar no pytest não comprova uma conversa com Hermes nem pesquisa web real.
+A CLI/TUI é o caminho principal de avaliação. Hermes Desktop é opcional;
+sua disponibilidade não comprova que este projeto foi validado nessa interface.
 
 A suíte verifica importação e diagnósticos por célula, custos de aquisição, leitura sem mutação, registro/revisão de candidatas, replay e rollback em SQLite temporário. Também cobre transporte MCP real, separação de `stdout`/`stderr`, encerramento do processo e resposta ao ping durante lock do SQLite.
 
@@ -206,9 +223,22 @@ retirada, escala e reordenação exigem revalidação e novos aceites/preços.
 A operação conjunta precisa de confirmação de capacidade e tempo; o arranjo
 suportado é sequencial, sem comprovar capacidade física ou operação de delivery.
 
-O [workflow de CI](.github/workflows/ci.yml) executa esses checks em Windows, Ubuntu e macOS. A execução local em um sistema não comprova sucesso nos demais; consulte os resultados no GitHub Actions.
+Correções de condições, receita ou escala invalidam as decisões afetadas e
+devolvem avaliação atual e caminho para reaceite. Recusa ou preferência `AVOID`
+incompatível retira o prato do plano; preferências e histórico sobrevivem ao
+reinício. `LIKE` não confirma aptidão. A correspondência automática de preferências
+é literal; a conversa precisa esclarecer incompatibilidades semânticas.
 
-Testes com fixtures não comprovam pesquisa real nem a qualidade da conversa. Avaliações de elicitação, orçamento, cálculos e decisões humanas dependem da implementação e execução das respectivas jornadas.
+O [workflow de CI](.github/workflows/ci.yml) configura Windows, Ubuntu e macOS
+para esses checks automatizados; não instala nem testa uma conversa Hermes.
+A execução local em um sistema não comprova sucesso nos demais; consulte os
+resultados da execução correspondente no GitHub Actions.
+
+Testes com fixtures não comprovam pesquisa real nem a qualidade da conversa.
+Os [Agent Evals](evals/README.md) incluem 12 roteiros versionados, execução
+assistida de adversariais/recuperação com Hermes real e evidências sanitizadas.
+Os resultados distinguem verificações atuais e históricas; evals assistidos
+não comprovam autonomia geral nem autenticam consentimento humano.
 
 <a id="estrutura"></a>
 ## 🗂️ Explore o repositório
