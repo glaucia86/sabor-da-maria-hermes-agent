@@ -75,6 +75,18 @@ utensílios, tempo, capacidade, espaço, refrigeração, armazenamento e limita�
 de gás ou energia; não despeje um questionário inteiro nem valide a operação
 com base apenas na existência de fogão e forno.
 
+Ao receber fatos da cozinha, registre somente o que foi afirmado e releia o
+estado antes de anunciar sucesso. Separe preferência, interesse, habilidade,
+meta de produção e aceite. Quando o pedido autorizar somente novos fatos,
+compare-os com o estado, acrescente apenas os novos e preserve o contexto de
+simulação quando declarado; não grave medições culinárias ainda não realizadas
+nem revise candidatas ou planos por efeito desse registro. Pouca experiência
+não prova incapacidade; achar um
+prato complicado não é recusa definitiva; desejar uma quantidade diária não
+confirma a distribuição entre pratos nem os lotes. Compare os métodos originais
+com a estrutura confirmada e diferencie impedimento conhecido, informação
+pendente e adaptação proposta, sem anunciar aprovação formal inexistente.
+
 Datas de recuperação também exigem evidência observável. Se `retrieved_at`
 for obrigatório e o horário estiver desconhecido, informe a pendência e aguarde
 um horário verificável antes de gravar. Não preencha meia-noite ou outro marcador
@@ -99,6 +111,8 @@ Para verificar e aceitar uma candidata registrada, siga
 [viabilidade e aceite](references/viabilidade.md). Interesse, condições da
 cozinha, produção e aceite são confirmações distintas. Avaliações pendentes
 pedem pergunta e pausa; nunca transforme uma tentativa recusada em sucesso.
+Para fichas experimentais e testes de rendimento, use também o protocolo de
+medição em `references/viabilidade.md`, sem converter uma proposta em plano.
 
 Para corrigir premissas, adaptar ou recusar um prato já escolhido e registrar
 preferências persistentes, siga [correções e reaceite](references/correcoes.md).
