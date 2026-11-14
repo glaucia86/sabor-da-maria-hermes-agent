@@ -11,8 +11,9 @@ from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 
 from dona_maria.candidates import RegisterCandidateRequest
 from dona_maria.ingredients import ConversionRequest, ResolveIngredientRequest
+from dona_maria.inventory import normalize_name
 from dona_maria.persistence import BusinessRuleError, SQLiteWorkspaceRepository
-from dona_maria.planning import evaluate_plan, pricing_view
+from dona_maria.planning import WorkspaceState, evaluate_plan, pricing_view
 from dona_maria.pricing import CalculatePricingRequest, SaveMenuDecisionRequest
 from dona_maria.production import (
     AcceptanceRequest,
@@ -20,6 +21,7 @@ from dona_maria.production import (
     FeedbackRequest,
     KitchenFactsRequest,
     PlanRequest,
+    PreferencesRequest,
 )
 from dona_maria.quotes import ConfirmQuoteRequest, RegisterQuoteRequest, current_confirmation
 
@@ -76,6 +78,9 @@ class BusinessStateReader:
 
     def record_recipe_feedback(self, arguments: dict[str, object]) -> dict[str, object]:
         return self._production_command("record_recipe_feedback", FeedbackRequest, arguments)
+
+    def record_user_preferences(self, arguments: dict[str, object]) -> dict[str, object]:
+        return self._production_command("record_user_preferences", PreferencesRequest, arguments)
 
     def record_ingredient_conversion(self, arguments: dict[str, object]) -> dict[str, object]:
         return self._production_command(
@@ -151,8 +156,8 @@ class BusinessStateReader:
                     next_action="CORRECT_INPUT",
                 ),
             ).model_dump(mode="json")
-        except (sqlite3.Error, ValidationError):
-            return _storage_unavailable(str(request.workspace_id))
+        except (sqlite3.Error, ValidationError) as exc:
+            return _storage_unavailable(str(request.workspace_id), cause=exc)
 
     def _production_command(self, tool: str, schema: type[BaseModel], arguments: dict) -> dict:
         try:
@@ -253,8 +258,8 @@ class BusinessStateReader:
         workspace_id = str(request.workspace_id)
         try:
             loaded = self.repository.inventory(workspace_id)
-        except (sqlite3.Error, ValidationError):
-            return _storage_unavailable(workspace_id)
+        except (sqlite3.Error, ValidationError) as exc:
+            return _storage_unavailable(workspace_id, cause=exc)
         if loaded is None:
             return self.get_business_state({"workspace_id": workspace_id})
         revision, snapshot = loaded
@@ -300,8 +305,8 @@ class BusinessStateReader:
         workspace_id = str(request.workspace_id)
         try:
             loaded = self.repository.load(workspace_id, with_snapshot=True)
-        except (sqlite3.Error, ValidationError):
-            return _storage_unavailable(workspace_id)
+        except (sqlite3.Error, ValidationError) as exc:
+            return _storage_unavailable(workspace_id, cause=exc)
         if loaded is not None:
             revision, state, snapshot = loaded
             now = self.clock()
@@ -319,112 +324,11 @@ class BusinessStateReader:
                 confirmations=state.quote_confirmations,
                 now=now,
             )
-            acceptances = [
-                acceptance.model_dump(mode="json")
-                | {
-                    "validity": "VALID"
-                    if acceptance.id not in state.invalidated_acceptance_ids
-                    and acceptance.fingerprint == evaluation["fingerprint"]
-                    and evaluation["purchase_status"] == "CONFIRMED"
-                    else "INVALIDATED",
-                }
-                for acceptance in state.acceptances
-            ]
-            prices = pricing_view(state, evaluation)
-            candidates = [candidate.public() for candidate in state.candidates]
-            for candidate in candidates:
-                feedback = next(
-                    (item for item in state.feedback if str(item.recipe_id) == candidate["id"]),
-                    None,
-                )
-                if feedback:
-                    candidate["interest"] = feedback.feedback
-                feasibility = next(
-                    (
-                        entry
-                        for entry in evaluation["feasibility_by_recipe"]
-                        if entry["recipe_id"] == candidate["id"]
-                    ),
-                    None,
-                )
-                if feasibility:
-                    derived = {entry["id"]: entry for entry in feasibility["requirements"]}
-                    for requirement in candidate["requirements"]:
-                        requirement.update(derived[requirement["id"]])
-                    candidate["status"] = (
-                        "BLOCKED"
-                        if feasibility["status"] == "BLOCKED"
-                        else "FEASIBILITY_PENDING"
-                        if feasibility["status"] == "PENDING"
-                        or any(
-                            entry["status"] != "ELIGIBLE"
-                            for entry in evaluation["feasibility_by_recipe"]
-                        )
-                        else "INGREDIENT_CHECK_PENDING"
-                        if evaluation["purchase_status"] != "CONFIRMED"
-                        else "DISCOVERED"
-                        if candidate["interest"] == "UNDECIDED"
-                        else "READY_FOR_ACCEPTANCE"
-                    )
-                elif feedback:
-                    candidate["status"] = "FEASIBILITY_PENDING"
-                if any(
-                    a["recipe_id"] == candidate["id"] and a["validity"] == "VALID"
-                    for a in acceptances
-                ):
-                    candidate["status"] = "ACCEPTED"
-                if any(
-                    c["recipe_id"] == candidate["id"] and c["validity"] == "VALID"
-                    for c in prices["pricing_calculations"]
-                ):
-                    candidate["status"] = "PRICED"
-                if any(d["recipe_id"] == candidate["id"] for d in prices["menu"]):
-                    candidate["status"] = "MENU_SELECTED"
-                if candidate["interest"] == "REJECTED":
-                    candidate["status"] = "REJECTED"
             return ReadErrorEnvelope(
                 ok=True,
                 workspace_id=workspace_id,
                 revision=revision,
-                data={
-                    "inventory_snapshot_id": str(state.inventory_snapshot_id),
-                    "budget_initial": state.budget_initial,
-                    "budget_remaining": evaluation["remaining_budget"]
-                    if state.plan and state.plan.items
-                    else "80.00",
-                    "candidates": candidates,
-                    "complement_ingredients": [
-                        i.model_dump(mode="json") for i in state.complement_ingredients
-                    ],
-                    "complement_quotes": [
-                        quote.public(current_confirmation(quote, state.quote_confirmations), now)
-                        for quote in state.complement_quotes
-                    ],
-                    "ingredient_conversions": [
-                        c.model_dump(mode="json") for c in state.ingredient_conversions
-                    ],
-                    "ingredient_resolutions": [
-                        r.model_dump(mode="json") for r in state.ingredient_resolutions
-                    ],
-                    "acceptances": acceptances,
-                    **prices,
-                    "evaluation": evaluation,
-                    "plan": state.plan.model_dump(mode="json") if state.plan else None,
-                    "kitchen_facts": [fact.model_dump(mode="json") for fact in state.kitchen_facts],
-                    "next_action": (
-                        "ASK_EXPLICIT_ACCEPTANCE"
-                        if any(c.get("status") == "READY_FOR_ACCEPTANCE" for c in candidates)
-                        else "ASK_PRICE_CHOICE"
-                        if any(c.get("status") == "PRICED" for c in candidates)
-                        else "REVIEW_ACCEPTED_RECIPES"
-                        if any(c.get("status") == "ACCEPTED" for c in candidates)
-                        else "REVIEW_MENU"
-                        if prices["menu"]
-                        else "CLARIFY_CANDIDATE_GAPS"
-                        if any(c["interest"] != "REJECTED" for c in candidates)
-                        else "RESEARCH_CANDIDATE"
-                    ),
-                },
+                data=_project_business_state(state, evaluation, now),
             ).model_dump(mode="json")
         return ReadErrorEnvelope(
             workspace_id=workspace_id,
@@ -438,6 +342,112 @@ class BusinessStateReader:
                 next_action="CONFIGURE_WORKSPACE",
             ),
         ).model_dump(mode="json")
+
+
+def _project_business_state(state: WorkspaceState, evaluation: dict, now: datetime) -> dict:
+    """Projeta os dados carregados sem I/O ou alteração dos modelos de negócio."""
+    acceptances = [
+        acceptance.model_dump(mode="json")
+        | {
+            "validity": "VALID"
+            if acceptance.id not in state.invalidated_acceptance_ids
+            and acceptance.fingerprint == evaluation["fingerprint"]
+            and evaluation["purchase_status"] == "CONFIRMED"
+            else "INVALIDATED",
+        }
+        for acceptance in state.acceptances
+    ]
+    prices = pricing_view(state, evaluation)
+    current_preferences = {(p.category, normalize_name(p.term)): p.id for p in state.preferences}
+    candidates = [candidate.public() for candidate in state.candidates]
+    for candidate in candidates:
+        feedback = next(
+            (item for item in state.feedback if str(item.recipe_id) == candidate["id"]),
+            None,
+        )
+        if feedback:
+            candidate["interest"] = feedback.feedback
+        feasibility = next(
+            (
+                entry
+                for entry in evaluation["feasibility_by_recipe"]
+                if entry["recipe_id"] == candidate["id"]
+            ),
+            None,
+        )
+        if feasibility:
+            derived = {entry["id"]: entry for entry in feasibility["requirements"]}
+            for requirement in candidate["requirements"]:
+                requirement.update(derived[requirement["id"]])
+            candidate["status"] = (
+                "BLOCKED"
+                if feasibility["status"] == "BLOCKED"
+                else "FEASIBILITY_PENDING"
+                if feasibility["status"] == "PENDING"
+                or any(
+                    entry["status"] != "ELIGIBLE" for entry in evaluation["feasibility_by_recipe"]
+                )
+                else "INGREDIENT_CHECK_PENDING"
+                if evaluation["purchase_status"] != "CONFIRMED"
+                else "DISCOVERED"
+                if candidate["interest"] == "UNDECIDED"
+                else "READY_FOR_ACCEPTANCE"
+            )
+        elif feedback:
+            candidate["status"] = "FEASIBILITY_PENDING"
+        if any(a["recipe_id"] == candidate["id"] and a["validity"] == "VALID" for a in acceptances):
+            candidate["status"] = "ACCEPTED"
+        if any(
+            c["recipe_id"] == candidate["id"] and c["validity"] == "VALID"
+            for c in prices["pricing_calculations"]
+        ):
+            candidate["status"] = "PRICED"
+        if any(d["recipe_id"] == candidate["id"] for d in prices["menu"]):
+            candidate["status"] = "MENU_SELECTED"
+        if candidate["interest"] == "REJECTED":
+            candidate["status"] = "REJECTED"
+    return {
+        "inventory_snapshot_id": str(state.inventory_snapshot_id),
+        "budget_initial": state.budget_initial,
+        "budget_remaining": evaluation["remaining_budget"]
+        if state.plan and state.plan.items
+        else "80.00",
+        "candidates": candidates,
+        "complement_ingredients": [i.model_dump(mode="json") for i in state.complement_ingredients],
+        "complement_quotes": [
+            quote.public(current_confirmation(quote, state.quote_confirmations), now)
+            for quote in state.complement_quotes
+        ],
+        "ingredient_conversions": [c.model_dump(mode="json") for c in state.ingredient_conversions],
+        "ingredient_resolutions": [r.model_dump(mode="json") for r in state.ingredient_resolutions],
+        "acceptances": acceptances,
+        **prices,
+        "evaluation": evaluation,
+        "plan": state.plan.model_dump(mode="json") if state.plan else None,
+        "kitchen_facts": [fact.model_dump(mode="json") for fact in state.kitchen_facts],
+        "preferences": [
+            p.model_dump(mode="json")
+            | {
+                "validity": "VALID"
+                if p.id == current_preferences[(p.category, normalize_name(p.term))]
+                else "INVALIDATED"
+            }
+            for p in state.preferences
+        ],
+        "next_action": (
+            "ASK_EXPLICIT_ACCEPTANCE"
+            if any(c.get("status") == "READY_FOR_ACCEPTANCE" for c in candidates)
+            else "ASK_PRICE_CHOICE"
+            if any(c.get("status") == "PRICED" for c in candidates)
+            else "REVIEW_ACCEPTED_RECIPES"
+            if any(c.get("status") == "ACCEPTED" for c in candidates)
+            else "REVIEW_MENU"
+            if prices["menu"]
+            else "CLARIFY_CANDIDATE_GAPS"
+            if any(c["interest"] != "REJECTED" for c in candidates)
+            else "RESEARCH_CANDIDATE"
+        ),
+    }
 
 
 def _storage_unavailable(

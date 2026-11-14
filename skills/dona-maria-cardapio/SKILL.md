@@ -54,6 +54,9 @@ Para verificar e aceitar uma candidata registrada, siga
 cozinha, produção e aceite são confirmações distintas. Avaliações pendentes
 pedem pergunta e pausa; nunca transforme uma tentativa recusada em sucesso.
 
+Para corrigir premissas, adaptar ou recusar um prato já escolhido e registrar
+preferências persistentes, siga [correções e reaceite](references/correcoes.md).
+
 Após aceite vigente, siga [CMV e escolha de preço](references/precificacao.md).
 Explique somente números do MCP e aguarde a escolha humana antes de gravar.
 

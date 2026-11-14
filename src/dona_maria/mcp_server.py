@@ -31,10 +31,19 @@ from dona_maria.production import (
     FeedbackRequest,
     KitchenFactsRequest,
     PlanRequest,
+    PreferencesRequest,
 )
 from dona_maria.quotes import ConfirmQuoteRequest, RegisterQuoteRequest
 
 PRODUCTION_TOOLS = [
+    (
+        "record_user_preferences",
+        PreferencesRequest,
+        False,
+        "Registra LIKE/AVOID com evidência humana e substituição explícita; "
+        "AVOID incompatível retira a receita do plano e invalida decisões; "
+        "LIKE não confirma aptidão.",
+    ),
     (
         "register_complement_quote",
         RegisterQuoteRequest,

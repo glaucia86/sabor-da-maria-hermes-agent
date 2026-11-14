@@ -25,10 +25,13 @@ from dona_maria.planning import (
     _apply_production_command,
     _calculate_pricing,
     _invalidate_acceptances,
+    _record_feedback,
     _save_menu_decision,
     _validate_ingredient_references,
+    avoided_preference,
     canonical_json,
     confirm_quote,
+    correction_next_action,
     evaluate_feasibility,
     evaluate_plan,
     fingerprint,
@@ -50,6 +53,8 @@ from dona_maria.production import (
     FeedbackRequest,
     KitchenFactsRequest,
     PlanRequest,
+    PreferencesRequest,
+    RecipeFeedback,
 )
 from dona_maria.quotes import ConfirmQuoteRequest, RegisterQuoteRequest, validate_quote_references
 
@@ -67,6 +72,27 @@ def _decode_json(text: str) -> dict:
         return json.loads(text, object_pairs_hook=unique_object)
     except (TypeError, ValueError) as exc:
         raise sqlite3.DatabaseError("JSON persistido inválido.") from exc
+
+
+def _invalidation_summary(state: WorkspaceState, previously_invalid: set[UUID]) -> dict:
+    invalidated = [
+        identifier
+        for identifier in state.invalidated_acceptance_ids
+        if identifier not in previously_invalid
+    ]
+    invalidated_ids = set(invalidated)
+    latest_choices = {d.recipe_id: d.id for d in state.menu_decisions}
+    return {
+        "invalidated_decisions": [str(identifier) for identifier in invalidated],
+        "invalidated_calculation_ids": [
+            str(c.id) for c in state.pricing_calculations if c.acceptance_id in invalidated_ids
+        ],
+        "invalidated_menu_decision_ids": [
+            str(d.id)
+            for d in state.menu_decisions
+            if d.acceptance_id in invalidated_ids and d.id == latest_choices[d.recipe_id]
+        ],
+    }
 
 
 SCHEMA = (
@@ -445,9 +471,33 @@ class SQLiteWorkspaceRepository:
                 _invalidate_acceptances(state)
             state.candidates = [item for item in state.candidates if item.id != candidate.id]
             state.candidates.append(candidate)
+            avoided = avoided_preference(state, candidate)
+            if avoided:
+                _record_feedback(
+                    state,
+                    RecipeFeedback(
+                        recipe_id=str(candidate.id),
+                        feedback="REJECTED",
+                        evidence=avoided.evidence,
+                    ),
+                )
             state.updated_at = now
             state = WorkspaceState.model_validate_json(state.model_dump_json())
             revision += 1
+            summary = evaluate_plan(
+                state.candidates,
+                state.plan,
+                state.kitchen_facts,
+                state.feedback,
+                snapshot,
+                state.pricing_policy_version,
+                revision,
+                conversions=state.ingredient_conversions,
+                complement_ingredients=state.complement_ingredients,
+                quotes=state.complement_quotes,
+                confirmations=state.quote_confirmations,
+                now=now,
+            )
             result = {
                 "schema_version": "1.0",
                 "ok": True,
@@ -455,13 +505,20 @@ class SQLiteWorkspaceRepository:
                 "revision": revision,
                 "operation_id": operation_id,
                 "data": {
-                    "candidate": candidate.public(),
-                    "invalidated_decisions": [
-                        str(identifier)
-                        for identifier in state.invalidated_acceptance_ids
-                        if identifier not in previously_invalid
-                    ],
-                    "next_action": "CLARIFY_CANDIDATE_GAPS",
+                    "candidate": candidate.public()
+                    | {
+                        "interest": next(
+                            (f.feedback for f in state.feedback if f.recipe_id == candidate.id),
+                            "UNDECIDED",
+                        )
+                    },
+                    "summary": summary,
+                    **_invalidation_summary(state, previously_invalid),
+                    "next_action": correction_next_action(state, summary)
+                    if avoided
+                    or state.plan
+                    and any(i.recipe_id == candidate.id for i in state.plan.items)
+                    else "CLARIFY_CANDIDATE_GAPS",
                 },
                 "warnings": [],
                 "error": None,
@@ -509,6 +566,7 @@ class SQLiteWorkspaceRepository:
         self,
         tool: str,
         request: FeedbackRequest
+        | PreferencesRequest
         | PlanRequest
         | KitchenFactsRequest
         | AcceptanceRequest
@@ -573,7 +631,9 @@ class SQLiteWorkspaceRepository:
             state.updated_at = now
             state = WorkspaceState.model_validate_json(state.model_dump_json())
             revision += 1
-            if isinstance(request, PlanRequest):
+            if isinstance(
+                request, (PlanRequest, KitchenFactsRequest, FeedbackRequest, PreferencesRequest)
+            ):
                 data["summary"] = evaluate_plan(
                     state.candidates,
                     state.plan,
@@ -588,11 +648,8 @@ class SQLiteWorkspaceRepository:
                     confirmations=state.quote_confirmations,
                     now=now,
                 )
-            data["invalidated_decisions"] = [
-                str(identifier)
-                for identifier in state.invalidated_acceptance_ids
-                if identifier not in previously_invalid
-            ]
+                data["next_action"] = correction_next_action(state, data["summary"])
+            data.update(_invalidation_summary(state, previously_invalid))
             result = {
                 "schema_version": "1.0",
                 "ok": True,

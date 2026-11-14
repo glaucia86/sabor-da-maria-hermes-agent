@@ -390,12 +390,15 @@ async def test_failed_transaction_never_confirms_and_can_be_retried_without_part
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize("refused", [False, True])
 async def test_tool_logs_are_correlated_json_without_recipe_payload(
-    tmp_path, inventory_file, recipe_candidate
+    tmp_path, inventory_file, recipe_candidate, refused
 ):
     database = tmp_path / "synthetic.sqlite3"
     created = bootstrap_workspace(database, inventory_file, allowed_directory=tmp_path)
     recipe_candidate["title"] = "SYNTHETIC_PRIVATE_MARKER_MUST_NOT_APPEAR_IN_LOG"
+    if refused:
+        recipe_candidate["sources"] = []
     operation_id = str(uuid4())
     server = StdioServerParameters(
         command=sys.executable,
@@ -417,7 +420,7 @@ async def test_tool_logs_are_correlated_json_without_recipe_payload(
                         "candidate": recipe_candidate,
                     },
                 )
-                assert result.structured_content["ok"] is True
+                assert result.structured_content["ok"] is not refused
     text = log_path.read_text("utf-8")
     assert recipe_candidate["title"] not in text
     events = [json.loads(line) for line in text.splitlines() if line.startswith("{")]
@@ -425,8 +428,8 @@ async def test_tool_logs_are_correlated_json_without_recipe_payload(
     assert len(calls) == 1
     assert calls[0]["correlation_id"] == operation_id
     assert calls[0]["tool"] == "register_recipe_candidate"
-    assert calls[0]["result"] == "SUCCESS"
-    assert calls[0]["revision"] == 1
+    assert calls[0]["result"] == ("SOURCE_REQUIRED" if refused else "SUCCESS")
+    assert calls[0]["revision"] == (None if refused else 1)
     assert calls[0]["duration_ms"] >= 0
 
 
