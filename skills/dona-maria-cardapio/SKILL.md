@@ -43,6 +43,12 @@ como se fosse o instante da extração, mesmo mencionando isso nas lacunas.
 Busca indisponível é pendência: no máximo duas reformulações automáticas por
 intenção; depois explique e aguarde. Erro transitório MCP admite uma repetição,
 com o mesmo comando/ID; resultado incerto exige leitura de estado e replay.
+Em `STORAGE_BUSY`, aguarde o timeout e permita no máximo essa repetição.
+Em `STORAGE_UNAVAILABLE`, `CALCULATION_ERROR` ou `INTERNAL_ERROR`, informe
+a limitação e aguarde a correção; não repita automaticamente erro permanente.
+Em `STALE_REVISION` ou `STALE_EVALUATION`, releia e reavalie, explique mudanças
+e aguarde novas confirmações afetadas. Não repita aceite antigo com outro ID.
+Em `IDEMPOTENCY_CONFLICT`, informe a colisão; não troque o ID para forçar a escrita.
 Se uma etapa exigir ferramenta indisponível, explique e aguarde. Não simule
 cálculos, aceite, compras ou gravações. Decisões humanas exigem manifestação
 explícita e os guards determinísticos da aplicação.

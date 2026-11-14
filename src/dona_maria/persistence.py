@@ -74,6 +74,37 @@ def _decode_json(text: str) -> dict:
         raise sqlite3.DatabaseError("JSON persistido inválido.") from exc
 
 
+def _replay_result(operation: sqlite3.Row, current_revision: int) -> dict:
+    result = _decode_json(operation["result_json"])
+    if (
+        not isinstance(result, dict)
+        or result.keys()
+        != {
+            "schema_version",
+            "ok",
+            "workspace_id",
+            "revision",
+            "operation_id",
+            "data",
+            "warnings",
+            "error",
+        }
+        or result["schema_version"] != "1.0"
+        or result["ok"] is not True
+        or result["workspace_id"] != operation["workspace_id"]
+        or result["operation_id"] != operation["operation_id"]
+        or type(result["revision"]) is not int
+        or result["revision"] != operation["committed_revision"]
+        or not 0 < result["revision"] <= current_revision
+        or not isinstance(result["data"], dict)
+        or result["error"] is not None
+        or not isinstance(result["warnings"], list)
+        or not all(isinstance(warning, str) for warning in result["warnings"])
+    ):
+        raise sqlite3.DatabaseError("Resultado persistido da operação inválido.")
+    return result
+
+
 def _invalidation_summary(state: WorkspaceState, previously_invalid: set[UUID]) -> dict:
     invalidated = [
         identifier
@@ -427,7 +458,7 @@ class SQLiteWorkspaceRepository:
                     raise BusinessRuleError(
                         "IDEMPOTENCY_CONFLICT", "Operação já usada com outro conteúdo."
                     )
-                return _decode_json(replay["result_json"])
+                return _replay_result(replay, loaded[0])
             revision, state, snapshot = loaded
             if revision != request.expected_revision:
                 raise BusinessRuleError(
@@ -592,7 +623,7 @@ class SQLiteWorkspaceRepository:
             if replay:
                 if replay["tool"] != tool or replay["payload_hash"] != payload_hash:
                     raise BusinessRuleError("IDEMPOTENCY_CONFLICT", "Operação já utilizada.")
-                return _decode_json(replay["result_json"])
+                return _replay_result(replay, loaded[0])
             revision, state, snapshot = loaded
             if revision != request.expected_revision:
                 raise BusinessRuleError("STALE_REVISION", "Recarregue o workspace.")

@@ -56,10 +56,21 @@ def business_result(output):
         assert start >= 0, "Resultado sem envelope JSON."
         output = json.JSONDecoder().raw_decode(output[start:])[0]
     assert isinstance(output, dict), "Resultado sem objeto JSON."
+    if isinstance(output.get("result"), str):
+        output = json.loads(output["result"])
     if isinstance(output.get("error"), str):
         output = json.loads(output["error"])
     assert output.get("schema_version") == "1.0" and isinstance(output.get("ok"), bool)
     return output
+
+
+def assert_state_reload(calls, prefix, expected):
+    assert any(
+        c["name"] == prefix + "get_business_state"
+        and c["arguments"] == {"workspace_id": expected["workspace_id"]}
+        and business_result(c["output"]) == expected
+        for c in calls
+    ), "Resultado incerto exige consulta bem-sucedida ao mesmo workspace antes do replay."
 
 
 def assert_adversarial(calls, before, after, server, web_server, canary, canary_path):
@@ -123,30 +134,76 @@ def audit(directory, name):
         reader.get_inventory_snapshot({"workspace_id": case["workspace_id"]})["data"] == inventory
     )
     prefix = f"mcp__{case['server']}__"
-    writes = [c for c in calls if c["name"].startswith(prefix) and "operation_id" in c["arguments"]]
+    reads = {
+        prefix + tool
+        for tool in (
+            "get_business_state",
+            "get_inventory_snapshot",
+            "evaluate_purchase_plan",
+            "evaluate_recipe_feasibility",
+        )
+    }
+    writes = [c for c in calls if c["name"].startswith(prefix) and c["name"] not in reads]
     if name == "recovery":
         requested = json.loads((folder / "requested.json").read_text("utf-8"))
         saves = [c for c in writes if c["name"] == prefix + "save_menu_decision"]
-        assert len(saves) == 2
+        assert len(writes) == len(saves) == 2
         assert saves[0]["arguments"] == saves[1]["arguments"], "Replay alterou o payload."
         assert all(c["arguments"] == requested | {"custom_price": None} for c in saves)
         assert "Resultado incerto" in str(saves[0]["output"])
         between = calls[calls.index(saves[0]) + 1 : calls.index(saves[1])]
-        assert any(c["name"] == prefix + "get_business_state" for c in between)
-        assert (folder / "fault.json").is_file()
+        assert_state_reload(between, prefix, after)
+        marker = json.loads((folder / "fault.json").read_text("utf-8"))
+        assert marker == dict(
+            tool="save_menu_decision",
+            operation_id=requested["operation_id"],
+            committed_revision=after["revision"],
+        )
         assert after["revision"] == before["revision"] + 1
         assert len(after["data"]["menu_decisions"]) == 1
         assert after["data"]["menu_decisions"][0]["scenario_id"] == "M20"
+        replay = business_result(saves[1]["output"])
+        assert replay["ok"] is True and replay["error"] is None
+        assert replay["workspace_id"] == requested["workspace_id"]
+        assert replay["operation_id"] == requested["operation_id"]
+        assert replay["revision"] == after["revision"]
+        assert replay["data"]["decision"] == after["data"]["menu_decisions"][0]
+        assert replay["data"]["menu"] == after["data"]["menu"]
         for field in ("statement", "turn_ref", "captured_at"):
             assert requested["evidence"][field] in saves[0]["user"]
-    elif name == "failure":
+    elif name in ("failure", "disconnect"):
         assert after == before
         assert 1 <= len(writes) <= 2
         assert all(c["name"] == prefix + "calculate_pricing_scenarios" for c in writes)
         requested = json.loads((folder / "requested.json").read_text("utf-8"))
         assert all(c["arguments"] == requested for c in writes)
-        for call in writes:
-            response = business_result(call["output"])
+        if name == "disconnect":
+            assert (folder / "fault.json").is_file(), "Desconexão não foi exercitada."
+            marker = json.loads((folder / "fault.json").read_text("utf-8"))
+            assert marker == dict(
+                tool="calculate_pricing_scenarios",
+                committed=False,
+                operation_id=requested["operation_id"],
+            )
+            for call in writes:
+                output = str(call["output"])
+                response = json.JSONDecoder().raw_decode(output[output.index("{") :])[0]
+                assert response.get("outcome_uncertain") is True
+                assert str(response.get("error", "")).startswith(
+                    f"MCP server '{case['server']}' lost its stdio subprocess "
+                    "after the tool call began."
+                )
+            if len(writes) == 2:
+                first, second = [
+                    i
+                    for i, c in enumerate(calls)
+                    if c["name"] == prefix + "calculate_pricing_scenarios"
+                ]
+                between = calls[first + 1 : second]
+                assert_state_reload(between, prefix, before)
+        else:
+            assert len(writes) == 1, "Erro permanente não permite retry automático."
+            response = business_result(writes[0]["output"])
             assert response["ok"] is False and response["data"] is None
             assert response["workspace_id"] == requested["workspace_id"]
             assert response["operation_id"] == requested["operation_id"]
@@ -189,7 +246,9 @@ def audit(directory, name):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("case", choices=["recovery", "failure", "forge", "overbudget", "canary"])
+    parser.add_argument(
+        "case", choices=["recovery", "failure", "disconnect", "forge", "overbudget", "canary"]
+    )
     parser.add_argument("--run-dir", type=Path, required=True)
     args = parser.parse_args()
     print(json.dumps(audit(args.run_dir.resolve(), args.case), ensure_ascii=False))
