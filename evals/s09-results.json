@@ -1,0 +1,126 @@
+{
+  "schema_version": "1.0",
+  "date": "2026-11-13",
+  "scope": "S09 exclusively",
+  "status": "EM REVISÃO",
+  "status_note": "Implementation and technical checks complete; existing human review remains pending.",
+  "application_changes": "Existing transaction/replay/bootstrap reused; no src, dependencies or schema changes.",
+  "environment": {
+    "python": "3.13.15",
+    "sqlite": "3.50.4",
+    "packages": {
+      "mcp": "2.3.0",
+      "pydantic": "2.14.3",
+      "pytest": "9.2.0",
+      "ruff": "0.17.4",
+      "hypothesis": "6.170.15"
+    }
+  },
+  "checks": {
+    "pytest": {
+      "result": "PASS",
+      "passed": 403,
+      "seconds": "272.303",
+      "command": "uv run --locked --no-sync python -X utf8 -B -m pytest tests/unit tests/integration -q --tb=short --basetemp artifacts/private/s09/final-suite-03 -o cache_dir=artifacts/private/s09/pytest-cache --junitxml artifacts/private/s09/final-suite-03.xml"
+    },
+    "ruff_check": "PASS",
+    "ruff_format": "PASS",
+    "harness_tests": {
+      "result": "PASS",
+      "passed": 9
+    }
+  },
+  "current_agent_evals": [
+    {
+      "case": "recovery",
+      "result": "PASS",
+      "assisted": true,
+      "export_sha256": "c7f786b9760338a80e15e1bc2a9d58bd58539f0eb7050e1036d50c8ee78afc2f",
+      "calls": [
+        "tool_describe",
+        "get_business_state",
+        "save_menu_decision",
+        "get_business_state",
+        "save_menu_decision"
+      ]
+    },
+    {
+      "case": "disconnect",
+      "result": "PASS",
+      "assisted": true,
+      "export_sha256": "aa3696fbb1a3b3fc434b35f1e63d24de58643790aa4408c0993cdd8d64b0f84e",
+      "calls": [
+        "tool_describe",
+        "get_business_state",
+        "calculate_pricing_scenarios",
+        "get_business_state",
+        "calculate_pricing_scenarios",
+        "get_business_state"
+      ]
+    },
+    {
+      "case": "EV-12-new-conversation",
+      "result": "PASS",
+      "assisted": true,
+      "distinct_session": true,
+      "same_state": true,
+      "same_inventory": true,
+      "writes": 0,
+      "calls": [
+        "get_business_state"
+      ]
+    }
+  ],
+  "model_invocations": 7,
+  "unsuccessful_attempts": [
+    {
+      "case": "disconnect",
+      "attempt": 2,
+      "result": "ERROR",
+      "tool_calls": 0,
+      "reason": "Model declined without calling tools; fault not exercised, not counted as PASS."
+    },
+    {
+      "case": "disconnect",
+      "attempt": 3,
+      "result": "ERROR",
+      "tool_calls": 0,
+      "reason": "Model declined without calling tools; fault not exercised, not counted as PASS."
+    },
+    {
+      "case": "disconnect",
+      "attempt": 4,
+      "result": "ERROR",
+      "tool_calls": 0,
+      "reason": "Model declined without calling tools; fault not exercised, not counted as PASS."
+    }
+  ],
+  "earlier_attempt": {
+    "case": "disconnect",
+    "attempt": 1,
+    "result": "PASS",
+    "verification": "Manual review of official trace and unchanged state; preliminary marker lacked operation_id. Final audited attempt is separate."
+  },
+  "verification_correction": "New-conversation collector used session_id instead of exported id after the host run. Original export preserved and verified offline with the correct field; no extra model call.",
+  "sources_sha256": {
+    "docs/setup.md": "8e678cc33d14fa79602d771fb0e1eedb8a992cc209b75f91a4b77ee6bd8d0772",
+    "evals/README.md": "8ad9b18ae07cddb808e6c1cc922ad344e9985f4489bb267c3f7507f9b0aedd8b",
+    "evals/audit.py": "64f6add5fbd53ecb6e4524ae6caade1c3252b532162ce81a6c1f56ea2d7a3778",
+    "evals/run.py": "8794b6d388ef05e0b4726636ee4b288f8f8987014baeedd3a8454679fc46d49b",
+    "evals/stdio_fault.py": "f7a5d488e4b8de554892317b60910422961b77489436e75b2f1eb066613a215c",
+    "skills/dona-maria-cardapio/SKILL.md": "40a1099dcf07c40b1963648874a21fa961fd4fee971f285e2618cdf6a1195e03",
+    "tests/integration/test_bootstrap.py": "f14e4b6ad088f11e21a9cfbedfe698823708522fcb11d0507d5bb4feedfbfa9c",
+    "tests/integration/test_recovery_stdio.py": "44a75ac5291b5e8be2661fc23f75b902b7217510d7d62ae6a6729a58540a24eb",
+    "tests/unit/test_agent_eval_audit.py": "6f6308afbb3e824ce59d37054cbba8c725b4dc6c10b5aec208631959ece77e66"
+  },
+  "process_note": "Initial plan read was broader than the Context Retrieval Contract; subsequent retrieval was restricted to S09, required handoffs and canonical definitions.",
+  "limits": [
+    "Assisted synthetic evals do not prove general autonomy or commercial operation.",
+    "Linux/macOS, remote CI and the joint suite of all 12 evals were not run.",
+    "No new web research or real pantry data used.",
+    "Some tool-free model responses occurred despite offered tool schemas; cause not established.",
+    "Future Hermes output/naming changes may require adapting the evaluation auditor.",
+    "Private raw traces and SQLite fixtures remain ignored under artifacts/private/s09."
+  ],
+  "all_temporary_connections_removed_and_verified": true
+}

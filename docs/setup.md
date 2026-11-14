@@ -320,6 +320,31 @@ Em resultado incerto, consulte o estado e repita o mesmo comando/ID. Payload
 diferente com o mesmo ID é recusado. `get_business_state` permite reencontrar
 a candidata. Esse registro não valida viabilidade, aceite, compras ou preço.
 
+### Retomada após falha e novo workspace
+
+Para continuar, mantenha o mesmo banco e `workspace_id` e peça
+`get_business_state` em uma nova conversa. Não execute bootstrap novamente:
+o plano, as preferências e as decisões vigentes vêm do banco.
+
+Se uma escrita perder a resposta, o resultado é incerto. Consulte o estado e
+repita exatamente a ferramenta, `operation_id`, `expected_revision` e payload
+originais. O replay retorna a resposta comprometida, sem nova revisão ou
+decisão. Conteúdo ou ferramenta diferentes com o mesmo ID geram
+`IDEMPOTENCY_CONFLICT`. Não crie outro ID para contornar o erro.
+
+`STORAGE_BUSY` permite no máximo uma repetição automática com o mesmo comando.
+Persistindo a falha, informe e aguarde. Em `STORAGE_UNAVAILABLE`, confira
+caminho, permissões e integridade; em `CALCULATION_ERROR`, confira as entradas.
+Nenhum desses erros confirma gravação ou autoriza cálculo textual substituto.
+Revisão desatualizada exige reler/reavaliar e obter novas confirmações afetadas.
+
+Para reset de demonstração ou nova planilha, a pessoa operadora executa o
+bootstrap da seção 2 **sem `--workspace-id`** e configura o novo ID explicitamente.
+O workspace anterior permanece consultável; o mesmo hash/política reutiliza
+o snapshot. Não há ferramenta MCP de apagar ou sobrescrever workspaces.
+Banco corrompido ou com schema mais novo é recusado: preserve o arquivo e
+verifique a versão ou uma cópia de segurança antes de continuar.
+
 ### Reconexão do perfil dedicado
 
 No gateway, `/reload-mcp` pode preservar conexões já registradas. No perfil

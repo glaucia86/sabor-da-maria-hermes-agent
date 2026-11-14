@@ -17,6 +17,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--database", type=Path, required=True)
     parser.add_argument("--marker", type=Path, required=True)
+    parser.add_argument(
+        "--fault", choices=["lost-success", "disconnect-calculation"], default="lost-success"
+    )
     args = parser.parse_args()
     if not args.database.is_file() or not args.marker.parent.is_dir():
         parser.error("Prepare o banco sintético e o diretório de evidências primeiro.")
@@ -50,7 +53,7 @@ def main():
             message = json.loads(line)
             operation_id = pending.pop(message.get("id"), None)
             result = message.get("result", {}).get("structuredContent", {})
-            if operation_id and result.get("ok"):
+            if args.fault == "lost-success" and operation_id and result.get("ok"):
                 try:
                     with args.marker.open("x", encoding="utf-8") as marker:
                         json.dump(
@@ -73,6 +76,22 @@ def main():
     try:
         for line in sys.stdin.buffer:
             message = json.loads(line)
+            if (
+                args.fault == "disconnect-calculation"
+                and message.get("method") == "tools/call"
+                and message["params"]["name"] == "calculate_pricing_scenarios"
+            ):
+                args.marker.write_text(
+                    json.dumps(
+                        dict(
+                            tool="calculate_pricing_scenarios",
+                            committed=False,
+                            operation_id=message["params"].get("arguments", {}).get("operation_id"),
+                        )
+                    ),
+                    encoding="utf-8",
+                )
+                break
             if (
                 message.get("method") == "tools/call"
                 and message["params"]["name"] == "save_menu_decision"

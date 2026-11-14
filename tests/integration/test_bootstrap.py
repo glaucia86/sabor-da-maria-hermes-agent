@@ -10,6 +10,68 @@ from dona_maria.bootstrap import bootstrap_workspace
 from dona_maria.business_state import BusinessStateReader, SQLiteWorkspaceRepository
 
 
+@pytest.mark.parametrize("damage", ["header", "truncated"])
+def test_corrupt_database_refuses_bootstrap_and_commands_without_recreation(
+    tmp_path, inventory_file, recipe_candidate, damage
+):
+    database = tmp_path / "synthetic.sqlite3"
+    created = bootstrap_workspace(database, inventory_file, allowed_directory=tmp_path)
+    contents = database.read_bytes()
+    database.write_bytes(b"synthetic corrupt SQLite" if damage == "header" else contents[:100])
+    before = database.read_bytes()
+    reader = BusinessStateReader(SQLiteWorkspaceRepository(database))
+    responses = [
+        reader.get_business_state({"workspace_id": created["workspace_id"]}),
+        reader.register_recipe_candidate(
+            dict(
+                workspace_id=created["workspace_id"],
+                operation_id=str(uuid4()),
+                expected_revision=0,
+                candidate=recipe_candidate,
+            )
+        ),
+    ]
+    assert all(response["error"]["code"] == "STORAGE_UNAVAILABLE" for response in responses)
+    with pytest.raises(sqlite3.DatabaseError):
+        bootstrap_workspace(database, inventory_file, allowed_directory=tmp_path)
+    assert database.read_bytes() == before
+
+
+def test_reset_creates_separate_workspace_and_preserves_previous_menu(
+    tmp_path, inventory_file, pricing_workspace
+):
+    service, workspace, recipe, acceptance, command, database = pricing_workspace()
+    calculation = command(
+        "calculate_pricing_scenarios", recipe_id=recipe["id"], acceptance_id=acceptance["id"]
+    )["data"]["calculation"]
+    chosen = command(
+        "save_menu_decision",
+        recipe_id=recipe["id"],
+        acceptance_id=acceptance["id"],
+        calculation_id=calculation["id"],
+        scenario_id="M20",
+        evidence=dict(
+            turn_ref="synthetic-reset", statement="Escolho M20.", captured_at="2026-11-13T12:00:00Z"
+        ),
+    )
+    assert chosen["ok"]
+    before = service.get_business_state({"workspace_id": workspace})
+    original_inventory = service.get_inventory_snapshot({"workspace_id": workspace})["data"]
+    reset = bootstrap_workspace(database, inventory_file, allowed_directory=tmp_path)
+    assert reset["workspace_id"] != workspace
+    assert reset["snapshot_id"] == original_inventory["id"]
+    assert service.get_business_state({"workspace_id": workspace}) == before
+    new = service.get_business_state({"workspace_id": reset["workspace_id"]})
+    assert new["revision"] == 0
+    assert new["data"]["menu"] == []
+    assert new["data"]["candidates"] == []
+    assert new["data"]["budget_remaining"] == "80.00"
+    assert (
+        service.get_inventory_snapshot({"workspace_id": reset["workspace_id"]})["data"]
+        == original_inventory
+    )
+
+
 def test_bootstrap_reuses_snapshot_and_never_replaces_an_existing_workspace(
     tmp_path, inventory_file
 ):
