@@ -5,6 +5,17 @@ proibidos, asserts de estado e rubrica. [results.json](results.json) consolida
 evidência sanitizada, distinguindo execuções históricas de verificações atuais.
 Um resultado histórico não aprova automaticamente outra versão do produto.
 
+A execução integrada S11 está em [s11-results.json](s11-results.json): 12 casos,
+29 invocações reais originais preservadas, assertions críticas aprovadas e
+rubrica original do agente 5/6. A revisão humana identificou ambiguidade entre
+preço e sobra no EV-07 e nas mudanças de preparo no EV-09: qualidade reprovada
+até correção validada. Orientações
+foram corrigidas; uma invocação adicional ERROR por MCP indisponível está
+preservada, totalizando30. A amostra continua em revisão. Instalação limpa,
+jornada assistida e matriz dos 22 critérios estão
+em [verificação integrada](../docs/verification.md). Os relatórios anteriores
+permanecem históricos; nenhuma falha de execução foi apagada para esta rodada.
+
 Os casos usam Hermes real, MCP stdio e SQLite sintético. São **assistidos**:
 mensagens humanas, IDs e horários são roteirizados. `UserEvidence` não autentica
 a pessoa. Frete compartilhado depende de atribuição humana. Não há afirmação

@@ -78,10 +78,19 @@ async def test_official_client_discovers_and_calls_the_real_stdio_server(tmp_pat
                     "calculate_pricing_scenarios",
                     "save_menu_decision",
                 ]
-                tool = tools[0]
-                assert tool.input_schema["additionalProperties"] is False
-                assert tool.annotations.read_only_hint is True
-                assert tool.annotations.destructive_hint is False
+                read_tools = {
+                    "get_business_state",
+                    "get_inventory_snapshot",
+                    "evaluate_recipe_feasibility",
+                    "evaluate_purchase_plan",
+                }
+                for tool in tools:
+                    assert tool.input_schema["additionalProperties"] is False
+                    assert tool.output_schema["additionalProperties"] is False
+                    assert tool.annotations.read_only_hint is (tool.name in read_tools)
+                    assert tool.annotations.destructive_hint is False
+                    if tool.name not in read_tools:
+                        assert tool.annotations.idempotent_hint is True
                 result = await session.call_tool(
                     "get_business_state", {"workspace_id": fixture["workspace_id"]}
                 )
