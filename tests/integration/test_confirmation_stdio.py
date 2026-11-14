@@ -9,6 +9,8 @@ import pytest
 from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 
+from dona_maria.bootstrap import bootstrap_workspace
+
 
 @pytest.fixture
 def anyio_backend():
@@ -17,7 +19,10 @@ def anyio_backend():
 
 @pytest.mark.anyio
 async def test_confirmation_pricing_replay_and_expired_resume_over_stdio(clarification, tmp_path):
-    service, workspace, command, candidate, _, original, _, database = clarification
+    service, workspace, command, candidate, _, original, inventory, database = clarification
+    other_workspace = bootstrap_workspace(database, inventory, allowed_directory=tmp_path)[
+        "workspace_id"
+    ]
     candidate["ingredients"] = candidate["ingredients"][:1]
     candidate["ingredients"][0]["quantity"]["value"] = "5200"
     recipe = command("register_recipe_candidate", candidate=candidate)["data"]["candidate"]
@@ -108,6 +113,31 @@ async def test_confirmation_pricing_replay_and_expired_resume_over_stdio(clarifi
                     revision = result.structured_content["revision"]
                     return result.structured_content["data"]
 
+                before = await session.call_tool("get_business_state", {"workspace_id": workspace})
+                other_before = await session.call_tool(
+                    "get_business_state", {"workspace_id": other_workspace}
+                )
+                foreign = await session.call_tool(
+                    "confirm_complement_quote",
+                    confirmation_request
+                    | {"workspace_id": other_workspace, "expected_revision": 0},
+                )
+                assert foreign.is_error is True
+                assert foreign.structured_content["error"]["code"] == "NOT_FOUND"
+                assert (
+                    await session.call_tool("get_business_state", {"workspace_id": other_workspace})
+                ).structured_content == other_before.structured_content
+                for origin in ("WEB", "MODEL"):
+                    refused = await session.call_tool(
+                        "confirm_complement_quote",
+                        confirmation_request
+                        | {"evidence": confirmation_request["evidence"] | {"kind": origin}},
+                    )
+                    assert refused.is_error is True
+                    assert refused.structured_content["error"]["code"] == "VALIDATION_ERROR"
+                assert (
+                    await session.call_tool("get_business_state", {"workspace_id": workspace})
+                ).structured_content == before.structured_content
                 confirmed = await session.call_tool(
                     "confirm_complement_quote", confirmation_request
                 )

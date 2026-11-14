@@ -105,6 +105,12 @@ async def test_direct_acceptance_cannot_bypass_gaps_and_mcp_exposes_safe_contrac
                 assert refused.is_error is True
                 assert refused.structured_content["error"]["code"] == "MISSING_INFORMATION"
                 assert json.loads(refused.content[0].text) == refused.structured_content
+                for origin in ("WEB", "MODEL"):
+                    invalid = await session.call_tool(
+                        "accept_recipe", command | {"evidence": evidence | {"kind": origin}}
+                    )
+                    assert invalid.is_error is True
+                    assert invalid.structured_content["error"]["code"] == "VALIDATION_ERROR"
                 for extra in ("approved", "status", "remaining_budget", "cmv"):
                     invalid = await session.call_tool("accept_recipe", command | {extra: True})
                     assert invalid.is_error is True
