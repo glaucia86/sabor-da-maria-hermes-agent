@@ -1,20 +1,28 @@
 """Serviço público de consulta, produção, aceite e precificação determinística."""
 
+import json
 import sqlite3
 from collections.abc import Callable
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from decimal import DecimalException
-from typing import Literal
+from decimal import Decimal, DecimalException, localcontext
+from pathlib import Path
+from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, ValidationError, field_validator
 
 from dona_maria.candidates import RegisterCandidateRequest
 from dona_maria.ingredients import ConversionRequest, ResolveIngredientRequest
 from dona_maria.inventory import normalize_name
 from dona_maria.persistence import BusinessRuleError, SQLiteWorkspaceRepository
 from dona_maria.planning import WorkspaceState, evaluate_plan, pricing_view
-from dona_maria.pricing import CalculatePricingRequest, SaveMenuDecisionRequest
+from dona_maria.pricing import (
+    FINANCIAL_CONTEXT,
+    CalculatePricingRequest,
+    SaveMenuDecisionRequest,
+    price_option,
+)
 from dona_maria.production import (
     AcceptanceRequest,
     FeasibilityRequest,
@@ -64,6 +72,297 @@ class ReadErrorEnvelope(BaseModel):
     data: dict | None = None
     warnings: list[str] = []
     error: ReadError | None = None
+
+
+class AttendanceReadRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+
+Reference = Annotated[StrictInt, Field(ge=1)]
+
+
+class AttendanceInventoryRequest(AttendanceReadRequest):
+    ingredients: Annotated[list[Reference], Field(max_length=200)] | None = None
+
+
+class AttendanceFeasibilityRequest(AttendanceReadRequest):
+    recipe: Reference
+    plan_item: Reference
+
+
+ATTENDANCE_TOOLS = {
+    "get_business_state": (AttendanceReadRequest, "Consulta os fatos e pendências atuais."),
+    "get_inventory_snapshot": (AttendanceInventoryRequest, "Consulta os ingredientes disponíveis."),
+    "evaluate_recipe_feasibility": (
+        AttendanceFeasibilityRequest,
+        "Verifica as condições da receita no plano atual.",
+    ),
+    "evaluate_purchase_plan": (AttendanceReadRequest, "Verifica os faltantes do plano atual."),
+}
+MAX_CALL_BYTES = 256 * 1024
+
+
+def _attendance_failure(message="Não foi possível consultar. Peça auxílio à pessoa operadora."):
+    return {"ok": False, "data": None, "message": message}
+
+
+@dataclass(frozen=True)
+class AttendanceService:
+    """Fronteira de leitura; o contexto é autoridade local, nunca entrada do modelo."""
+
+    database: Path
+    workspace_id: str
+    mode: str
+    _reader: "BusinessStateReader" = field(init=False, repr=False)
+
+    def __post_init__(self):
+        try:
+            if self.mode != "ATTENDANCE" or not self.database.is_absolute():
+                raise ValueError
+            database = self.database.resolve(strict=True)
+            workspace = str(UUID(self.workspace_id))
+            repository = SQLiteWorkspaceRepository(database)
+            if not database.is_file() or repository.load(workspace) is None:
+                raise ValueError
+        except (ValueError, OSError, sqlite3.Error, ValidationError):
+            raise ValueError("Atendimento indisponível. Peça auxílio à pessoa operadora.") from None
+        object.__setattr__(self, "database", database)
+        object.__setattr__(self, "workspace_id", workspace)
+        object.__setattr__(self, "_reader", BusinessStateReader(repository))
+
+    def call(self, name: str, arguments: dict) -> dict:
+        if name not in ATTENDANCE_TOOLS:
+            return _attendance_failure("Esta ação não está disponível neste atendimento.")
+        try:
+            size = len(
+                json.dumps(arguments, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+            )
+            if size > MAX_CALL_BYTES:
+                return _attendance_failure("O pedido excede o limite. Envie um pedido menor.")
+            request = ATTENDANCE_TOOLS[name][0].model_validate(arguments)
+        except (ValidationError, TypeError, ValueError, RecursionError):
+            return _attendance_failure("Não foi possível usar esses dados. Revise o pedido.")
+        try:
+            loaded = self._reader.repository.load(self.workspace_id, with_snapshot=True)
+            if loaded is None:
+                return _attendance_failure()
+            _, state, snapshot = loaded
+            internal = {"workspace_id": self.workspace_id}
+            if name == "get_inventory_snapshot" and request.ingredients is not None:
+                if any(index > len(snapshot.items) for index in request.ingredients):
+                    return _attendance_failure(
+                        "Ingrediente indisponível. Consulte a despensa atual."
+                    )
+                internal["ingredient_ids"] = [
+                    str(snapshot.items[index - 1].id) for index in request.ingredients
+                ]
+            elif name == "evaluate_recipe_feasibility":
+                if (
+                    request.recipe > len(state.candidates)
+                    or state.plan is None
+                    or request.plan_item > len(state.plan.items)
+                ):
+                    return _attendance_failure("Receita indisponível. Consulte o plano atual.")
+                internal.update(
+                    recipe_id=str(state.candidates[request.recipe - 1].id),
+                    plan_item_id=str(state.plan.items[request.plan_item - 1].plan_item_id),
+                )
+            envelope = getattr(self._reader, name)(internal)
+            if not envelope["ok"]:
+                return _attendance_failure()
+            data = envelope["data"]
+            if name == "get_business_state":
+                recipes = {
+                    recipe["id"]: index for index, recipe in enumerate(data["candidates"], 1)
+                }
+                projected = {
+                    "remaining_budget": data["budget_remaining"],
+                    "recipes": [
+                        {
+                            "recipe": index,
+                            "title": recipe["title"],
+                            "status": recipe["status"],
+                            "interest": recipe["interest"],
+                            "missing_information": recipe["gaps"],
+                            "ingredients": [
+                                {key: ingredient[key] for key in ("description", "quantity")}
+                                for ingredient in recipe["ingredients"]
+                            ],
+                            "conditions": [
+                                {
+                                    key: requirement[key]
+                                    for key in ("category", "key", "status", "reason")
+                                }
+                                for requirement in recipe["requirements"]
+                            ],
+                        }
+                        for index, recipe in enumerate(data["candidates"], 1)
+                    ],
+                    "plan": [
+                        {
+                            "plan_item": index,
+                            "recipe": recipes[item["recipe_id"]],
+                            "batches": item["batches"],
+                            "servings": item["servings"],
+                        }
+                        for index, item in enumerate(
+                            data["plan"]["items"] if data["plan"] else [], 1
+                        )
+                    ],
+                    "kitchen_facts": [
+                        {key: fact[key] for key in ("category", "key", "value", "unit")}
+                        for fact in data["kitchen_facts"]
+                    ],
+                    "preferences": [
+                        {key: preference[key] for key in ("category", "term", "value")}
+                        for preference in data["preferences"]
+                        if preference["validity"] == "VALID"
+                    ],
+                    "menu": _attendance_menu(data, recipes),
+                    "next_step": (
+                        "Consulte a despensa e as pendências. "
+                        "Alterações dependem de etapa posterior."
+                    ),
+                }
+            elif name == "get_inventory_snapshot":
+                indices = {str(item.id): index for index, item in enumerate(snapshot.items, 1)}
+                projected = {
+                    "items": [
+                        {
+                            "ingredient": indices[item["id"]],
+                            "name": item["name_original"],
+                            **{
+                                key: item[key]
+                                for key in (
+                                    "stock_quantity_original",
+                                    "stock_unit_original",
+                                    "purchase_quantity_original",
+                                    "purchase_unit_original",
+                                    "acquisition_total",
+                                    "unit_cost",
+                                    "dimension",
+                                )
+                            },
+                            "needs_review": bool(item["issues"]),
+                        }
+                        for item in data["items"]
+                    ],
+                    "historical_total": data["historical_total"],
+                }
+            elif name == "evaluate_purchase_plan":
+                projected = {
+                    key: data[key]
+                    for key in (
+                        "purchase_status",
+                        "disbursement",
+                        "remaining_budget",
+                    )
+                }
+                projected["needs_review"] = bool(data["gaps"])
+                projected.update(_attendance_purchase(data, state, snapshot))
+            else:
+                projected = {
+                    "status": data["status"],
+                    "missing_information": data["gaps"],
+                    "conditions": [
+                        {key: requirement[key] for key in ("category", "key", "status", "question")}
+                        for requirement in data["requirements"]
+                    ],
+                }
+            return {
+                "ok": True,
+                "data": projected,
+                "message": "Consulta realizada. Nenhuma alteração foi feita.",
+            }
+        except Exception:
+            # Exceções de persistência/domínio nunca atravessam a fronteira de atendimento.
+            return _attendance_failure()
+
+
+def _attendance_menu(data, recipes):
+    menu = []
+    for decision in data["menu"]:
+        calculation = next(
+            c for c in data["pricing_calculations"] if c["id"] == decision["calculation_id"]
+        )
+        # Mesmo cálculo do contrato legado, inclusive para preço personalizado já persistido.
+        with localcontext(FINANCIAL_CONTEXT):
+            option = price_option(
+                Decimal(calculation["cmv_per_serving"]),
+                Decimal(decision["price"]),
+                Decimal("0"),
+                "CUSTOM",
+            )
+        menu.append(
+            {
+                "recipe": recipes[decision["recipe_id"]],
+                "price": decision["price"],
+                "ingredient_cost_per_serving": calculation["cmv_per_serving"],
+                "fee": option.display["fee"],
+                "surplus_after_fee": option.display["result"],
+                "operational_costs": "Embalagem, gás/energia e trabalho não informados.",
+            }
+        )
+    return menu
+
+
+def _attendance_purchase(data, state, snapshot):
+    names = {
+        str(item.id): item.name_original
+        for item in [*snapshot.items, *state.complement_ingredients]
+    }
+    names.update(
+        {
+            str(ingredient.line_id): ingredient.description
+            for recipe in state.candidates
+            for ingredient in recipe.ingredients
+        }
+    )
+    names.update(
+        {str(quote.id): names[str(quote.ingredient_id)] for quote in state.complement_quotes}
+    )
+    messages = {
+        "MISSING_INFORMATION": (
+            "Precisamos confirmar a quantidade, o estoque ou uma oferta para este ingrediente."
+        ),
+        "UNIT_CONVERSION_REQUIRED": (
+            "Precisamos esclarecer a medida e a unidade antes de avaliar a compra."
+        ),
+        "PRICE_UNCONFIRMED": "O preço e as condições da oferta ainda precisam de confirmação.",
+        "QUOTE_EXPIRED": "A oferta expirou; precisamos de condições atuais.",
+        "STALE_QUOTE": "A oferta mudou; precisamos revisar suas condições.",
+        "BUDGET_EXCEEDED": (
+            "A compra ultrapassa o orçamento de R$ 80,00. Revise as quantidades ou alternativas."
+        ),
+    }
+    questions = []
+    for gap in data["gaps"]:
+        message = messages.get(
+            gap.partition(":")[0], "Há uma pendência de compra. Revise as condições do plano."
+        )
+        ingredients = sorted({name for identifier, name in names.items() if identifier in gap})
+        question = {"message": message, "ingredients": ingredients}
+        if question not in questions:
+            questions.append(question)
+    return {
+        "demand": [
+            {
+                "name": line["source"]["name_original"],
+                **{
+                    key: line[key]
+                    for key in (
+                        "unit",
+                        "required",
+                        "stock_available",
+                        "stock_used",
+                        "shortage",
+                    )
+                },
+            }
+            for line in data["demand"]
+        ],
+        "questions": questions,
+    }
 
 
 class BusinessStateReader:

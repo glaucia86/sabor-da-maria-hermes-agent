@@ -6,6 +6,7 @@ from uuid import uuid4
 
 import anyio
 import pytest
+from conftest import OPERATOR_STDIO_ARGS
 from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 
@@ -62,7 +63,7 @@ async def test_confirmation_pricing_replay_and_expired_resume_over_stdio(clarifi
     revision = service.get_business_state({"workspace_id": workspace})["revision"]
     server = StdioServerParameters(
         command=sys.executable,
-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
+        args=OPERATOR_STDIO_ARGS,
         env={"DONA_MARIA_DB_PATH": str(database)},
         cwd=tmp_path,
     )

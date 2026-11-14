@@ -1,0 +1,1334 @@
+diff --git a/.gitignore b/.gitignore
+index 673b2cf..a9d233e 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1,4 +1,8 @@
+-doc-specs/**
++# Contexto de engenharia: versionar apenas fontes canônicas
++/doc-specs/*
++!/doc-specs/PRD.md
++!/doc-specs/spec.md
++!/doc-specs/implementation-slices.md
+ 
+ 
+ # Python
+diff --git a/.hermes.md b/.hermes.md
+index a105f40..ab0bbc2 100644
+--- a/.hermes.md
++++ b/.hermes.md
+@@ -24,6 +24,24 @@ Use os valores do MCP, sem refazer contas. Prefira “custo dos ingredientes”
+ “margem” sem dizer o que representam. Identifique taxas didáticas como parte
+ do teste; elas não comprovam a taxa real do iFood.
+ 
++## Atendimento vinculado de leitura
++
++Ao abrir ou retomar, chame `get_business_state` com `{}` e consulte a despensa
++quando necessário. O contexto já foi configurado pela pessoa operadora: não
++peça UUID, caminho de banco, revisão ou nome de ferramenta à cozinheira.
++As referências numéricas das respostas servem somente às chamadas internas.
++Reutilize fatos e decisões vigentes e faça perguntas apenas sobre lacunas.
++
++O atendimento atual permite somente quatro consultas: estado, despensa,
++viabilidade da receita e avaliação de compras. Pesquisa, gravações, aceite,
++aprovação e escolha de preço estão indisponíveis nesta etapa. As orientações
++do fluxo completo abaixo não concedem capacidades adicionais. Conversa não
++troca contexto nem habilita diagnóstico. Não tente ferramentas alternativas.
++
++Em falha, explique a limitação e o próximo passo em português simples, sem
++identificadores, códigos ou detalhes técnicos. Se a consulta não pode prosseguir,
++peça auxílio à pessoa operadora; não invente dados nem repita em loop.
++
+ ## Contexto sob demanda
+ 
+ Use a skill `dona-maria-cardapio` quando disponível. Consulte suas referências
+diff --git a/README.md b/README.md
+index 62dd40e..2ca5a0f 100644
+--- a/README.md
++++ b/README.md
+@@ -172,12 +172,16 @@ Siga o [guia detalhado](docs/setup.md#despensa):
+ 1. Escolha o anexo original ou a demonstração sintética.
+ 2. Importe o XLSX para um SQLite isolado.
+ 3. Guarde o `workspace_id` real retornado pelo bootstrap.
+-4. Configure perfil, modelo, web, MCP e skill.
+-5. Inicie a conversa na raiz do checkout usando esse workspace.
++4. Configure perfil, modelo, MCP e skill; vincule banco/workspace/modo privadamente.
++5. Inicie o atendimento de leitura sem informar identificadores na conversa.
+ 
+ Não use o UUID fictício do smoke negativo para a conversa com sua despensa.
+ Não é necessário preencher manualmente payloads MCP para conduzir o atendimento.
+ 
++O atendimento padrão expõe quatro consultas de leitura com contexto configurado
++privadamente. Pesquisa e novas confirmações/decisões permanecem indisponíveis
++nesse catálogo; os contratos legados são preservados nos testes técnicos.
++
+ A [configuração de exemplo](config/hermes.config.example.yaml) contém somente
+ campos e caminhos substituíveis. Credenciais ficam no perfil privado do Hermes.
+ 
+diff --git a/config/hermes.config.example.yaml b/config/hermes.config.example.yaml
+index 2574044..cc1886e 100644
+--- a/config/hermes.config.example.yaml
++++ b/config/hermes.config.example.yaml
+@@ -2,6 +2,17 @@
+ # All paths are placeholders; they are not expanded automatically.
+ # Do not replace the entire private profile with this example.
+ # Provider credentials belong only in Hermes' private configuration.
++platform_toolsets:
++  cli: [mcp-dona_maria]
++tools:
++  tool_search:
++    enabled: "off"
++memory:
++  memory_enabled: false
++  user_profile_enabled: false
++display:
++  tool_progress: "off"
++  show_reasoning: false
+ skills:
+   external_dirs:
+     - /ABSOLUTE/PATH/TO/CHECKOUT/skills
+@@ -10,8 +21,18 @@ mcp_servers:
+   dona_maria:
+     # Windows executable; use .venv/bin/python on Linux/macOS.
+     command: /ABSOLUTE/PATH/TO/CHECKOUT/.venv/Scripts/python.exe
+-    args: ["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"]
++    args: ["-X", "utf8", "-B", "-m", "dona_maria.launcher"]
+     env:
+-      # Imported database; the negative smoke uses an unregistered workspace ID.
++      # Operator-only binding; never ask the customer to supply these values.
+       DONA_MARIA_DB_PATH: /ABSOLUTE/PATH/TO/CHECKOUT/artifacts/private/quickstart/workspace.sqlite3
++      DONA_MARIA_WORKSPACE_ID: WORKSPACE_UUID_FROM_LOCAL_IMPORT
++      DONA_MARIA_MODE: ATTENDANCE
++    tools:
++      include:
++        - get_business_state
++        - get_inventory_snapshot
++        - evaluate_recipe_feasibility
++        - evaluate_purchase_plan
++      resources: false
++      prompts: false
+     connect_timeout: 15
+diff --git a/docs/setup.md b/docs/setup.md
+index a212a1b..6fbc43a 100644
+--- a/docs/setup.md
++++ b/docs/setup.md
+@@ -119,7 +119,7 @@ despensa importada não confirma equipamentos, habilidades, rendimento,
+ condições comerciais ou aceite: essas informações ainda serão elicitadas.
+ 
+ <a id="perfil-hermes"></a>
+-## 3. Configure o perfil, modelo e pesquisa
++## 3. Configure o perfil e o modelo
+ 
+ Os comandos de perfil e MCP deste guia têm como referência a instalação
+ Hermes v0.23.1 e a [CLI oficial](https://hermes-agent.nousresearch.com/docs/reference/cli-commands).
+@@ -135,8 +135,9 @@ hermes -p sabor-da-maria tools
+ ```
+ 
+ No seletor de modelo, configure um provedor acessível e um modelo com
+-suporte a chamadas de ferramentas. No configurador de ferramentas,
+-configure pesquisa e extração web, incluindo o acesso exigido pelo backend.
++suporte a chamadas de ferramentas. No atendimento de leitura, habilite somente
++`mcp-dona_maria`. Pesquisa, arquivos, shell, memória, administração e outros
++servidores/plugins ficam desabilitados. A skill será pré-carregada.
+ 
+ As opções, autenticação e custos dependem do provedor escolhido.
+ O modelo do Hermes é configurado aqui; não depende do modelo usado por
+@@ -159,7 +160,7 @@ não variáveis expandidas automaticamente.
+ 
+ ```sh
+ hermes -p sabor-da-maria config set skills.external_dirs "['SKILLS_ABSOLUTO']"
+-hermes -p sabor-da-maria mcp add dona_maria --command "PYTHON_ABSOLUTO" --connect-timeout 15 --env "DONA_MARIA_DB_PATH=SQLITE_ABSOLUTO" --args -X utf8 -B -m dona_maria.mcp_server
++hermes -p sabor-da-maria mcp add dona_maria --command "PYTHON_ABSOLUTO" --connect-timeout 15 --env "DONA_MARIA_DB_PATH=SQLITE_ABSOLUTO" --env "DONA_MARIA_WORKSPACE_ID=WORKSPACE_IMPORTADO" --env "DONA_MARIA_MODE=ATTENDANCE" --args -X utf8 -B -m dona_maria.launcher
+ ```
+ 
+ Mantenha `--args` como a última opção: o restante pertence ao subprocesso.
+@@ -172,8 +173,15 @@ O Python impresso usa `.venv/Scripts/python.exe` no Windows e `.venv/bin/python`
+ no Linux/macOS. Mantenha caminhos com espaços entre aspas. Para o caminho
+ da skill, use barras `/` e preserve a lista YAML no argumento de `config set`.
+ 
+-Passe somente `DONA_MARIA_DB_PATH` ao servidor de negócio. Credenciais de
+-modelo e pesquisa pertencem à configuração privada do Hermes.
++Substitua `WORKSPACE_IMPORTADO` somente na configuração privada, pelo valor
++da importação local. O caminho deve ser absoluto e o arquivo já deve existir.
++Ausência, workspace incompatível ou modo diferente de `ATTENDANCE` impedem
++startup. Não existe descoberta automática do único workspace. Reinício conserva
++o vínculo; não execute bootstrap novamente para retomar.
++
++O launcher repassa ao processo de negócio apenas ambiente operacional mínimo
++e os três campos `DONA_MARIA_*` acima. Credenciais ficam no Hermes. Diagnóstico,
++bootstrap e testes legados são contexto local do operador, fora do atendimento.
+ A orientação `.hermes.md` é lida do projeto; `skills.external_dirs` aponta
+ apenas para `skills/` deste checkout.
+ 
+@@ -188,8 +196,12 @@ hermes -p sabor-da-maria mcp test dona_maria
+ hermes -p sabor-da-maria skills list --enabled-only
+ ```
+ 
+-A listagem deve incluir `dona-maria-cardapio`; o MCP deve descobrir as
+-ferramentas implementadas, incluindo consulta de estado e inventário.
++A listagem deve incluir `dona-maria-cardapio`; o MCP deve descobrir exatamente
++`get_business_state`, `get_inventory_snapshot`, `evaluate_recipe_feasibility`
++e `evaluate_purchase_plan`. A configuração de exemplo aplica os mesmos nomes
++em `tools.include` e desabilita wrappers resources/prompts, ferramentas adiadas
++e memória. Não habilite o canal se catálogo ou execução divergirem, inclusive
++após refresh/retomada/gateway. Nenhuma escrita ou aprovação é exposta.
+ Descoberta não prova, por si só, uso das ferramentas pelo modelo.
+ 
+ ## 5. Inicie uma conversa natural
+@@ -197,41 +209,36 @@ Descoberta não prova, por si só, uso das ferramentas pelo modelo.
+ Na raiz do checkout:
+ 
+ ```sh
+-hermes -p sabor-da-maria chat --toolsets file,web,mcp-dona_maria --skills dona-maria-cardapio
++hermes -p sabor-da-maria chat --toolsets mcp-dona_maria --skills dona-maria-cardapio -Q
+ ```
+ 
+-A skill é carregada explicitamente. O grupo `file` permite ler suas
+-referências, mas também inclui ferramentas de escrita e busca de arquivos.
+-Esta seleção não representa um sandbox de arquivos; confira o catálogo
+-efetivo e não habilite shell ou execução de código para este atendimento.
++A skill é pré-carregada de fonte local confiável. Use apresentação sem cartões
++técnicos (`-Q` na CLI assistida; `display.tool_progress: "off"` no perfil).
++Confira o canal real antes de disponibilizá-lo: texto, cartões e retornos
++automáticos não devem mostrar identificadores, caminhos ou detalhes privados.
++Perfil não constitui sandbox do sistema operacional.
+ 
+-Substitua o marcador pelo workspace retornado no bootstrap e envie:
++Envie, sem substituir marcadores ou informar identificadores:
+ 
+ ```text
+-Meu workspace é [WORKSPACE_ID_REAL].
+-
+-Quero montar o cardápio de lançamento do Sabor da Maria com a minha
+-despensa e até R$ 80 para complementos. Pode começar consultando o que
+-tenho e pesquisando receitas reais? Pergunte sobre minha cozinha e
+-habilidades antes de propor um prato para eu aceitar.
++Olá! Quero saber o que posso preparar com os ingredientes que tenho.
+ ```
+ 
+-Responda às perguntas com as condições reais da cozinha. Interesse,
+-confirmação de fatos, aceite do prato e escolha de preço são decisões distintas.
++O contexto já está fixado. O atendimento consulta ingredientes, candidatas e
++decisões persistidas; explica pendências sem criar receitas ou fatos. Pesquisa,
++aprovação, aceite e preço novos ainda não estão disponíveis nesse catálogo.
+ 
+ Confira durante a conversa:
+ 
+-- Consulta MCP ao workspace e ao inventário importados.
+-- Pesquisa e extração web efetivas, com URL e conteúdo recuperado.
+-- Perguntas sobre os requisitos da receita, sem condições presumidas.
+-- Cálculos retornados pelo MCP e escolha de preço solicitada à pessoa.
+-- Registro anunciado somente depois de retorno de sucesso.
++- Estado e despensa corretos, sem pedir identificadores à cozinheira.
++- Reutilização de fatos vigentes e perguntas ligadas às lacunas reais.
++- Recusa de troca de contexto, diagnóstico e operações não disponíveis.
++- Nenhuma gravação, decisão ou pesquisa executada nesta etapa.
+ 
+ Depois, abra uma nova conversa com o mesmo perfil, checkout e banco:
+ 
+ ```text
+-Retome o workspace [WORKSPACE_ID_REAL]. Mostre o cardápio e as pendências
+-usando o estado salvo, sem registrar novas decisões.
++Vamos continuar. Mostre o que já está confirmado e o que ainda falta.
+ ```
+ 
+ Compare com o estado observado anteriormente. Memória da conversa não
+@@ -240,22 +247,21 @@ substitui a consulta ao SQLite.
+ <a id="smoke-negativo"></a>
+ ## 6. Smoke negativo — diagnóstico opcional
+ 
+-Em um banco recém-importado que contenha somente o workspace retornado,
+-consulte um UUID diferente dele e que não tenha sido cadastrado:
++Faça diagnóstico somente em sessão local do operador e com banco sintético.
++Não conceda privilégios por conversa. O teste do binding inválido pode iniciar
++um subprocesso de atendimento com UUID não cadastrado na configuração privada:
+ 
+ ```text
+-Use o MCP dona_maria para chamar get_business_state com workspace_id
+-[UUID_NAO_CADASTRADO]. Informe o resultado observado, sem criar workspace
+-ou simular dados.
++DONA_MARIA_WORKSPACE_ID=UUID_NAO_CADASTRADO
+ ```
+ 
+-O resultado esperado é `NOT_FOUND`, `ok=false`, `data=null` e `revision=null`.
+-O MCP marca esse resultado com `isError=true`; o cliente pode apresentá-lo
+-como erro de ferramenta. Isso verifica uma recusa de leitura; não demonstra
+-importação, pesquisa, viabilidade, aceite ou preço.
++Esse é um valor de configuração, não uma fala nem um comando de shell.
++O startup deve falhar sem servir MCP, sem traceback e sem alterar o banco.
++Uma chamada com `workspace_id` extra também deve ser recusada. Os testes
++`test_attendance.py` e `test_attendance_stdio.py` verificam essas fronteiras.
+ 
+-Depois retome a conversa usando o workspace real. O percurso principal
+-não depende de obter um erro primeiro.
++Depois restaure o vínculo sintético válido fora da conversa e reinicie o
++processo. Não faça esse experimento contra o banco real da demonstração.
+ 
+ ## Se algo falhar
+ 
+@@ -266,11 +272,11 @@ não depende de obter um erro primeiro.
+ | Módulo `dona_maria` ausente | Sync concluído e MCP usando o Python da aplicação. |
+ | Importação recusada | Arquivo XLSX, abas/colunas, diretório autorizado e diretório pai do SQLite existente. |
+ | Banco indisponível | Caminho, permissões e versão do schema; banco corrompido ou mais novo é recusado e preservado. Registros exigem escrita no SQLite e no diretório pai. |
+-| `NOT_FOUND` na conversa principal | Workspace copiado do bootstrap e MCP apontando para o mesmo banco. |
+-| Busca indisponível | Backend web, autenticação, conectividade e limites do provedor. Habilitar o toolset não configura acesso por si só. |
++| Atendimento indisponível | Operador confere banco absoluto, workspace explícito e modo; não pede UUID à cozinheira. |
++| Busca indisponível | Atendimento atual somente de leitura; pesquisa ainda não está habilitada. Não use ferramentas alternativas. |
+ | Skill ausente | Perfil correto, lista `skills.external_dirs` e caminho somente da skill de domínio. |
+-| Referência da skill não lida | Catálogo efetivo e disponibilidade das ferramentas de arquivo previstas neste guia. |
+-| Catálogo ou banco antigo | Confira a conexão ativa antes de repetir escritas. Use o procedimento de reconexão abaixo; não apague banco nem reinicie gateways alheios. |
++| Referência da skill não lida | Pré-carregue a skill confiável; não habilite ferramentas genéricas de arquivo. |
++| Catálogo ou banco antigo | Confira a conexão ativa antes de repetir consultas. Use a reconexão abaixo; não apague banco nem reinicie gateways alheios. |
+ | Resultado de escrita incerto | Consulte o estado antes de repetir. Não anuncie gravação sem confirmação. |
+ | Sessão sem resposta | Modelo, provedor e conectividade; não substitua uma chamada pendente por resultado simulado. |
+ | Ferramentas inesperadas | Catálogo efetivo e filtros do perfil; web pertence ao host. |
+@@ -296,14 +302,16 @@ fotografia quando hash/política coincidem. Com `--workspace-id ID_EXISTENTE`,
+ somente o mesmo snapshot é reutilizado, preservando estado e revisão. Outra
+ planilha não substitui silenciosamente o workspace existente.
+ 
+-O catálogo inclui `get_business_state`, `get_inventory_snapshot`,
++O catálogo técnico legado, usado somente em testes sintéticos fora do
++atendimento, inclui `get_business_state`, `get_inventory_snapshot`,
+ `register_recipe_candidate`, `record_user_preferences`, `record_recipe_feedback`,
+ `record_kitchen_facts`, `set_production_plan`, `evaluate_recipe_feasibility`,
+ `evaluate_purchase_plan`, `accept_recipe`, `calculate_pricing_scenarios`,
+ `save_menu_decision`, `resolve_recipe_ingredient`, `record_ingredient_conversion`,
+ `register_complement_quote` e `confirm_complement_quote`.
+ 
+-Para registrar a candidata, o agente usa o workspace importado, fontes
++Os contratos internos abaixo preservam compatibilidade; não estão disponíveis
++como decisões no atendimento de leitura. Nos testes legados, o agente usa o workspace importado, fontes
+ efetivamente extraídas e os schemas descobertos no MCP. Rendimento, medidas
+ ou contexto ausentes precisam de lacunas explícitas. `complete` e outros
+ campos derivados não são entradas.
+@@ -349,7 +357,7 @@ verifique a versão ou uma cópia de segurança antes de continuar.
+ 
+ No gateway, `/reload-mcp` pode preservar conexões já registradas. No perfil
+ dedicado, desabilite somente `mcp_servers.dona_maria.enabled`, recarregue,
+-reabilite e recarregue novamente. Confira nomes e workspace antes de pesquisar.
++reabilite e recarregue novamente. Confira catálogo e vínculo antes de atender.
+ 
+ A ausência de ferramentas perigosas deve ser conferida no catálogo efetivo.
+ Uma skill builtin essencial pode permanecer no contexto conforme a versão;
+diff --git a/evals/run.py b/evals/run.py
+index 60dbcdc..5976c99 100644
+--- a/evals/run.py
++++ b/evals/run.py
+@@ -154,7 +154,7 @@ def cli(launcher, profile, folder, *args, input_text=None):
+ 
+ 
+ def connect(launcher, profile, folder, case, name):
+-    servers = [(case["server"], ["-m", "dona_maria.mcp_server"])]
++    servers = [(case["server"], [str(ROOT / "evals/operator_stdio.py")])]
+     if name in ("recovery", "disconnect"):
+         servers[0] = (
+             case["server"],
+diff --git a/evals/stdio_fault.py b/evals/stdio_fault.py
+index c062ab1..60da36c 100644
+--- a/evals/stdio_fault.py
++++ b/evals/stdio_fault.py
+@@ -25,7 +25,7 @@ def main():
+         parser.error("Prepare o banco sintético e o diretório de evidências primeiro.")
+     pending = {}
+     child = subprocess.Popen(
+-        [sys.executable, "-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
++        [sys.executable, "-X", "utf8", "-B", str(Path(__file__).with_name("operator_stdio.py"))],
+         stdin=subprocess.PIPE,
+         stdout=subprocess.PIPE,
+         env=get_default_environment() | {"DONA_MARIA_DB_PATH": str(args.database.resolve())},
+diff --git a/skills/dona-maria-cardapio/SKILL.md b/skills/dona-maria-cardapio/SKILL.md
+index 60c9ff6..563876a 100644
+--- a/skills/dona-maria-cardapio/SKILL.md
++++ b/skills/dona-maria-cardapio/SKILL.md
+@@ -10,13 +10,22 @@ conversa e pesquisa; Python/MCP valida o estado e as regras de negócio.
+ 
+ ## Início e retomada
+ 
+-1. Descubra as ferramentas disponíveis. Use `get_business_state` do servidor
+-   Dona Maria com o workspace explicitamente configurado pela pessoa operadora.
+-2. Se receber `NOT_FOUND`, explique que o workspace não existe. Não invente
+-   despensa, saldo, receitas ou decisões; peça à pessoa operadora que prepare
+-   o workspace. Não crie ou selecione outro workspace por conta própria.
++1. Use `get_business_state` com `{}`. O contexto privado já foi vinculado pela
++   pessoa operadora. Nunca peça UUID, caminho de banco ou revisão à cozinheira.
++   Consulte `get_inventory_snapshot` com `{}` para recuperar os ingredientes.
++2. Use somente as quatro leituras disponíveis: estado, despensa, viabilidade
++   e avaliação de compras. Referências numéricas são internas às chamadas;
++   não as apresente na conversa. Reutilize fatos, preferências e decisões atuais.
++   Não crie nem selecione outro contexto; conversa não habilita diagnóstico.
+ 3. Se a ferramenta ou o servidor estiver indisponível, interrompa essa etapa
+    e informe a limitação. Memória da conversa não substitui o estado persistido.
++4. Em recusa ou falha, diga o que foi possível consultar e o que falta, sem
++   códigos, identificadores ou detalhes privados. Peça auxílio à pessoa
++   operadora se necessário; não invente dados nem repita chamadas em loop.
++
++Nesta etapa de leitura, pesquisa, alterações e decisões estão indisponíveis.
++As referências ao fluxo completo abaixo são orientação histórica, sem permissão
++para executar ferramentas adicionais ou solicitar habilitação pela conversa.
+ 
+ ## Consulta da despensa sem decisões
+ 
+diff --git a/src/dona_maria/business_state.py b/src/dona_maria/business_state.py
+index 2fd21ad..7eeb834 100644
+--- a/src/dona_maria/business_state.py
++++ b/src/dona_maria/business_state.py
+@@ -1,20 +1,28 @@
+ """Serviço público de consulta, produção, aceite e precificação determinística."""
+ 
++import json
+ import sqlite3
+ from collections.abc import Callable
++from dataclasses import dataclass, field
+ from datetime import UTC, datetime
+-from decimal import DecimalException
+-from typing import Literal
++from decimal import Decimal, DecimalException, localcontext
++from pathlib import Path
++from typing import Annotated, Literal
+ from uuid import UUID
+ 
+-from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
++from pydantic import BaseModel, ConfigDict, Field, StrictInt, ValidationError, field_validator
+ 
+ from dona_maria.candidates import RegisterCandidateRequest
+ from dona_maria.ingredients import ConversionRequest, ResolveIngredientRequest
+ from dona_maria.inventory import normalize_name
+ from dona_maria.persistence import BusinessRuleError, SQLiteWorkspaceRepository
+ from dona_maria.planning import WorkspaceState, evaluate_plan, pricing_view
+-from dona_maria.pricing import CalculatePricingRequest, SaveMenuDecisionRequest
++from dona_maria.pricing import (
++    FINANCIAL_CONTEXT,
++    CalculatePricingRequest,
++    SaveMenuDecisionRequest,
++    price_option,
++)
+ from dona_maria.production import (
+     AcceptanceRequest,
+     FeasibilityRequest,
+@@ -66,6 +74,297 @@ class ReadErrorEnvelope(BaseModel):
+     error: ReadError | None = None
+ 
+ 
++class AttendanceReadRequest(BaseModel):
++    model_config = ConfigDict(extra="forbid", strict=True)
++
++
++Reference = Annotated[StrictInt, Field(ge=1)]
++
++
++class AttendanceInventoryRequest(AttendanceReadRequest):
++    ingredients: Annotated[list[Reference], Field(max_length=200)] | None = None
++
++
++class AttendanceFeasibilityRequest(AttendanceReadRequest):
++    recipe: Reference
++    plan_item: Reference
++
++
++ATTENDANCE_TOOLS = {
++    "get_business_state": (AttendanceReadRequest, "Consulta os fatos e pendências atuais."),
++    "get_inventory_snapshot": (AttendanceInventoryRequest, "Consulta os ingredientes disponíveis."),
++    "evaluate_recipe_feasibility": (
++        AttendanceFeasibilityRequest,
++        "Verifica as condições da receita no plano atual.",
++    ),
++    "evaluate_purchase_plan": (AttendanceReadRequest, "Verifica os faltantes do plano atual."),
++}
++MAX_CALL_BYTES = 256 * 1024
++
++
++def _attendance_failure(message="Não foi possível consultar. Peça auxílio à pessoa operadora."):
++    return {"ok": False, "data": None, "message": message}
++
++
++@dataclass(frozen=True)
++class AttendanceService:
++    """Fronteira de leitura; o contexto é autoridade local, nunca entrada do modelo."""
++
++    database: Path
++    workspace_id: str
++    mode: str
++    _reader: "BusinessStateReader" = field(init=False, repr=False)
++
++    def __post_init__(self):
++        try:
++            if self.mode != "ATTENDANCE" or not self.database.is_absolute():
++                raise ValueError
++            database = self.database.resolve(strict=True)
++            workspace = str(UUID(self.workspace_id))
++            repository = SQLiteWorkspaceRepository(database)
++            if not database.is_file() or repository.load(workspace) is None:
++                raise ValueError
++        except (ValueError, OSError, sqlite3.Error, ValidationError):
++            raise ValueError("Atendimento indisponível. Peça auxílio à pessoa operadora.") from None
++        object.__setattr__(self, "database", database)
++        object.__setattr__(self, "workspace_id", workspace)
++        object.__setattr__(self, "_reader", BusinessStateReader(repository))
++
++    def call(self, name: str, arguments: dict) -> dict:
++        if name not in ATTENDANCE_TOOLS:
++            return _attendance_failure("Esta ação não está disponível neste atendimento.")
++        try:
++            size = len(
++                json.dumps(arguments, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
++            )
++            if size > MAX_CALL_BYTES:
++                return _attendance_failure("O pedido excede o limite. Envie um pedido menor.")
++            request = ATTENDANCE_TOOLS[name][0].model_validate(arguments)
++        except (ValidationError, TypeError, ValueError, RecursionError):
++            return _attendance_failure("Não foi possível usar esses dados. Revise o pedido.")
++        try:
++            loaded = self._reader.repository.load(self.workspace_id, with_snapshot=True)
++            if loaded is None:
++                return _attendance_failure()
++            _, state, snapshot = loaded
++            internal = {"workspace_id": self.workspace_id}
++            if name == "get_inventory_snapshot" and request.ingredients is not None:
++                if any(index > len(snapshot.items) for index in request.ingredients):
++                    return _attendance_failure(
++                        "Ingrediente indisponível. Consulte a despensa atual."
++                    )
++                internal["ingredient_ids"] = [
++                    str(snapshot.items[index - 1].id) for index in request.ingredients
++                ]
++            elif name == "evaluate_recipe_feasibility":
++                if (
++                    request.recipe > len(state.candidates)
++                    or state.plan is None
++                    or request.plan_item > len(state.plan.items)
++                ):
++                    return _attendance_failure("Receita indisponível. Consulte o plano atual.")
++                internal.update(
++                    recipe_id=str(state.candidates[request.recipe - 1].id),
++                    plan_item_id=str(state.plan.items[request.plan_item - 1].plan_item_id),
++                )
++            envelope = getattr(self._reader, name)(internal)
++            if not envelope["ok"]:
++                return _attendance_failure()
++            data = envelope["data"]
++            if name == "get_business_state":
++                recipes = {
++                    recipe["id"]: index for index, recipe in enumerate(data["candidates"], 1)
++                }
++                projected = {
++                    "remaining_budget": data["budget_remaining"],
++                    "recipes": [
++                        {
++                            "recipe": index,
++                            "title": recipe["title"],
++                            "status": recipe["status"],
++                            "interest": recipe["interest"],
++                            "missing_information": recipe["gaps"],
++                            "ingredients": [
++                                {key: ingredient[key] for key in ("description", "quantity")}
++                                for ingredient in recipe["ingredients"]
++                            ],
++                            "conditions": [
++                                {
++                                    key: requirement[key]
++                                    for key in ("category", "key", "status", "reason")
++                                }
++                                for requirement in recipe["requirements"]
++                            ],
++                        }
++                        for index, recipe in enumerate(data["candidates"], 1)
++                    ],
++                    "plan": [
++                        {
++                            "plan_item": index,
++                            "recipe": recipes[item["recipe_id"]],
++                            "batches": item["batches"],
++                            "servings": item["servings"],
++                        }
++                        for index, item in enumerate(
++                            data["plan"]["items"] if data["plan"] else [], 1
++                        )
++                    ],
++                    "kitchen_facts": [
++                        {key: fact[key] for key in ("category", "key", "value", "unit")}
++                        for fact in data["kitchen_facts"]
++                    ],
++                    "preferences": [
++                        {key: preference[key] for key in ("category", "term", "value")}
++                        for preference in data["preferences"]
++                        if preference["validity"] == "VALID"
++                    ],
++                    "menu": _attendance_menu(data, recipes),
++                    "next_step": (
++                        "Consulte a despensa e as pendências. "
++                        "Alterações dependem de etapa posterior."
++                    ),
++                }
++            elif name == "get_inventory_snapshot":
++                indices = {str(item.id): index for index, item in enumerate(snapshot.items, 1)}
++                projected = {
++                    "items": [
++                        {
++                            "ingredient": indices[item["id"]],
++                            "name": item["name_original"],
++                            **{
++                                key: item[key]
++                                for key in (
++                                    "stock_quantity_original",
++                                    "stock_unit_original",
++                                    "purchase_quantity_original",
++                                    "purchase_unit_original",
++                                    "acquisition_total",
++                                    "unit_cost",
++                                    "dimension",
++                                )
++                            },
++                            "needs_review": bool(item["issues"]),
++                        }
++                        for item in data["items"]
++                    ],
++                    "historical_total": data["historical_total"],
++                }
++            elif name == "evaluate_purchase_plan":
++                projected = {
++                    key: data[key]
++                    for key in (
++                        "purchase_status",
++                        "disbursement",
++                        "remaining_budget",
++                    )
++                }
++                projected["needs_review"] = bool(data["gaps"])
++                projected.update(_attendance_purchase(data, state, snapshot))
++            else:
++                projected = {
++                    "status": data["status"],
++                    "missing_information": data["gaps"],
++                    "conditions": [
++                        {key: requirement[key] for key in ("category", "key", "status", "question")}
++                        for requirement in data["requirements"]
++                    ],
++                }
++            return {
++                "ok": True,
++                "data": projected,
++                "message": "Consulta realizada. Nenhuma alteração foi feita.",
++            }
++        except Exception:
++            # Exceções de persistência/domínio nunca atravessam a fronteira de atendimento.
++            return _attendance_failure()
++
++
++def _attendance_menu(data, recipes):
++    menu = []
++    for decision in data["menu"]:
++        calculation = next(
++            c for c in data["pricing_calculations"] if c["id"] == decision["calculation_id"]
++        )
++        # Mesmo cálculo do contrato legado, inclusive para preço personalizado já persistido.
++        with localcontext(FINANCIAL_CONTEXT):
++            option = price_option(
++                Decimal(calculation["cmv_per_serving"]),
++                Decimal(decision["price"]),
++                Decimal("0"),
++                "CUSTOM",
++            )
++        menu.append(
++            {
++                "recipe": recipes[decision["recipe_id"]],
++                "price": decision["price"],
++                "ingredient_cost_per_serving": calculation["cmv_per_serving"],
++                "fee": option.display["fee"],
++                "surplus_after_fee": option.display["result"],
++                "operational_costs": "Embalagem, gás/energia e trabalho não informados.",
++            }
++        )
++    return menu
++
++
++def _attendance_purchase(data, state, snapshot):
++    names = {
++        str(item.id): item.name_original
++        for item in [*snapshot.items, *state.complement_ingredients]
++    }
++    names.update(
++        {
++            str(ingredient.line_id): ingredient.description
++            for recipe in state.candidates
++            for ingredient in recipe.ingredients
++        }
++    )
++    names.update(
++        {str(quote.id): names[str(quote.ingredient_id)] for quote in state.complement_quotes}
++    )
++    messages = {
++        "MISSING_INFORMATION": (
++            "Precisamos confirmar a quantidade, o estoque ou uma oferta para este ingrediente."
++        ),
++        "UNIT_CONVERSION_REQUIRED": (
++            "Precisamos esclarecer a medida e a unidade antes de avaliar a compra."
++        ),
++        "PRICE_UNCONFIRMED": "O preço e as condições da oferta ainda precisam de confirmação.",
++        "QUOTE_EXPIRED": "A oferta expirou; precisamos de condições atuais.",
++        "STALE_QUOTE": "A oferta mudou; precisamos revisar suas condições.",
++        "BUDGET_EXCEEDED": (
++            "A compra ultrapassa o orçamento de R$ 80,00. Revise as quantidades ou alternativas."
++        ),
++    }
++    questions = []
++    for gap in data["gaps"]:
++        message = messages.get(
++            gap.partition(":")[0], "Há uma pendência de compra. Revise as condições do plano."
++        )
++        ingredients = sorted({name for identifier, name in names.items() if identifier in gap})
++        question = {"message": message, "ingredients": ingredients}
++        if question not in questions:
++            questions.append(question)
++    return {
++        "demand": [
++            {
++                "name": line["source"]["name_original"],
++                **{
++                    key: line[key]
++                    for key in (
++                        "unit",
++                        "required",
++                        "stock_available",
++                        "stock_used",
++                        "shortage",
++                    )
++                },
++            }
++            for line in data["demand"]
++        ],
++        "questions": questions,
++    }
++
++
+ class BusinessStateReader:
+     def __init__(
+         self,
+diff --git a/src/dona_maria/mcp_server.py b/src/dona_maria/mcp_server.py
+index 01412a2..7ac2a60 100644
+--- a/src/dona_maria/mcp_server.py
++++ b/src/dona_maria/mcp_server.py
+@@ -4,6 +4,8 @@ import asyncio
+ import json
+ import logging
+ import os
++import sys
++from contextlib import closing
+ from datetime import UTC, datetime
+ from importlib.metadata import version
+ from pathlib import Path
+@@ -13,9 +15,19 @@ from uuid import uuid4
+ from mcp.server.lowlevel import Server
+ from mcp.server.stdio import stdio_server
+ from mcp.shared.exceptions import MCPError
+-from mcp.types import CallToolResult, ListToolsResult, TextContent, Tool, ToolAnnotations
++from mcp.types import (
++    CallToolResult,
++    ListToolsResult,
++    TextContent,
++    Tool,
++    ToolAnnotations,
++    jsonrpc_message_adapter,
++)
+ 
+ from dona_maria.business_state import (
++    ATTENDANCE_TOOLS,
++    MAX_CALL_BYTES,
++    AttendanceService,
+     BusinessStateReader,
+     GetBusinessStateRequest,
+     GetInventorySnapshotRequest,
+@@ -219,16 +231,165 @@ def create_server(reader: BusinessStateReader) -> Server:
+ 
+ 
+ async def serve(database: Path) -> None:
++    """Seam técnico legado para testes locais; não é o launcher do atendimento."""
+     server = create_server(BusinessStateReader(SQLiteWorkspaceRepository(database)))
+     async with stdio_server() as (read, write):
+         await server.run(read, write, server.create_initialization_options())
+ 
+ 
++def create_attendance_server(service: AttendanceService) -> Server:
++    async def list_tools(ctx, params):
++        return ListToolsResult(
++            tools=[
++                Tool(
++                    name=name,
++                    description=description,
++                    input_schema=schema.model_json_schema(),
++                    annotations=ToolAnnotations(
++                        read_only_hint=True,
++                        destructive_hint=False,
++                        idempotent_hint=True,
++                        open_world_hint=False,
++                    ),
++                )
++                for name, (schema, description) in ATTENDANCE_TOOLS.items()
++            ]
++        )
++
++    async def call_tool(ctx, params):
++        started = perf_counter()
++        result = await asyncio.to_thread(service.call, params.name, params.arguments or {})
++        logging.getLogger(__name__).info(
++            json.dumps(
++                {
++                    "event": "attendance_read",
++                    "correlation_id": str(uuid4()),
++                    "tool": params.name if params.name in ATTENDANCE_TOOLS else "disabled",
++                    "result": "SUCCESS" if result["ok"] else "REFUSED",
++                    "duration_ms": round((perf_counter() - started) * 1000, 3),
++                }
++            )
++        )
++        return CallToolResult(
++            content=[TextContent(type="text", text=json.dumps(result, ensure_ascii=False))],
++            structured_content=result,
++            is_error=not result["ok"],
++        )
++
++    return Server(
++        "dona_maria",
++        version=version("sabor-da-maria"),
++        on_list_tools=list_tools,
++        on_call_tool=call_tool,
++    )
++
++
++async def serve_attendance(service: AttendanceService) -> None:
++    server = create_attendance_server(service)
++    # O SDK desvia fd 1; o erro do receptor usa uma cópia privada do canal original.
++    with closing(os.fdopen(os.dup(sys.stdout.fileno()), "w", encoding="utf-8")) as output:
++        async with stdio_server(stdin=_BoundedStdin(output)) as (read, write):
++            await server.run(read, write, server.create_initialization_options())
++
++
++MAX_FRAME_BYTES = 512 * 1024
++
++
++def _raw_parameter_size(text: str) -> int:
++    """Conta o trecho recebido, inclusive espaços e escapes que o SDK normalizaria."""
++    decoder = json.JSONDecoder()
++    offset = text.index("{") + 1
++    size = 0
++    while True:
++        while text[offset].isspace():
++            offset += 1
++        if text[offset] == "}":
++            return size
++        key, offset = decoder.raw_decode(text, offset)
++        while text[offset].isspace():
++            offset += 1
++        offset += 1  # O JSON já foi validado; este caractere é ':'
++        start = offset
++        while text[offset].isspace():
++            offset += 1
++        _, offset = decoder.raw_decode(text, offset)
++        if key == "params":
++            size = max(size, len(text[start:offset].encode("utf-8")))
++        while text[offset].isspace():
++            offset += 1
++        if text[offset] == ",":
++            offset += 1
++
++
++def _collections_fit(parameters) -> bool:
++    pending = [parameters]
++    while pending:
++        value = pending.pop()
++        if isinstance(value, (dict, list)):
++            if len(value) > 200:
++                return False
++            pending.extend(value.values() if isinstance(value, dict) else value)
++    return True
++
++
++class _BoundedStdin:
++    """O SDK 2.3.0 não limita readline; recusa o frame antes de materializá-lo inteiro."""
++
++    def __init__(self, output):
++        self.output = output
++
++    def __aiter__(self):
++        return self
++
++    async def __anext__(self):
++        while True:
++            frame = await asyncio.to_thread(sys.stdin.buffer.readline, MAX_FRAME_BYTES + 1)
++            if not frame:
++                raise StopAsyncIteration
++            if len(frame) > MAX_FRAME_BYTES:
++                self._refuse("O pedido excede o limite. Envie um pedido menor.")
++                # Fecha sem drenar uma entrada excessiva nem truncar silenciosamente.
++                raise StopAsyncIteration
++            try:
++                text = frame.decode("utf-8")
++                message = jsonrpc_message_adapter.validate_json(text, by_name=False)
++                if getattr(message, "method", None) == "tools/call":
++                    if _raw_parameter_size(text) > MAX_CALL_BYTES or not _collections_fit(
++                        message.params
++                    ):
++                        self._refuse("O pedido excede o limite. Envie um pedido menor.", message.id)
++                        continue
++                return text
++            except (UnicodeError, ValueError, RecursionError):
++                self._refuse("Não foi possível usar esses dados. Revise o pedido.")
++                raise StopAsyncIteration from None
++
++    def _refuse(self, message, identifier=None):
++        self.output.write(
++            json.dumps(
++                {
++                    "jsonrpc": "2.0",
++                    "id": identifier,
++                    "error": {"code": -32600, "message": message},
++                },
++                ensure_ascii=False,
++            )
++            + "\n"
++        )
++        self.output.flush()
++
++
+ def main() -> None:
+     logging.basicConfig(level=logging.INFO, format="%(message)s")
+-    database = os.environ.get("DONA_MARIA_DB_PATH")
+-    if not database:
+-        raise SystemExit("Configure DONA_MARIA_DB_PATH antes de iniciar o servidor.")
++    logging.getLogger("mcp").setLevel(logging.CRITICAL)
++    try:
++        service = AttendanceService(
++            Path(os.environ["DONA_MARIA_DB_PATH"]),
++            os.environ["DONA_MARIA_WORKSPACE_ID"],
++            os.environ["DONA_MARIA_MODE"],
++        )
++    except (KeyError, ValueError):
++        raise SystemExit("Atendimento indisponível. Peça auxílio à pessoa operadora.") from None
+     logging.getLogger(__name__).info(
+         json.dumps(
+             {
+@@ -237,7 +398,10 @@ def main() -> None:
+             }
+         )
+     )
+-    asyncio.run(serve(Path(database)))
++    try:
++        asyncio.run(serve_attendance(service))
++    except Exception:
++        raise SystemExit("Atendimento interrompido. Peça auxílio à pessoa operadora.") from None
+ 
+ 
+ if __name__ == "__main__":
+diff --git a/tests/conftest.py b/tests/conftest.py
+index e4f99fe..f952d20 100644
+--- a/tests/conftest.py
++++ b/tests/conftest.py
+@@ -1,5 +1,6 @@
+ from copy import deepcopy
+ from datetime import UTC, datetime
++from pathlib import Path
+ from uuid import uuid4
+ 
+ import pytest
+@@ -9,6 +10,10 @@ from dona_maria.bootstrap import bootstrap_workspace
+ from dona_maria.business_state import BusinessStateReader
+ from dona_maria.persistence import SQLiteWorkspaceRepository
+ 
++OPERATOR_STDIO_ARGS = [
++    "-X", "utf8", "-B", str(Path(__file__).resolve().parents[1] / "evals/operator_stdio.py")
++]
++
+ 
+ @pytest.fixture
+ def inventory_file(tmp_path):
+diff --git a/tests/integration/test_acceptance_stdio.py b/tests/integration/test_acceptance_stdio.py
+index c372631..9d1db08 100644
+--- a/tests/integration/test_acceptance_stdio.py
++++ b/tests/integration/test_acceptance_stdio.py
+@@ -8,6 +8,7 @@ from uuid import uuid4
+ 
+ import anyio
+ import pytest
++from conftest import OPERATOR_STDIO_ARGS
+ from mcp.client.session import ClientSession
+ from mcp.client.stdio import StdioServerParameters, stdio_client
+ 
+@@ -31,7 +32,7 @@ async def test_direct_acceptance_cannot_bypass_gaps_and_mcp_exposes_safe_contrac
+     ]
+     server = StdioServerParameters(
+         command=sys.executable,
+-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
++        args=OPERATOR_STDIO_ARGS,
+         env={"DONA_MARIA_DB_PATH": str(database)},
+         cwd=tmp_path,
+     )
+@@ -154,7 +155,7 @@ async def test_acceptance_commits_atomically_and_replays_after_restart(
+     ]
+     server = StdioServerParameters(
+         command=sys.executable,
+-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
++        args=OPERATOR_STDIO_ARGS,
+         env={"DONA_MARIA_DB_PATH": str(database)},
+         cwd=tmp_path,
+     )
+diff --git a/tests/integration/test_candidate_stdio.py b/tests/integration/test_candidate_stdio.py
+index 0709aac..c7250ed 100644
+--- a/tests/integration/test_candidate_stdio.py
++++ b/tests/integration/test_candidate_stdio.py
+@@ -7,6 +7,7 @@ from uuid import uuid4
+ 
+ import anyio
+ import pytest
++from conftest import OPERATOR_STDIO_ARGS
+ from mcp.client.session import ClientSession
+ from mcp.client.stdio import StdioServerParameters, stdio_client
+ 
+@@ -24,7 +25,7 @@ async def test_locally_imported_workspace_can_be_resumed_over_mcp(tmp_path, inve
+     created = bootstrap_workspace(database, inventory_file, allowed_directory=tmp_path)
+     server = StdioServerParameters(
+         command=sys.executable,
+-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
++        args=OPERATOR_STDIO_ARGS,
+         env={"DONA_MARIA_DB_PATH": str(database)},
+         cwd=tmp_path,
+     )
+@@ -55,7 +56,7 @@ async def test_inventory_can_be_filtered_without_changing_the_snapshot(tmp_path,
+     created = bootstrap_workspace(database, inventory_file, allowed_directory=tmp_path)
+     server = StdioServerParameters(
+         command=sys.executable,
+-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
++        args=OPERATOR_STDIO_ARGS,
+         env={"DONA_MARIA_DB_PATH": str(database)},
+         cwd=tmp_path,
+     )
+@@ -89,7 +90,7 @@ async def test_incomplete_candidate_is_registered_and_recovered_after_server_res
+     created = bootstrap_workspace(database, inventory_file, allowed_directory=tmp_path)
+     server = StdioServerParameters(
+         command=sys.executable,
+-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
++        args=OPERATOR_STDIO_ARGS,
+         env={"DONA_MARIA_DB_PATH": str(database)},
+         cwd=tmp_path,
+     )
+@@ -151,7 +152,7 @@ async def test_replay_does_not_duplicate_and_recipe_revision_requires_current_ve
+     )
+     server = StdioServerParameters(
+         command=sys.executable,
+-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
++        args=OPERATOR_STDIO_ARGS,
+         env={"DONA_MARIA_DB_PATH": str(tmp_path / "state.sqlite3")},
+         cwd=tmp_path,
+     )
+@@ -220,7 +221,7 @@ async def test_candidate_identity_is_validated_against_its_workspace(
+     )
+     server = StdioServerParameters(
+         command=sys.executable,
+-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
++        args=OPERATOR_STDIO_ARGS,
+         env={"DONA_MARIA_DB_PATH": str(tmp_path / "state.sqlite3")},
+         cwd=tmp_path,
+     )
+@@ -266,7 +267,7 @@ async def test_untrusted_candidate_fields_and_missing_sources_cannot_mutate_stat
+     )
+     server = StdioServerParameters(
+         command=sys.executable,
+-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
++        args=OPERATOR_STDIO_ARGS,
+         env={"DONA_MARIA_DB_PATH": str(tmp_path / "state.sqlite3")},
+         cwd=tmp_path,
+     )
+@@ -360,7 +361,7 @@ async def test_failed_transaction_never_confirms_and_can_be_retried_without_part
+             )
+     server = StdioServerParameters(
+         command=sys.executable,
+-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
++        args=OPERATOR_STDIO_ARGS,
+         env={"DONA_MARIA_DB_PATH": str(database)},
+         cwd=tmp_path,
+     )
+@@ -410,7 +411,7 @@ async def test_tool_logs_are_correlated_json_without_recipe_payload(
+     operation_id = str(uuid4())
+     server = StdioServerParameters(
+         command=sys.executable,
+-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
++        args=OPERATOR_STDIO_ARGS,
+         env={"DONA_MARIA_DB_PATH": str(database)},
+         cwd=tmp_path,
+     )
+@@ -450,7 +451,7 @@ async def test_locked_storage_returns_retryable_error_with_the_same_operation_id
+     operation_id = str(uuid4())
+     server = StdioServerParameters(
+         command=sys.executable,
+-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
++        args=OPERATOR_STDIO_ARGS,
+         env={"DONA_MARIA_DB_PATH": str(database)},
+         cwd=tmp_path,
+     )
+@@ -486,7 +487,7 @@ async def test_two_clients_cannot_commit_the_same_workspace_revision(
+     created = bootstrap_workspace(database, inventory_file, allowed_directory=tmp_path)
+     server = StdioServerParameters(
+         command=sys.executable,
+-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
++        args=OPERATOR_STDIO_ARGS,
+         env={"DONA_MARIA_DB_PATH": str(database)},
+         cwd=tmp_path,
+     )
+@@ -539,7 +540,7 @@ async def test_missing_measure_and_unknown_requirement_remain_explicit(
+     ]
+     server = StdioServerParameters(
+         command=sys.executable,
+-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
++        args=OPERATOR_STDIO_ARGS,
+         env={"DONA_MARIA_DB_PATH": str(database)},
+         cwd=tmp_path,
+     )
+@@ -580,7 +581,7 @@ async def test_source_retrieval_time_is_persisted_in_utc(
+     recipe_candidate["sources"][0]["retrieved_at"] = retrieved_at
+     server = StdioServerParameters(
+         command=sys.executable,
+-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
++        args=OPERATOR_STDIO_ARGS,
+         env={"DONA_MARIA_DB_PATH": str(database)},
+         cwd=tmp_path,
+     )
+diff --git a/tests/integration/test_confirmation_stdio.py b/tests/integration/test_confirmation_stdio.py
+index 470f458..b2e8692 100644
+--- a/tests/integration/test_confirmation_stdio.py
++++ b/tests/integration/test_confirmation_stdio.py
+@@ -6,6 +6,7 @@ from uuid import uuid4
+ 
+ import anyio
+ import pytest
++from conftest import OPERATOR_STDIO_ARGS
+ from mcp.client.session import ClientSession
+ from mcp.client.stdio import StdioServerParameters, stdio_client
+ 
+@@ -62,7 +63,7 @@ async def test_confirmation_pricing_replay_and_expired_resume_over_stdio(clarifi
+     revision = service.get_business_state({"workspace_id": workspace})["revision"]
+     server = StdioServerParameters(
+         command=sys.executable,
+-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
++        args=OPERATOR_STDIO_ARGS,
+         env={"DONA_MARIA_DB_PATH": str(database)},
+         cwd=tmp_path,
+     )
+diff --git a/tests/integration/test_corrections_stdio.py b/tests/integration/test_corrections_stdio.py
+index f996f40..103db52 100644
+--- a/tests/integration/test_corrections_stdio.py
++++ b/tests/integration/test_corrections_stdio.py
+@@ -6,6 +6,7 @@ from uuid import uuid4
+ 
+ import anyio
+ import pytest
++from conftest import OPERATOR_STDIO_ARGS
+ from mcp.client.session import ClientSession
+ from mcp.client.stdio import StdioServerParameters, stdio_client
+ 
+@@ -19,7 +20,7 @@ def anyio_backend():
+ async def client(database, cwd):
+     server = StdioServerParameters(
+         command=sys.executable,
+-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
++        args=OPERATOR_STDIO_ARGS,
+         env={"DONA_MARIA_DB_PATH": str(database)},
+         cwd=cwd,
+     )
+diff --git a/tests/integration/test_ingredient_stdio.py b/tests/integration/test_ingredient_stdio.py
+index 25a51af..cd1d586 100644
+--- a/tests/integration/test_ingredient_stdio.py
++++ b/tests/integration/test_ingredient_stdio.py
+@@ -6,6 +6,7 @@ from uuid import uuid4
+ 
+ import anyio
+ import pytest
++from conftest import OPERATOR_STDIO_ARGS
+ from mcp.client.session import ClientSession
+ from mcp.client.stdio import StdioServerParameters, stdio_client
+ 
+@@ -21,7 +22,7 @@ async def test_clarification_overlay_acceptance_and_replay_over_stdio(clarificat
+     source_bytes = path.read_bytes()
+     server = StdioServerParameters(
+         command=sys.executable,
+-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
++        args=OPERATOR_STDIO_ARGS,
+         env={"DONA_MARIA_DB_PATH": str(database)},
+         cwd=tmp_path,
+     )
+diff --git a/tests/integration/test_mcp_stdio.py b/tests/integration/test_mcp_stdio.py
+index 7b366ec..14521dc 100644
+--- a/tests/integration/test_mcp_stdio.py
++++ b/tests/integration/test_mcp_stdio.py
+@@ -8,6 +8,7 @@ from pathlib import Path
+ import anyio
+ import pytest
+ from anyio.streams.buffered import BufferedByteReceiveStream
++from conftest import OPERATOR_STDIO_ARGS
+ from mcp.client.session import ClientSession
+ from mcp.client.stdio import StdioServerParameters, get_default_environment, stdio_client
+ from mcp.shared.exceptions import MCPError
+@@ -33,7 +34,7 @@ def test_missing_database_config_exits_without_stdout_or_default_database(tmp_pa
+ 
+     assert result.returncode != 0
+     assert result.stdout == ""
+-    assert "Configure DONA_MARIA_DB_PATH" in result.stderr
++    assert "Atendimento indisponível" in result.stderr
+     assert "Traceback" not in result.stderr
+     assert list(tmp_path.iterdir()) == []
+ 
+@@ -47,7 +48,7 @@ async def test_official_client_discovers_and_calls_the_real_stdio_server(tmp_pat
+     sqlite3.connect(database).close()
+     server = StdioServerParameters(
+         command=sys.executable,
+-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
++        args=OPERATOR_STDIO_ARGS,
+         env={"DONA_MARIA_DB_PATH": str(database)},
+         cwd=tmp_path,
+     )
+@@ -108,7 +109,7 @@ async def test_invalid_calls_are_structured_and_the_server_remains_usable(tmp_pa
+     sqlite3.connect(database).close()
+     server = StdioServerParameters(
+         command=sys.executable,
+-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
++        args=OPERATOR_STDIO_ARGS,
+         env={"DONA_MARIA_DB_PATH": str(database)},
+         cwd=tmp_path,
+     )
+@@ -144,7 +145,7 @@ async def test_storage_lock_does_not_block_mcp_ping_and_read_recovers(tmp_path):
+         before = database.read_bytes()
+         server = StdioServerParameters(
+             command=sys.executable,
+-            args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
++            args=OPERATOR_STDIO_ARGS,
+             env={"DONA_MARIA_DB_PATH": str(database)},
+             cwd=tmp_path,
+         )
+@@ -187,7 +188,7 @@ async def test_stdout_is_only_protocol_stderr_accepts_logs_and_eof_exits_cleanly
+     environment = get_default_environment() | {"DONA_MARIA_DB_PATH": str(database)}
+     with anyio.fail_after(15):
+         async with await anyio.open_process(
+-            [sys.executable, "-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
++            [sys.executable, *OPERATOR_STDIO_ARGS],
+             cwd=tmp_path,
+             env=environment,
+             stdin=subprocess.PIPE,
+diff --git a/tests/integration/test_operation_replay.py b/tests/integration/test_operation_replay.py
+index 28ca9c2..127e0da 100644
+--- a/tests/integration/test_operation_replay.py
++++ b/tests/integration/test_operation_replay.py
+@@ -8,6 +8,7 @@ from uuid import uuid4
+ 
+ import anyio
+ import pytest
++from conftest import OPERATOR_STDIO_ARGS
+ from mcp import ClientSession, StdioServerParameters
+ from mcp.client.stdio import stdio_client
+ 
+@@ -130,7 +131,7 @@ async def test_corrupted_replay_remains_a_structured_error_over_stdio(stored_ope
+     contents = database.read_bytes()
+     server = StdioServerParameters(
+         command=sys.executable,
+-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
++        args=OPERATOR_STDIO_ARGS,
+         env={"DONA_MARIA_DB_PATH": str(database)},
+         cwd=tmp_path,
+     )
+diff --git a/tests/integration/test_pricing_stdio.py b/tests/integration/test_pricing_stdio.py
+index cfa76d8..617d0c9 100644
+--- a/tests/integration/test_pricing_stdio.py
++++ b/tests/integration/test_pricing_stdio.py
+@@ -7,6 +7,7 @@ from uuid import uuid4
+ 
+ import anyio
+ import pytest
++from conftest import OPERATOR_STDIO_ARGS
+ from mcp.client.session import ClientSession
+ from mcp.client.stdio import StdioServerParameters, stdio_client
+ 
+@@ -20,7 +21,7 @@ def anyio_backend():
+ async def client(database, cwd):
+     server = StdioServerParameters(
+         command=sys.executable,
+-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
++        args=OPERATOR_STDIO_ARGS,
+         env={"DONA_MARIA_DB_PATH": str(database)},
+         cwd=cwd,
+     )
+diff --git a/tests/integration/test_quote_stdio.py b/tests/integration/test_quote_stdio.py
+index 8581f20..0f7d9b6 100644
+--- a/tests/integration/test_quote_stdio.py
++++ b/tests/integration/test_quote_stdio.py
+@@ -6,6 +6,7 @@ from uuid import uuid4
+ 
+ import anyio
+ import pytest
++from conftest import OPERATOR_STDIO_ARGS
+ from mcp.client.session import ClientSession
+ from mcp.client.stdio import StdioServerParameters, stdio_client
+ 
+@@ -21,7 +22,7 @@ async def test_estimated_complement_roundtrip_and_replay_over_stdio(clarificatio
+     source_bytes = path.read_bytes()
+     server = StdioServerParameters(
+         command=sys.executable,
+-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
++        args=OPERATOR_STDIO_ARGS,
+         env={"DONA_MARIA_DB_PATH": str(database)},
+         cwd=tmp_path,
+     )
+diff --git a/tests/integration/test_recovery_stdio.py b/tests/integration/test_recovery_stdio.py
+index 8e45cf8..9b5811d 100644
+--- a/tests/integration/test_recovery_stdio.py
++++ b/tests/integration/test_recovery_stdio.py
+@@ -9,6 +9,7 @@ from uuid import uuid4
+ 
+ import anyio
+ import pytest
++from conftest import OPERATOR_STDIO_ARGS
+ from mcp import ClientSession, StdioServerParameters
+ from mcp.client.stdio import stdio_client
+ from mcp.shared.exceptions import MCPError
+@@ -56,7 +57,7 @@ async def test_disconnected_calculation_keeps_acceptance_and_can_resume_with_sam
+                 with pytest.raises(MCPError):
+                     await session.call_tool("calculate_pricing_scenarios", command)
+         assert service.get_business_state({"workspace_id": workspace}) == before
+-        server.args = ["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"]
++        server.args = OPERATOR_STDIO_ARGS
+         server.env = {"DONA_MARIA_DB_PATH": str(database)}
+         async with stdio_client(server) as (read, write):
+             async with ClientSession(read, write) as session:
+@@ -84,7 +85,7 @@ async def test_read_only_database_refuses_write_and_same_command_recovers(
+     )
+     server = StdioServerParameters(
+         command=sys.executable,
+-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
++        args=OPERATOR_STDIO_ARGS,
+         env={"DONA_MARIA_DB_PATH": str(database)},
+         cwd=tmp_path,
+     )
+@@ -135,7 +136,7 @@ async def test_locked_read_is_retryable_and_preserves_state(tmp_path, inventory_
+     ]
+     server = StdioServerParameters(
+         command=sys.executable,
+-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
++        args=OPERATOR_STDIO_ARGS,
+         env={"DONA_MARIA_DB_PATH": str(database)},
+         cwd=tmp_path,
+     )
+diff --git a/tests/integration/test_shared_plan_stdio.py b/tests/integration/test_shared_plan_stdio.py
+index 0b0f50f..a10fb97 100644
+--- a/tests/integration/test_shared_plan_stdio.py
++++ b/tests/integration/test_shared_plan_stdio.py
+@@ -6,6 +6,7 @@ from uuid import uuid4
+ 
+ import anyio
+ import pytest
++from conftest import OPERATOR_STDIO_ARGS
+ from mcp.client.session import ClientSession
+ from mcp.client.stdio import StdioServerParameters, stdio_client
+ 
+@@ -22,7 +23,7 @@ async def test_shared_plan_order_reacceptance_and_removal_survive_stdio_restart(
+     p = shared_plan()
+     server = StdioServerParameters(
+         command=sys.executable,
+-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
++        args=OPERATOR_STDIO_ARGS,
+         env={"DONA_MARIA_DB_PATH": str(p["database"])},
+         cwd=tmp_path,
+     )

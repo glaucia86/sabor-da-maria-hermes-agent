@@ -25,7 +25,7 @@ def main():
         parser.error("Prepare o banco sintético e o diretório de evidências primeiro.")
     pending = {}
     child = subprocess.Popen(
-        [sys.executable, "-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
+        [sys.executable, "-X", "utf8", "-B", str(Path(__file__).with_name("operator_stdio.py"))],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         env=get_default_environment() | {"DONA_MARIA_DB_PATH": str(args.database.resolve())},

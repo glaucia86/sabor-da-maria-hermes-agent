@@ -4,6 +4,8 @@ import asyncio
 import json
 import logging
 import os
+import sys
+from contextlib import closing
 from datetime import UTC, datetime
 from importlib.metadata import version
 from pathlib import Path
@@ -13,9 +15,19 @@ from uuid import uuid4
 from mcp.server.lowlevel import Server
 from mcp.server.stdio import stdio_server
 from mcp.shared.exceptions import MCPError
-from mcp.types import CallToolResult, ListToolsResult, TextContent, Tool, ToolAnnotations
+from mcp.types import (
+    CallToolResult,
+    ListToolsResult,
+    TextContent,
+    Tool,
+    ToolAnnotations,
+    jsonrpc_message_adapter,
+)
 
 from dona_maria.business_state import (
+    ATTENDANCE_TOOLS,
+    MAX_CALL_BYTES,
+    AttendanceService,
     BusinessStateReader,
     GetBusinessStateRequest,
     GetInventorySnapshotRequest,
@@ -219,16 +231,165 @@ def create_server(reader: BusinessStateReader) -> Server:
 
 
 async def serve(database: Path) -> None:
+    """Seam técnico legado para testes locais; não é o launcher do atendimento."""
     server = create_server(BusinessStateReader(SQLiteWorkspaceRepository(database)))
     async with stdio_server() as (read, write):
         await server.run(read, write, server.create_initialization_options())
 
 
+def create_attendance_server(service: AttendanceService) -> Server:
+    async def list_tools(ctx, params):
+        return ListToolsResult(
+            tools=[
+                Tool(
+                    name=name,
+                    description=description,
+                    input_schema=schema.model_json_schema(),
+                    annotations=ToolAnnotations(
+                        read_only_hint=True,
+                        destructive_hint=False,
+                        idempotent_hint=True,
+                        open_world_hint=False,
+                    ),
+                )
+                for name, (schema, description) in ATTENDANCE_TOOLS.items()
+            ]
+        )
+
+    async def call_tool(ctx, params):
+        started = perf_counter()
+        result = await asyncio.to_thread(service.call, params.name, params.arguments or {})
+        logging.getLogger(__name__).info(
+            json.dumps(
+                {
+                    "event": "attendance_read",
+                    "correlation_id": str(uuid4()),
+                    "tool": params.name if params.name in ATTENDANCE_TOOLS else "disabled",
+                    "result": "SUCCESS" if result["ok"] else "REFUSED",
+                    "duration_ms": round((perf_counter() - started) * 1000, 3),
+                }
+            )
+        )
+        return CallToolResult(
+            content=[TextContent(type="text", text=json.dumps(result, ensure_ascii=False))],
+            structured_content=result,
+            is_error=not result["ok"],
+        )
+
+    return Server(
+        "dona_maria",
+        version=version("sabor-da-maria"),
+        on_list_tools=list_tools,
+        on_call_tool=call_tool,
+    )
+
+
+async def serve_attendance(service: AttendanceService) -> None:
+    server = create_attendance_server(service)
+    # O SDK desvia fd 1; o erro do receptor usa uma cópia privada do canal original.
+    with closing(os.fdopen(os.dup(sys.stdout.fileno()), "w", encoding="utf-8")) as output:
+        async with stdio_server(stdin=_BoundedStdin(output)) as (read, write):
+            await server.run(read, write, server.create_initialization_options())
+
+
+MAX_FRAME_BYTES = 512 * 1024
+
+
+def _raw_parameter_size(text: str) -> int:
+    """Conta o trecho recebido, inclusive espaços e escapes que o SDK normalizaria."""
+    decoder = json.JSONDecoder()
+    offset = text.index("{") + 1
+    size = 0
+    while True:
+        while text[offset].isspace():
+            offset += 1
+        if text[offset] == "}":
+            return size
+        key, offset = decoder.raw_decode(text, offset)
+        while text[offset].isspace():
+            offset += 1
+        offset += 1  # O JSON já foi validado; este caractere é ':'
+        start = offset
+        while text[offset].isspace():
+            offset += 1
+        _, offset = decoder.raw_decode(text, offset)
+        if key == "params":
+            size = max(size, len(text[start:offset].encode("utf-8")))
+        while text[offset].isspace():
+            offset += 1
+        if text[offset] == ",":
+            offset += 1
+
+
+def _collections_fit(parameters) -> bool:
+    pending = [parameters]
+    while pending:
+        value = pending.pop()
+        if isinstance(value, (dict, list)):
+            if len(value) > 200:
+                return False
+            pending.extend(value.values() if isinstance(value, dict) else value)
+    return True
+
+
+class _BoundedStdin:
+    """O SDK 2.3.0 não limita readline; recusa o frame antes de materializá-lo inteiro."""
+
+    def __init__(self, output):
+        self.output = output
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        while True:
+            frame = await asyncio.to_thread(sys.stdin.buffer.readline, MAX_FRAME_BYTES + 1)
+            if not frame:
+                raise StopAsyncIteration
+            if len(frame) > MAX_FRAME_BYTES:
+                self._refuse("O pedido excede o limite. Envie um pedido menor.")
+                # Fecha sem drenar uma entrada excessiva nem truncar silenciosamente.
+                raise StopAsyncIteration
+            try:
+                text = frame.decode("utf-8")
+                message = jsonrpc_message_adapter.validate_json(text, by_name=False)
+                if getattr(message, "method", None) == "tools/call":
+                    if _raw_parameter_size(text) > MAX_CALL_BYTES or not _collections_fit(
+                        message.params
+                    ):
+                        self._refuse("O pedido excede o limite. Envie um pedido menor.", message.id)
+                        continue
+                return text
+            except (UnicodeError, ValueError, RecursionError):
+                self._refuse("Não foi possível usar esses dados. Revise o pedido.")
+                raise StopAsyncIteration from None
+
+    def _refuse(self, message, identifier=None):
+        self.output.write(
+            json.dumps(
+                {
+                    "jsonrpc": "2.0",
+                    "id": identifier,
+                    "error": {"code": -32600, "message": message},
+                },
+                ensure_ascii=False,
+            )
+            + "\n"
+        )
+        self.output.flush()
+
+
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
-    database = os.environ.get("DONA_MARIA_DB_PATH")
-    if not database:
-        raise SystemExit("Configure DONA_MARIA_DB_PATH antes de iniciar o servidor.")
+    logging.getLogger("mcp").setLevel(logging.CRITICAL)
+    try:
+        service = AttendanceService(
+            Path(os.environ["DONA_MARIA_DB_PATH"]),
+            os.environ["DONA_MARIA_WORKSPACE_ID"],
+            os.environ["DONA_MARIA_MODE"],
+        )
+    except (KeyError, ValueError):
+        raise SystemExit("Atendimento indisponível. Peça auxílio à pessoa operadora.") from None
     logging.getLogger(__name__).info(
         json.dumps(
             {
@@ -237,7 +398,10 @@ def main() -> None:
             }
         )
     )
-    asyncio.run(serve(Path(database)))
+    try:
+        asyncio.run(serve_attendance(service))
+    except Exception:
+        raise SystemExit("Atendimento interrompido. Peça auxílio à pessoa operadora.") from None
 
 
 if __name__ == "__main__":

@@ -1,5 +1,6 @@
 from copy import deepcopy
 from datetime import UTC, datetime
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
@@ -8,6 +9,10 @@ from openpyxl import Workbook, load_workbook
 from dona_maria.bootstrap import bootstrap_workspace
 from dona_maria.business_state import BusinessStateReader
 from dona_maria.persistence import SQLiteWorkspaceRepository
+
+OPERATOR_STDIO_ARGS = [
+    "-X", "utf8", "-B", str(Path(__file__).resolve().parents[1] / "evals/operator_stdio.py")
+]
 
 
 @pytest.fixture

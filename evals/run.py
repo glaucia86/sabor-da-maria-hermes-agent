@@ -154,7 +154,7 @@ def cli(launcher, profile, folder, *args, input_text=None):
 
 
 def connect(launcher, profile, folder, case, name):
-    servers = [(case["server"], ["-m", "dona_maria.mcp_server"])]
+    servers = [(case["server"], [str(ROOT / "evals/operator_stdio.py")])]
     if name in ("recovery", "disconnect"):
         servers[0] = (
             case["server"],

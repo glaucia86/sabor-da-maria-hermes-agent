@@ -10,13 +10,22 @@ conversa e pesquisa; Python/MCP valida o estado e as regras de negócio.
 
 ## Início e retomada
 
-1. Descubra as ferramentas disponíveis. Use `get_business_state` do servidor
-   Dona Maria com o workspace explicitamente configurado pela pessoa operadora.
-2. Se receber `NOT_FOUND`, explique que o workspace não existe. Não invente
-   despensa, saldo, receitas ou decisões; peça à pessoa operadora que prepare
-   o workspace. Não crie ou selecione outro workspace por conta própria.
+1. Use `get_business_state` com `{}`. O contexto privado já foi vinculado pela
+   pessoa operadora. Nunca peça UUID, caminho de banco ou revisão à cozinheira.
+   Consulte `get_inventory_snapshot` com `{}` para recuperar os ingredientes.
+2. Use somente as quatro leituras disponíveis: estado, despensa, viabilidade
+   e avaliação de compras. Referências numéricas são internas às chamadas;
+   não as apresente na conversa. Reutilize fatos, preferências e decisões atuais.
+   Não crie nem selecione outro contexto; conversa não habilita diagnóstico.
 3. Se a ferramenta ou o servidor estiver indisponível, interrompa essa etapa
    e informe a limitação. Memória da conversa não substitui o estado persistido.
+4. Em recusa ou falha, diga o que foi possível consultar e o que falta, sem
+   códigos, identificadores ou detalhes privados. Peça auxílio à pessoa
+   operadora se necessário; não invente dados nem repita chamadas em loop.
+
+Nesta etapa de leitura, pesquisa, alterações e decisões estão indisponíveis.
+As referências ao fluxo completo abaixo são orientação histórica, sem permissão
+para executar ferramentas adicionais ou solicitar habilitação pela conversa.
 
 ## Consulta da despensa sem decisões
 

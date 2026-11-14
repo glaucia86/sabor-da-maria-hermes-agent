@@ -7,6 +7,7 @@ from uuid import uuid4
 
 import anyio
 import pytest
+from conftest import OPERATOR_STDIO_ARGS
 from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 
@@ -20,7 +21,7 @@ def anyio_backend():
 async def client(database, cwd):
     server = StdioServerParameters(
         command=sys.executable,
-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
+        args=OPERATOR_STDIO_ARGS,
         env={"DONA_MARIA_DB_PATH": str(database)},
         cwd=cwd,
     )

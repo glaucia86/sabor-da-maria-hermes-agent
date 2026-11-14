@@ -9,6 +9,7 @@ from uuid import uuid4
 
 import anyio
 import pytest
+from conftest import OPERATOR_STDIO_ARGS
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.shared.exceptions import MCPError
@@ -56,7 +57,7 @@ async def test_disconnected_calculation_keeps_acceptance_and_can_resume_with_sam
                 with pytest.raises(MCPError):
                     await session.call_tool("calculate_pricing_scenarios", command)
         assert service.get_business_state({"workspace_id": workspace}) == before
-        server.args = ["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"]
+        server.args = OPERATOR_STDIO_ARGS
         server.env = {"DONA_MARIA_DB_PATH": str(database)}
         async with stdio_client(server) as (read, write):
             async with ClientSession(read, write) as session:
@@ -84,7 +85,7 @@ async def test_read_only_database_refuses_write_and_same_command_recovers(
     )
     server = StdioServerParameters(
         command=sys.executable,
-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
+        args=OPERATOR_STDIO_ARGS,
         env={"DONA_MARIA_DB_PATH": str(database)},
         cwd=tmp_path,
     )
@@ -135,7 +136,7 @@ async def test_locked_read_is_retryable_and_preserves_state(tmp_path, inventory_
     ]
     server = StdioServerParameters(
         command=sys.executable,
-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
+        args=OPERATOR_STDIO_ARGS,
         env={"DONA_MARIA_DB_PATH": str(database)},
         cwd=tmp_path,
     )

@@ -172,11 +172,15 @@ Siga o [guia detalhado](docs/setup.md#despensa):
 1. Escolha o anexo original ou a demonstração sintética.
 2. Importe o XLSX para um SQLite isolado.
 3. Guarde o `workspace_id` real retornado pelo bootstrap.
-4. Configure perfil, modelo, web, MCP e skill.
-5. Inicie a conversa na raiz do checkout usando esse workspace.
+4. Configure perfil, modelo, MCP e skill; vincule banco/workspace/modo privadamente.
+5. Inicie o atendimento de leitura sem informar identificadores na conversa.
 
 Não use o UUID fictício do smoke negativo para a conversa com sua despensa.
 Não é necessário preencher manualmente payloads MCP para conduzir o atendimento.
+
+O atendimento padrão expõe quatro consultas de leitura com contexto configurado
+privadamente. Pesquisa e novas confirmações/decisões permanecem indisponíveis
+nesse catálogo; os contratos legados são preservados nos testes técnicos.
 
 A [configuração de exemplo](config/hermes.config.example.yaml) contém somente
 campos e caminhos substituíveis. Credenciais ficam no perfil privado do Hermes.

@@ -119,7 +119,7 @@ despensa importada não confirma equipamentos, habilidades, rendimento,
 condições comerciais ou aceite: essas informações ainda serão elicitadas.
 
 <a id="perfil-hermes"></a>
-## 3. Configure o perfil, modelo e pesquisa
+## 3. Configure o perfil e o modelo
 
 Os comandos de perfil e MCP deste guia têm como referência a instalação
 Hermes v0.23.1 e a [CLI oficial](https://hermes-agent.nousresearch.com/docs/reference/cli-commands).
@@ -135,8 +135,9 @@ hermes -p sabor-da-maria tools
 ```
 
 No seletor de modelo, configure um provedor acessível e um modelo com
-suporte a chamadas de ferramentas. No configurador de ferramentas,
-configure pesquisa e extração web, incluindo o acesso exigido pelo backend.
+suporte a chamadas de ferramentas. No atendimento de leitura, habilite somente
+`mcp-dona_maria`. Pesquisa, arquivos, shell, memória, administração e outros
+servidores/plugins ficam desabilitados. A skill será pré-carregada.
 
 As opções, autenticação e custos dependem do provedor escolhido.
 O modelo do Hermes é configurado aqui; não depende do modelo usado por
@@ -159,7 +160,7 @@ não variáveis expandidas automaticamente.
 
 ```sh
 hermes -p sabor-da-maria config set skills.external_dirs "['SKILLS_ABSOLUTO']"
-hermes -p sabor-da-maria mcp add dona_maria --command "PYTHON_ABSOLUTO" --connect-timeout 15 --env "DONA_MARIA_DB_PATH=SQLITE_ABSOLUTO" --args -X utf8 -B -m dona_maria.mcp_server
+hermes -p sabor-da-maria mcp add dona_maria --command "PYTHON_ABSOLUTO" --connect-timeout 15 --env "DONA_MARIA_DB_PATH=SQLITE_ABSOLUTO" --env "DONA_MARIA_WORKSPACE_ID=WORKSPACE_IMPORTADO" --env "DONA_MARIA_MODE=ATTENDANCE" --args -X utf8 -B -m dona_maria.launcher
 ```
 
 Mantenha `--args` como a última opção: o restante pertence ao subprocesso.
@@ -172,8 +173,15 @@ O Python impresso usa `.venv/Scripts/python.exe` no Windows e `.venv/bin/python`
 no Linux/macOS. Mantenha caminhos com espaços entre aspas. Para o caminho
 da skill, use barras `/` e preserve a lista YAML no argumento de `config set`.
 
-Passe somente `DONA_MARIA_DB_PATH` ao servidor de negócio. Credenciais de
-modelo e pesquisa pertencem à configuração privada do Hermes.
+Substitua `WORKSPACE_IMPORTADO` somente na configuração privada, pelo valor
+da importação local. O caminho deve ser absoluto e o arquivo já deve existir.
+Ausência, workspace incompatível ou modo diferente de `ATTENDANCE` impedem
+startup. Não existe descoberta automática do único workspace. Reinício conserva
+o vínculo; não execute bootstrap novamente para retomar.
+
+O launcher repassa ao processo de negócio apenas ambiente operacional mínimo
+e os três campos `DONA_MARIA_*` acima. Credenciais ficam no Hermes. Diagnóstico,
+bootstrap e testes legados são contexto local do operador, fora do atendimento.
 A orientação `.hermes.md` é lida do projeto; `skills.external_dirs` aponta
 apenas para `skills/` deste checkout.
 
@@ -188,8 +196,12 @@ hermes -p sabor-da-maria mcp test dona_maria
 hermes -p sabor-da-maria skills list --enabled-only
 ```
 
-A listagem deve incluir `dona-maria-cardapio`; o MCP deve descobrir as
-ferramentas implementadas, incluindo consulta de estado e inventário.
+A listagem deve incluir `dona-maria-cardapio`; o MCP deve descobrir exatamente
+`get_business_state`, `get_inventory_snapshot`, `evaluate_recipe_feasibility`
+e `evaluate_purchase_plan`. A configuração de exemplo aplica os mesmos nomes
+em `tools.include` e desabilita wrappers resources/prompts, ferramentas adiadas
+e memória. Não habilite o canal se catálogo ou execução divergirem, inclusive
+após refresh/retomada/gateway. Nenhuma escrita ou aprovação é exposta.
 Descoberta não prova, por si só, uso das ferramentas pelo modelo.
 
 ## 5. Inicie uma conversa natural
@@ -197,41 +209,36 @@ Descoberta não prova, por si só, uso das ferramentas pelo modelo.
 Na raiz do checkout:
 
 ```sh
-hermes -p sabor-da-maria chat --toolsets file,web,mcp-dona_maria --skills dona-maria-cardapio
+hermes -p sabor-da-maria chat --toolsets mcp-dona_maria --skills dona-maria-cardapio -Q
 ```
 
-A skill é carregada explicitamente. O grupo `file` permite ler suas
-referências, mas também inclui ferramentas de escrita e busca de arquivos.
-Esta seleção não representa um sandbox de arquivos; confira o catálogo
-efetivo e não habilite shell ou execução de código para este atendimento.
+A skill é pré-carregada de fonte local confiável. Use apresentação sem cartões
+técnicos (`-Q` na CLI assistida; `display.tool_progress: "off"` no perfil).
+Confira o canal real antes de disponibilizá-lo: texto, cartões e retornos
+automáticos não devem mostrar identificadores, caminhos ou detalhes privados.
+Perfil não constitui sandbox do sistema operacional.
 
-Substitua o marcador pelo workspace retornado no bootstrap e envie:
+Envie, sem substituir marcadores ou informar identificadores:
 
 ```text
-Meu workspace é [WORKSPACE_ID_REAL].
-
-Quero montar o cardápio de lançamento do Sabor da Maria com a minha
-despensa e até R$ 80 para complementos. Pode começar consultando o que
-tenho e pesquisando receitas reais? Pergunte sobre minha cozinha e
-habilidades antes de propor um prato para eu aceitar.
+Olá! Quero saber o que posso preparar com os ingredientes que tenho.
 ```
 
-Responda às perguntas com as condições reais da cozinha. Interesse,
-confirmação de fatos, aceite do prato e escolha de preço são decisões distintas.
+O contexto já está fixado. O atendimento consulta ingredientes, candidatas e
+decisões persistidas; explica pendências sem criar receitas ou fatos. Pesquisa,
+aprovação, aceite e preço novos ainda não estão disponíveis nesse catálogo.
 
 Confira durante a conversa:
 
-- Consulta MCP ao workspace e ao inventário importados.
-- Pesquisa e extração web efetivas, com URL e conteúdo recuperado.
-- Perguntas sobre os requisitos da receita, sem condições presumidas.
-- Cálculos retornados pelo MCP e escolha de preço solicitada à pessoa.
-- Registro anunciado somente depois de retorno de sucesso.
+- Estado e despensa corretos, sem pedir identificadores à cozinheira.
+- Reutilização de fatos vigentes e perguntas ligadas às lacunas reais.
+- Recusa de troca de contexto, diagnóstico e operações não disponíveis.
+- Nenhuma gravação, decisão ou pesquisa executada nesta etapa.
 
 Depois, abra uma nova conversa com o mesmo perfil, checkout e banco:
 
 ```text
-Retome o workspace [WORKSPACE_ID_REAL]. Mostre o cardápio e as pendências
-usando o estado salvo, sem registrar novas decisões.
+Vamos continuar. Mostre o que já está confirmado e o que ainda falta.
 ```
 
 Compare com o estado observado anteriormente. Memória da conversa não
@@ -240,22 +247,21 @@ substitui a consulta ao SQLite.
 <a id="smoke-negativo"></a>
 ## 6. Smoke negativo — diagnóstico opcional
 
-Em um banco recém-importado que contenha somente o workspace retornado,
-consulte um UUID diferente dele e que não tenha sido cadastrado:
+Faça diagnóstico somente em sessão local do operador e com banco sintético.
+Não conceda privilégios por conversa. O teste do binding inválido pode iniciar
+um subprocesso de atendimento com UUID não cadastrado na configuração privada:
 
 ```text
-Use o MCP dona_maria para chamar get_business_state com workspace_id
-[UUID_NAO_CADASTRADO]. Informe o resultado observado, sem criar workspace
-ou simular dados.
+DONA_MARIA_WORKSPACE_ID=UUID_NAO_CADASTRADO
 ```
 
-O resultado esperado é `NOT_FOUND`, `ok=false`, `data=null` e `revision=null`.
-O MCP marca esse resultado com `isError=true`; o cliente pode apresentá-lo
-como erro de ferramenta. Isso verifica uma recusa de leitura; não demonstra
-importação, pesquisa, viabilidade, aceite ou preço.
+Esse é um valor de configuração, não uma fala nem um comando de shell.
+O startup deve falhar sem servir MCP, sem traceback e sem alterar o banco.
+Uma chamada com `workspace_id` extra também deve ser recusada. Os testes
+`test_attendance.py` e `test_attendance_stdio.py` verificam essas fronteiras.
 
-Depois retome a conversa usando o workspace real. O percurso principal
-não depende de obter um erro primeiro.
+Depois restaure o vínculo sintético válido fora da conversa e reinicie o
+processo. Não faça esse experimento contra o banco real da demonstração.
 
 ## Se algo falhar
 
@@ -266,11 +272,11 @@ não depende de obter um erro primeiro.
 | Módulo `dona_maria` ausente | Sync concluído e MCP usando o Python da aplicação. |
 | Importação recusada | Arquivo XLSX, abas/colunas, diretório autorizado e diretório pai do SQLite existente. |
 | Banco indisponível | Caminho, permissões e versão do schema; banco corrompido ou mais novo é recusado e preservado. Registros exigem escrita no SQLite e no diretório pai. |
-| `NOT_FOUND` na conversa principal | Workspace copiado do bootstrap e MCP apontando para o mesmo banco. |
-| Busca indisponível | Backend web, autenticação, conectividade e limites do provedor. Habilitar o toolset não configura acesso por si só. |
+| Atendimento indisponível | Operador confere banco absoluto, workspace explícito e modo; não pede UUID à cozinheira. |
+| Busca indisponível | Atendimento atual somente de leitura; pesquisa ainda não está habilitada. Não use ferramentas alternativas. |
 | Skill ausente | Perfil correto, lista `skills.external_dirs` e caminho somente da skill de domínio. |
-| Referência da skill não lida | Catálogo efetivo e disponibilidade das ferramentas de arquivo previstas neste guia. |
-| Catálogo ou banco antigo | Confira a conexão ativa antes de repetir escritas. Use o procedimento de reconexão abaixo; não apague banco nem reinicie gateways alheios. |
+| Referência da skill não lida | Pré-carregue a skill confiável; não habilite ferramentas genéricas de arquivo. |
+| Catálogo ou banco antigo | Confira a conexão ativa antes de repetir consultas. Use a reconexão abaixo; não apague banco nem reinicie gateways alheios. |
 | Resultado de escrita incerto | Consulte o estado antes de repetir. Não anuncie gravação sem confirmação. |
 | Sessão sem resposta | Modelo, provedor e conectividade; não substitua uma chamada pendente por resultado simulado. |
 | Ferramentas inesperadas | Catálogo efetivo e filtros do perfil; web pertence ao host. |
@@ -296,14 +302,16 @@ fotografia quando hash/política coincidem. Com `--workspace-id ID_EXISTENTE`,
 somente o mesmo snapshot é reutilizado, preservando estado e revisão. Outra
 planilha não substitui silenciosamente o workspace existente.
 
-O catálogo inclui `get_business_state`, `get_inventory_snapshot`,
+O catálogo técnico legado, usado somente em testes sintéticos fora do
+atendimento, inclui `get_business_state`, `get_inventory_snapshot`,
 `register_recipe_candidate`, `record_user_preferences`, `record_recipe_feedback`,
 `record_kitchen_facts`, `set_production_plan`, `evaluate_recipe_feasibility`,
 `evaluate_purchase_plan`, `accept_recipe`, `calculate_pricing_scenarios`,
 `save_menu_decision`, `resolve_recipe_ingredient`, `record_ingredient_conversion`,
 `register_complement_quote` e `confirm_complement_quote`.
 
-Para registrar a candidata, o agente usa o workspace importado, fontes
+Os contratos internos abaixo preservam compatibilidade; não estão disponíveis
+como decisões no atendimento de leitura. Nos testes legados, o agente usa o workspace importado, fontes
 efetivamente extraídas e os schemas descobertos no MCP. Rendimento, medidas
 ou contexto ausentes precisam de lacunas explícitas. `complete` e outros
 campos derivados não são entradas.
@@ -349,7 +357,7 @@ verifique a versão ou uma cópia de segurança antes de continuar.
 
 No gateway, `/reload-mcp` pode preservar conexões já registradas. No perfil
 dedicado, desabilite somente `mcp_servers.dona_maria.enabled`, recarregue,
-reabilite e recarregue novamente. Confira nomes e workspace antes de pesquisar.
+reabilite e recarregue novamente. Confira catálogo e vínculo antes de atender.
 
 A ausência de ferramentas perigosas deve ser conferida no catálogo efetivo.
 Uma skill builtin essencial pode permanecer no contexto conforme a versão;
