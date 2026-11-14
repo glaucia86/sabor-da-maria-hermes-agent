@@ -4,17 +4,20 @@ Depois de `accept_recipe` confirmado, use `calculate_pricing_scenarios` com
 `recipe_id`, `acceptance_id`, revisão observada e um novo `operation_id`.
 É uma escrita técnica: registra o cálculo, sem escolher pela pessoa.
 
-Explique primeiro o CMV por porção, o mínimo e as três opções M10/M20/M30
-fornecidas pelo MCP. O mínimo não é um dos cenários. Margens de 10/20/30%
+Apresente o preço por porção de cada opção M10/M20/M30 fornecida pelo MCP,
+o mínimo e o custo dos ingredientes por porção (CMV, explicado por extenso).
+O mínimo não é um dos cenários. Margens de 10/20/30%
 são política didática sobre a venda após taxa e ingredientes, não markup
 nem regra de repasse da plataforma. Mostre preço, taxa, recebimento,
-resultado aproximado e margem efetiva da ferramenta, sem refazer contas.
+o que sobra para pagar os outros custos e a margem efetiva, explicada, sem
+refazer contas. A taxa didática não comprova a taxa real do iFood.
 
 Se a pessoa quiser detalhes, mostre a memória: produção total, lote médio,
 porção vendável, lotes/rendimento e parcelas de ingredientes com quantidade,
 unidade, preço de aquisição, denominador e origem. Preserve notas sobre
-diferenças de arredondamento. O resultado não é lucro líquido: gás,
-embalagem e mão de obra sem dados não estão incluídos.
+diferenças de arredondamento. Quando faltam gás/energia, embalagem ou mão de
+obra, diga que a sobra ainda precisa pagar esses custos e que o lucro não pode
+ser determinado com os dados disponíveis. Não chame essa sobra de lucro.
 
 Aguarde a escolha humana. A forma conservadora aceita “Escolho M20”,
 “Escolho o cenário M20” ou “Escolho o preço de R$ 15,00”, também com
@@ -36,6 +39,13 @@ Só diga “registrado” após sucesso confirmado da ferramenta. Falha de cálc
 ou MCP exige informar o problema e aguardar, sem cálculo textual alternativo.
 Resultado incerto exige leitura e replay do mesmo comando/ID. Uma mudança
 material exige novo resumo, aceite e cálculo; não reutilize a fala antiga.
+
+Depois da escolha, comece pelo preço de venda salvo e diga que é o valor cobrado
+do cliente por porção. Explique a sobra em outro parágrafo, com a finalidade
+de pagar os custos restantes. Exemplo de linguagem, somente se esses forem os
+valores retornados pelo MCP: “Preço de venda salvo: R$ 6,43 por porção. Esse é o
+valor que você cobra do cliente. Depois dos ingredientes e da taxa do teste,
+sobram cerca de R$ 1,29 para pagar os outros custos. Ainda não sabemos o lucro.”
 
 Na retomada, `get_business_state` fornece cálculos, histórico de escolhas e
 `menu` com decisões vigentes. Preserve estoque e orçamento; não importe de

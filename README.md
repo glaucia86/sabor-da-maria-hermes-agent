@@ -240,6 +240,14 @@ assistida de adversariais/recuperação com Hermes real e evidências sanitizada
 Os resultados distinguem verificações atuais e históricas; evals assistidos
 não comprovam autonomia geral nem autenticam consentimento humano.
 
+A [verificação integrada](docs/verification.md) registra a reprodução em ambiente
+limpo, a jornada com complemento pesquisado e a matriz dos 22 critérios.
+Os [12 evals integrados](evals/s11-results.json) passaram nas assertions críticas
+originais; a revisão humana pediu mais clareza entre preço e sobra no EV-07
+e nas mudanças de preparo no EV-09. As orientações foram corrigidas, com
+revalidação conversacional pendente. Linux/macOS,
+Desktop e vídeo não foram testados nesta execução.
+
 <a id="estrutura"></a>
 ## 🗂️ Explore o repositório
 

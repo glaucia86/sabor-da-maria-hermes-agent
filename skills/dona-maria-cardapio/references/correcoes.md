@@ -4,6 +4,17 @@ Leia `get_business_state` ao corrigir ou retomar. Fatos, interesse, preferência
 aceite e escolha de preço são registros distintos. Nunca restaure decisões pela
 memória da conversa ou por voltar ao valor antigo de uma condição.
 
+Na resposta à pessoa, explique as consequências com palavras do dia a dia:
+o que mudou na cozinha ou na quantidade, se o prato saiu do cardápio, se o
+preço precisa ser calculado de novo e qual informação falta para continuar.
+Não diga apenas “aceite, cálculo e preço invalidados”. Descreva somente os
+efeitos confirmados pelo MCP; uma mudança sem efeito no preparo/custo não
+autoriza anunciar perda de decisões preservadas. Use perguntas curtas sobre
+o preparo concreto, uma por vez, em lugar de “confirme capacidade compartilhada”.
+Após conferir as condições, apresente o prato para nova confirmação; só depois
+calcule as opções e aguarde a escolha de preço, quando essas etapas forem
+exigidas pelo estado atual. O forno voltar não confirma essas decisões.
+
 - Corrija condições por `record_kitchen_facts`, informando o `replaces_fact_id`
   atual e a fala literal. Examine `summary`, os IDs invalidados e `next_action`.
   Forno ausente bloqueia sua receita; gostar de assados ou possuir air fryer
