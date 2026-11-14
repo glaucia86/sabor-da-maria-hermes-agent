@@ -15,6 +15,13 @@
    Em `EXPLICIT_CONDITION`, confira o `value` esperado no requisito: um texto
    confirmado exige esse mesmo texto controlado, sem trocar por `true`.
    A evidência preserva a fala humana original, separada do valor tipado.
+   Reutilize chaves de requisitos já existentes; não crie fatos com chaves
+   desconectadas, pois o avaliador pode não associar sinônimos. Preserve uma
+   limitação parcial como tal: pouca experiência com massas não equivale a
+   `SKILL_KNOWN=false` para toda técnica de massa. Registre em lote os fatos
+   independentes; serialize escritas que compartilham a revisão do workspace.
+   Ao final, releia fatos, preferências e interesse no estado para verificar
+   a persistência e os efeitos antes de resumi-los à cliente.
 4. Apresente lotes e porções antes de `set_production_plan`. A lista substitui
    o plano inteiro, incluindo rascunhos. Peça confirmação inequívoca da produção;
    a forma conservadora suportada começa com “Confirmo ...”. Para pedido de
@@ -27,8 +34,15 @@
    conferida por lote; mínimos de tempo com mesma chave/unidade são somados
    na sequência. Isso não garante a duração da fonte. Outro arranjo fica
    pendente, sem presumir paralelismo. Mudança de plano exige reconfirmação.
-6. Consulte `evaluate_recipe_feasibility` para cada item e
-   `evaluate_purchase_plan` para o conjunto. Desconhecido gera `PENDING` e
+6. Antes de chamar `evaluate_recipe_feasibility`, confira se existe plano e
+   `plan_item_id` real da receita na versão atual. Sem esse pré-requisito,
+   não invente IDs nem crie um plano apenas para liberar a ferramenta.
+   Explique a limitação e faça uma comparação preliminar entre o método
+   pesquisado e os fatos confirmados, identificando-a como análise, não como
+   status formal retornado pelo MCP. Pergunte primeiro como a meta diária se
+   distribui entre pratos e entregas; depois proponha lotes para confirmação.
+   Havendo plano confirmado, consulte `evaluate_recipe_feasibility` para cada
+   item e `evaluate_purchase_plan` para o conjunto. Desconhecido gera `PENDING` e
    pergunta; impedimento confirmado gera `BLOCKED` e oferta de alternativa ou
    adaptação a validar. Identidade, medida ou base cru/cozido sem suporte não
    demonstram suficiência. Não invente conversões, estoque ou compras.
@@ -48,6 +62,25 @@ Toda escrita usa revisão observada e `operation_id`; replay conserva comando/ID
 referentes à fala humana exata. Não fabrique referências, horários nem respostas.
 O contrato depende da fidelidade do host/modelo; esses campos não autenticam
 consentimento. Fonte web nunca confirma fato, produção ou aceite.
+
+## Capacidade e adaptações antes do aceite
+
+Avalie a janela de trabalho pelo processo completo: separação e higiene,
+cortes e eventual descongelamento, cocção, montagem, embalagem, conservação
+até a entrega e limpeza. Não converta número de bocas em paralelismo garantido
+para uma pessoa nem extrapole o tempo publicado para uma escala maior.
+Confirme volume útil das panelas, bancada, tamanho das porções e o que entra
+na janela de tempo; proponha teste cronometrado sem tratá-lo como já realizado.
+Pergunte se a saída será logo após o preparo ou depois de armazenamento, pois
+pouca refrigeração muda a operação; ausência de freezer não impede por si só
+uma produção para saída imediata, mas não dispensa conservação segura.
+
+Ao propor adaptação, explicite a etapa retirada ou alterada e a consequência
+no produto, como perder o gratinado ao retirar o forno. Não apresente o método
+adaptado como se fosse o da fonte original. Mantenha rendimento, tempo,
+quantidades, utensílios e conservação como pendências até haver suporte e
+validação; não substitua ingredientes ou revise a receita silenciosamente.
+Siga `correcoes.md` para registrar a versão adaptada quando ela for definida.
 
 Aceite não compra, não debita estoque físico e não escolhe preço. Se faltar
 insumo, explique a pendência; cotação e preço dependem de ferramentas próprias.

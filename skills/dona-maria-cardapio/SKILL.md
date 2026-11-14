@@ -75,6 +75,14 @@ utensílios, tempo, capacidade, espaço, refrigeração, armazenamento e limita�
 de gás ou energia; não despeje um questionário inteiro nem valide a operação
 com base apenas na existência de fogão e forno.
 
+Ao receber fatos da cozinha, registre somente o que foi afirmado e releia o
+estado antes de anunciar sucesso. Separe preferência, interesse, habilidade,
+meta de produção e aceite: pouca experiência não prova incapacidade; achar um
+prato complicado não é recusa definitiva; desejar uma quantidade diária não
+confirma a distribuição entre pratos nem os lotes. Compare os métodos originais
+com a estrutura confirmada e diferencie impedimento conhecido, informação
+pendente e adaptação proposta, sem anunciar aprovação formal inexistente.
+
 Datas de recuperação também exigem evidência observável. Se `retrieved_at`
 for obrigatório e o horário estiver desconhecido, informe a pendência e aguarde
 um horário verificável antes de gravar. Não preencha meia-noite ou outro marcador
