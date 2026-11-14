@@ -18,6 +18,28 @@ conversa e pesquisa; Python/MCP valida o estado e as regras de negócio.
 3. Se a ferramenta ou o servidor estiver indisponível, interrompa essa etapa
    e informe a limitação. Memória da conversa não substitui o estado persistido.
 
+## Consulta da despensa sem decisões
+
+Quando o pedido for somente leitura, consulte `get_inventory_snapshot` e use
+`get_business_state` para obter o saldo persistido; não registre candidatas,
+preferências, conversões ou decisões. Respeite esse escopo mesmo que existam
+pendências de produção no estado.
+
+Apresente o total de itens contado por ferramenta e uma tabela com ingrediente,
+quantidade e unidade originais de estoque, quantidade e unidade de compra,
+preço histórico total e custo unitário retornado. Identifique a unidade-base do
+custo (`g`, `ml` ou `un`): o custo por grama não é o custo por quilograma.
+Se as unidades de estoque e compra coincidirem, uma coluna compartilhada é
+suficiente, desde que isso seja explicado. Não recalcule nem arredonde custos
+unitários de forma que percam a precisão retornada.
+
+Liste os `issues` com código, localização, mensagem e caráter bloqueante;
+não conte duas vezes o mesmo diagnóstico repetido no item e na fotografia.
+Diferencie incompatibilidade de unidades de conteúdo não informado: um produto
+registrado apenas em `un` pode ter custo válido por unidade, mas não por massa.
+Use o saldo do workspace, não o orçamento padrão, quando o pedido exigir
+exclusivamente valores do MCP.
+
 ## Pesquisa e decisões
 
 Use somente as ferramentas web realmente expostas pelo host. Apresente como
@@ -33,7 +55,25 @@ suficiente. Pesquise e extraia uma fonte real, então use
 `register_recipe_candidate` com a revisão observada, um `operation_id` e os
 dados sustentados pela fonte. Preserve medidas originais e lacunas de quantidade,
 rendimento ou contexto; não invente conversões. Registro de candidata não é aceite.
-Ao retomar, reencontre a candidata em `get_business_state`.
+Após registrar, releia `get_business_state` e confira as candidatas antes de
+afirmar que foram salvas. Ao retomar, reencontre-as nessa mesma consulta.
+
+Quando a cliente pedir várias receitas, apresente a quantidade solicitada,
+mas mantenha cada opção como candidata: nome, link recuperado, rendimento da
+fonte, ingredientes e medidas originais, itens presentes e faltantes, técnicas
+e equipamentos a validar. Prefira opções com poucos complementos e bom uso do
+estoque; não trate cortes diferentes, massas diferentes, manteiga e margarina
+como substituições automáticas. Diferencie ingrediente presente de quantidade
+suficiente para o plano completo e de ingrediente já no estado preparado
+exigido pela receita, pois limpeza e cozimento podem alterar o rendimento.
+Preserve qualificadores como 'até' no rendimento e não transforme uma descrição
+de rapidez em minutos inventados.
+
+Inicie a descoberta operacional com poucas perguntas naturais sobre a estrutura
+necessária às candidatas. Prossiga nas respostas seguintes com habilidades,
+utensílios, tempo, capacidade, espaço, refrigeração, armazenamento e limitações
+de gás ou energia; não despeje um questionário inteiro nem valide a operação
+com base apenas na existência de fogão e forno.
 
 Datas de recuperação também exigem evidência observável. Se `retrieved_at`
 for obrigatório e o horário estiver desconhecido, informe a pendência e aguarde
@@ -73,8 +113,11 @@ e o conteúdo da embalagem histórica têm escopos distintos; nunca invente fato
 Para faltantes e ofertas, siga [complementos e simulação](references/compras.md).
 Cotação pesquisada é estimativa; seleção de oferta, confirmação e aceite são
 decisões distintas. Não apresente orçamento pendente como aprovado.
-Quando compras permanecerem `PENDING`, conclua a resposta com uma pergunta
-específica sobre os dados e confirmações ainda necessários, conforme a avaliação.
+Quando a etapa em curso for avaliar compras e elas permanecerem `PENDING`,
+conclua com uma pergunta específica sobre os dados e confirmações necessários,
+conforme a avaliação. Não transforme o `PENDING` genérico de um workspace sem
+plano em cobrança de confirmação de compras durante uma consulta somente leitura
+ou a descoberta inicial da cozinha.
 
 Siga a orientação curta do projeto. Não carregue documentos de engenharia,
 skills de desenvolvimento ou páginas completas no atendimento habitual.

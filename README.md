@@ -245,8 +245,8 @@ limpo, a jornada com complemento pesquisado e a matriz dos 22 critérios.
 Os [12 evals integrados](evals/s11-results.json) passaram nas assertions críticas
 originais; a revisão humana pediu mais clareza entre preço e sobra no EV-07
 e nas mudanças de preparo no EV-09. As orientações foram corrigidas, com
-revalidação conversacional pendente. Linux/macOS,
-Desktop e vídeo não foram testados nesta execução.
+revalidação conversacional pendente. A CI de núcleo/MCP passou em Windows,
+Linux e macOS; Desktop e vídeo ainda não foram testados nesta execução.
 
 <a id="estrutura"></a>
 ## 🗂️ Explore o repositório

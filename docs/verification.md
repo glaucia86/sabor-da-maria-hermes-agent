@@ -150,11 +150,22 @@ de documentos nem alteradas regras de negócio para fazer a avaliação passar.
 | Ambiente | Núcleo/SQLite | MCP stdio | Hermes CLI/projeto | Desktop/projeto |
 | --- | --- | --- | --- | --- |
 | Windows nativo, Python3.13.15 | PASS na cópia limpa | PASS,16ferramentas/protocolo2025-11-25 | 12 casos executados; revisão humana pendente | Não testado |
-| Linux | Não testado nesta execução | Não testado nesta execução | Não testado | Não testado |
-| macOS | Não testado nesta execução | Não testado nesta execução | Não testado | Não testado |
+| Windows runner, Python3.13.17/x64 | PASS na CI | PASS na CI | Não testado nessa CI | Não testado |
+| Linux runner, Python3.13.18/x64 | PASS na CI | PASS na CI | Não testado | Não testado |
+| macOS runner, Python3.13.17/arm64 | PASS na CI | PASS na CI | Não testado | Não testado |
 
-O workflow declara jobs para três sistemas; isso não comprova execução remota.
-WSL não é prova de Windows nativo. Nenhuma paridade CLI/Desktop foi presumida.
+Execução remota conferida em 14/11/2026 no [CI do PR](https://github.com/glaucia86/sabor-da-maria-hermes-agent/actions/runs/43626864729),
+head `87738981bcb650b09ed4c6d1dac1c2d62ef03a69`: 450 PASS/1 SKIP em cada
+sistema, mais Ruff e formatação PASS. Tempos pytest: Windows445.11s,
+Linux192.21s e macOS273.83s. O skip é o anexo privado ausente.
+
+O [CI do push da mesma alteração](https://github.com/glaucia86/sabor-da-maria-hermes-agent/actions/runs/43626850154)
+interrompeu Windows com448PASS/1SKIP/2sem resultado: a anotação do GitHub
+confirma o limite de10min do job excedido. Esse cancelamento não é PASS nem
+falha de assertion. O limite local do workflow foi ampliado para20min para
+acomodar variação do runner; essa alteração ainda não foi executada remotamente.
+Os testes e seus limites individuais foram preservados. WSL não é prova de
+Windows nativo; a CI não comprova paridade de interface CLI/Desktop.
 
 Baseline de uma execução Windows com3linhas sintéticas e plano vazio: importação
 0.012587s, avaliação0.001937s, criação/inicialização MCP1.563929s e consulta MCP

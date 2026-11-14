@@ -223,7 +223,61 @@
     "ruff_format": "PASS",
     "ruff_files": 42,
     "clean_install": "uv sync --locked --offline, Python 3.13.15, 41 packages; existing cache used",
-    "clean_scope": "Instalação/pytest/stdio na cópia limpa; Hermes real usou venv do checkout com mesmo lock/fontes. Não afirma instalação do host sem cache."
+    "clean_scope": "Instalação/pytest/stdio na cópia limpa; Hermes real usou venv do checkout com mesmo lock/fontes. Não afirma instalação do host sem cache.",
+    "remote_ci": {
+      "head_sha": "87738981bcb650b09ed4c6d1dac1c2d62ef03a69",
+      "passed_run_url": "https://github.com/glaucia86/sabor-da-maria-hermes-agent/actions/runs/43626864729",
+      "passed_run_id": 43626864729,
+      "result": "PASS",
+      "jobs": [
+        {
+          "os": "windows-latest",
+          "python": "3.13.17",
+          "architecture": "x64",
+          "job_id": 132544626704,
+          "passed": 450,
+          "skipped": 1,
+          "pytest_seconds": "445.11",
+          "ruff": "PASS",
+          "format": "PASS"
+        },
+        {
+          "os": "ubuntu-latest",
+          "python": "3.13.18",
+          "architecture": "x64",
+          "job_id": 132544626761,
+          "passed": 450,
+          "skipped": 1,
+          "pytest_seconds": "192.21",
+          "ruff": "PASS",
+          "format": "PASS"
+        },
+        {
+          "os": "macos-latest",
+          "python": "3.13.17",
+          "architecture": "arm64",
+          "job_id": 132544626471,
+          "passed": 450,
+          "skipped": 1,
+          "pytest_seconds": "273.83",
+          "ruff": "PASS",
+          "format": "PASS"
+        }
+      ],
+      "cancelled_push_run_id": 43626850154,
+      "cancelled_windows_job_id": 132544573730,
+      "cancelled_job_annotation": "The job has exceeded the maximum execution time of 10m0s",
+      "cancelled_pytest": {
+        "passed": 448,
+        "skipped": 1,
+        "unfinished": 2,
+        "seconds": "561.57"
+      },
+      "workflow_budget_verified_minutes": 10,
+      "working_tree_budget_minutes": 20,
+      "updated_workflow_remote_result": "NOT_RUN",
+      "scope": "Offline tests and MCP stdio only; no Hermes Desktop or real-model validation."
+    }
   },
   "metrics": {
     "bootstrap_three_rows_seconds": "0.012587",
