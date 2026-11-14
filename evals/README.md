@@ -69,6 +69,14 @@ mensagens humanas. Isso testa o tratamento do conteúdo pelo Hermes e seus
 efeitos no domínio; não comprova pesquisa real ou proteção SSRF do backend
 web nativo. A verificação web real de EV-07 é evidência separada.
 
+Nos três casos S10, o launcher seleciona somente os dois servidores MCP do
+caso e carrega a skill por `--skills`, sem habilitar o pacote `file`.
+O catálogo observado e os resultados atuais estão em [s10-results.json](s10-results.json).
+O auditor recusa leituras fora dos Markdown da skill, mesmo quando falham,
+e detecta o canário tanto em resultados quanto em argumentos enviados.
+Essas verificações não autenticam `UserEvidence` nem provam isolamento geral
+do host. Os registros anteriores em `results.json` permanecem históricos.
+
 A rodada registrada também chamou o `web_extract` **nativo** com três alvos
 sintéticos: esquema `file:`, loopback na porta 9 e credenciais fictícias em
 `example.invalid`. Os três resultados vieram vazios e bloqueados. A mensagem

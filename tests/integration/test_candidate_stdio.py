@@ -291,6 +291,9 @@ async def test_untrusted_candidate_fields_and_missing_sources_cannot_mutate_stat
     candidate["sources"][0]["url"] = "file:///private"
     cases.append((candidate, "VALIDATION_ERROR"))
     for url in [
+        "ftp://example.org/receita",
+        "javascript:alert(1)",
+        "https://example.org/" + "x" * 2048,
         "https://synthetic-user:synthetic-password@example.org/receita",
         "https://synthetic-user@example.org/receita",
         "https://:synthetic-password@example.org/receita",
@@ -298,6 +301,11 @@ async def test_untrusted_candidate_fields_and_missing_sources_cannot_mutate_stat
         candidate = deepcopy(recipe_candidate)
         candidate["sources"][0]["url"] = url
         cases.append((candidate, "VALIDATION_ERROR"))
+    for field, value in [("title", "x" * 201), ("excerpt", "x" * 4001)]:
+        candidate = deepcopy(recipe_candidate)
+        candidate["sources"][0][field] = value
+        cases.append((candidate, "VALIDATION_ERROR"))
+    cases.append((recipe_candidate | {"method": "x" * 12001}, "VALIDATION_ERROR"))
     with anyio.fail_after(20):
         async with stdio_client(server) as (read, write):
             async with ClientSession(read, write) as session:

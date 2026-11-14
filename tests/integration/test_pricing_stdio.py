@@ -83,6 +83,8 @@ async def test_pricing_guards_choice_and_replay_after_process_restart(pricing_wo
                 {"approved": True},
                 {"custom_price": "20.00"},
                 {"target_margin": "0.90"},
+                {"evidence": choice["evidence"] | {"kind": "WEB"}},
+                {"evidence": choice["evidence"] | {"kind": "MODEL"}},
             ):
                 invalid = await session.call_tool("save_menu_decision", choice | extra)
                 assert invalid.is_error is True
@@ -119,6 +121,9 @@ async def test_pricing_guards_choice_and_replay_after_process_restart(pricing_wo
                     evidence=choice["evidence"] | {"statement": "Confirmo limpar o plano."},
                 ),
             )
+            before_stale = await session.call_tool(
+                "get_business_state", {"workspace_id": workspace}
+            )
             stale = await session.call_tool(
                 "save_menu_decision",
                 choice
@@ -129,3 +134,6 @@ async def test_pricing_guards_choice_and_replay_after_process_restart(pricing_wo
             )
             assert stale.is_error is True
             assert stale.structured_content["error"]["code"] == "STALE_EVALUATION"
+            assert (
+                await session.call_tool("get_business_state", {"workspace_id": workspace})
+            ).structured_content == before_stale.structured_content

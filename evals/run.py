@@ -248,7 +248,7 @@ def turn(launcher, profile, folder, case, name):
         )
     prompt = folder / "prompt.private.txt"
     prompt.write_text(intro + request, encoding="utf-8")
-    toolsets = "file,mcp-" + case["server"]
+    toolsets = ("file," if name in RECOVERY_CASES else "") + "mcp-" + case["server"]
     if name not in RECOVERY_CASES:
         toolsets += ",mcp-" + case["web_server"]
     command = [
