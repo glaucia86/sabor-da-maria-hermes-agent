@@ -82,6 +82,51 @@ quantidades, utensílios e conservação como pendências até haver suporte e
 validação; não substitua ingredientes ou revise a receita silenciosamente.
 Siga `correcoes.md` para registrar a versão adaptada quando ela for definida.
 
+## Ficha experimental e medição de rendimento
+
+1. Separe na ficha a fonte recuperada, suas medidas originais, as retiradas ou
+   substituições propostas e os campos ainda sem valor. Identifique a ficha
+   como experimental, não como método testado. Ao retirar massa, acompanhamentos
+   ou outros componentes, não herde automaticamente água, sal, tempo ou rendimento:
+   a composição e a absorção mudam. Declare o que exige teste antes da repetição.
+2. Liste sólidos em gramas e líquidos em mililitros a medir, preservando em
+   paralelo xícaras, colheres e unidades da fonte. Não invente equivalências.
+   Pese partes limpas e identifique a base crua/cozida; rendimento após cocção
+   não é conversão de medida doméstica. Confira resolução da balança para
+   pequenas doses, capacidade máxima e compatibilidade térmica dos recipientes.
+3. Diferencie volume nominal da embalagem de peso líquido da porção e capacidade
+   nominal da panela de volume útil durante a cocção. Não deduza rendimento por
+   divisão desses volumes: expansão, mistura, fechamento e espaço para mexer
+   precisam ser observados. Não fixe ocupação segura sem suporte do fabricante
+   ou validação específica.
+4. Proponha um teste por lote com registro de ingredientes efetivamente usados,
+   água inicial e acréscimos, peso final aproveitável com tara, pesos individuais,
+   marmitas completas, sobras, amostras e perdas separadas. Registre ocupação
+   máxima da panela, facilidade para mexer, uniformidade e necessidade de dourar
+   em etapas. Não apoie panela quente diretamente na balança.
+5. Cronometre desde separação e higiene até embalagem e limpeza; anote também
+   horários de cocção, espera e saída. Reproduza trabalho e recursos reais, sem
+   presumir paralelismo. Repita o teste para conferir consistência. Somente após
+   receber resultados humanos, registre medições como fatos; campos em branco
+   não são resultados e protocolo escrito não é teste executado.
+6. Com rendimento comprovado de R marmitas completas no padrão escolhido,
+   calcule por ferramenta lotes = teto(meta/R), produção = lotes × R e excedente
+   = produção − meta. Preserve lotes inteiros e combine destino do excedente.
+   Se R for desconhecido ou a fonte disser apenas 'até', não apresente contagem
+   definitiva; exemplos devem ser condicionais. Escala maior exige validar de
+   novo panela, água, tempo e qualidade; não reduza porções para forçar a meta.
+7. Valide conservação separadamente do rendimento: confira termômetro culinário,
+   higienização/verificação, temperaturas e horários ao terminar, embalar, sair
+   e concluir a rota. Bolsa térmica disponível não prova manutenção segura de
+   temperatura. Confira carga, abertura, duração da rota e conservação durante
+   pesagem e embalagem. Fundamente limites térmicos em fonte sanitária oficial
+   recuperada e considere exigências locais; não atribua validade ao produto sem
+   validação. Entrega imediata não elimina esse controle.
+
+Finalize com pendências concretas e poucas perguntas necessárias ao próximo
+passo. Não registre plano, aceite, compras ou conversões enquanto esses atos
+não tiverem suporte e autorização próprios.
+
 Aceite não compra, não debita estoque físico e não escolhe preço. Se faltar
 insumo, explique a pendência; cotação e preço dependem de ferramentas próprias.
 Após aceite vigente, siga [CMV e escolha de preço](precificacao.md) quando as
