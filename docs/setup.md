@@ -111,8 +111,18 @@ XLSX mínimo, com um ingrediente fictício de teste:
 uv run --locked --no-sync python -c "from pathlib import Path; from openpyxl import Workbook; p=Path('artifacts/private/input/synthetic.xlsx'); p.parent.mkdir(parents=True, exist_ok=True); w=Workbook(); s=w.active; s.title='Despensa'; s.append(['Ingrediente','Quantidade em estoque','Unidade']); s.append(['Arroz',5,'kg']); s=w.create_sheet('Precos'); s.append(['Ingrediente','Quantidade comprada','Unidade','Preço total pago (R$)']); s.append(['Arroz',5,'kg','24.90']); w.save(p); w.close(); print(p.resolve())"
 ```
 
-Use o mesmo comando de bootstrap acima, alterando somente `--inventory`
-para `artifacts/private/input/synthetic.xlsx`.
+Crie um banco separado para o contexto fictício:
+
+```sh
+uv run --locked --no-sync python -X utf8 -B -m dona_maria.bootstrap --database artifacts/private/simulation/workspace.sqlite3 --inventory artifacts/private/input/synthetic.xlsx --allowed-directory artifacts/private/input --context-mode SIMULATION
+```
+
+Crie previamente o diretório `artifacts/private/simulation` se necessário.
+Configure o binding privado com o banco e o workspace retornado. O modo é
+imutável: o bootstrap recusa reutilizar banco REAL como SIMULATION e vice-versa,
+inclusive após renomear/copiar o arquivo. Não recrie nem apague um banco por
+incompatibilidade. Um banco legado sem modo permanece REAL; use outro banco
+novo para a demonstração fictícia. Nenhuma ferramenta MCP troca esse modo.
 
 Identifique esses dados como sintéticos durante a demonstração. Uma
 despensa importada não confirma equipamentos, habilidades, rendimento,
@@ -168,7 +178,9 @@ pelo modelo com o nome que o host pretende executar e veta nomes proibidos,
 inclusive após correção automática do Hermes. Ausência de observação válida
 também recusa a chamada. Usa os hooks públicos `post_api_request` e
 `pre_tool_call`, conferidos na versão instalada; não altera o código do host.
-Mantenha somente essa política na allowlist de plugins do perfil vinculado.
+No perfil sem pesquisa mediada, mantenha somente essa política na allowlist de plugins.
+O perfil isolado de pesquisa tem configuração e gate próprios em
+[S17](s17-mediated-research.md); não amplie automaticamente este perfil.
 Não disponibilize o atendimento sem repetir o teste de catálogo e de chamada
 proibida no host efetivo. Após atualizar a política, copie novamente apenas
 esses dois arquivos e inicie uma sessão nova.
@@ -191,6 +203,8 @@ hermes -p sabor-da-maria mcp add dona_maria --command "PYTHON_ABSOLUTO" --connec
 Use um único `--env` para a lista das três variáveis. No parser conferido,
 repetir essa opção substitui a lista anterior e perde parte do binding.
 Mantenha `--args` como a última opção: o restante pertence ao subprocesso.
+No Hermes0.23.1, use `--env` uma única vez, seguido de todos os pares:
+repetir a opção conserva somente os valores da última ocorrência.
 
 A descoberta MCP pode pedir seleção das ferramentas. Confira o catálogo
 de negócio apresentado e habilite as ferramentas necessárias da aplicação.

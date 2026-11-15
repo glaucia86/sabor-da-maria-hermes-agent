@@ -1,6 +1,8 @@
 from copy import deepcopy
 from datetime import UTC, datetime
+from hashlib import sha256
 from pathlib import Path
+from urllib.parse import urlsplit
 from uuid import uuid4
 
 import pytest
@@ -16,6 +18,33 @@ OPERATOR_STDIO_ARGS = [
     "-B",
     str(Path(__file__).resolve().parents[1] / "evals/operator_stdio.py"),
 ]
+
+
+@pytest.fixture(autouse=True)
+def local_checkout_for_subprocesses(monkeypatch):
+    # O pythonpath do pytest não se propaga aos processos filhos.
+    monkeypatch.setenv("PYTHONPATH", str(Path(__file__).resolve().parents[1] / "src"))
+
+
+def synthetic_web_extraction(url, text):
+    """Resposta text/plain sintética do seam de transporte, nunca evidência web real."""
+    body = text.encode("utf-8")
+    return {
+        "url": url,
+        "text": text,
+        "content_sha256": sha256(body).hexdigest(),
+        "complete": True,
+        "received_bytes": len(body),
+        "decoded_bytes": len(body),
+        "destinations": [
+            {
+                "url": url,
+                "hostname": urlsplit(url).hostname,
+                "address": "93.184.216.34",
+                "port": 443,
+            }
+        ],
+    }
 
 
 @pytest.fixture
@@ -171,8 +200,15 @@ def reconfirm_attendance():
 @pytest.fixture
 def pricing_workspace(tmp_path, inventory_file, recipe_candidate):
     def create(
-        *, total="20.00", purchased="100", consumed="100", servings=2, batches=1, parts=1,
-        accept=True, unit="g",
+        *,
+        total="20.00",
+        purchased="100",
+        consumed="100",
+        servings=2,
+        batches=1,
+        parts=1,
+        accept=True,
+        unit="g",
     ):
         book = load_workbook(inventory_file)
         book["Precos"]["B2"] = purchased

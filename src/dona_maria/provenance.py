@@ -11,6 +11,7 @@ from pydantic import (
     ConfigDict,
     Field,
     HttpUrl,
+    StrictBool,
     StrictInt,
     field_validator,
 )
@@ -67,6 +68,9 @@ class WebSource(CandidateModel):
         default=None, exclude_if=lambda value: value is None
     )
     segment: ShortText | None = Field(default=None, exclude_if=lambda value: value is None)
+    content_sha256: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
 
     @field_validator("retrieved_at", mode="before")
     @classmethod
@@ -102,6 +106,12 @@ class InformationRef(CandidateModel):
     field: ShortText
 
 
+class RegisteredWebReference(CandidateModel):
+    kind: Literal["WEB"]
+    research_result_id: UUIDText
+    segment: ShortText
+
+
 class UserProvidedSource(CandidateModel):
     kind: Literal["USER_PROVIDED"]
     # Ausência representa somente uma alegação na proposta, nunca fato confirmado.
@@ -119,6 +129,16 @@ class UserReportedMeasurementSource(UserProvidedSource):
     kind: Literal["USER_REPORTED_MEASUREMENT"]
     method: Note
     context: Note
+    inputs: Annotated[list[InformationRef], Field(max_length=200)] = Field(
+        default_factory=list, exclude_if=lambda value: not value
+    )
+
+    @field_validator("method", "context")
+    @classmethod
+    def reported_detail(cls, value):
+        if not value.strip():
+            raise ValueError("Medição exige método e contexto relatados.")
+        return value
 
 
 def legacy_web_tag(value):
@@ -139,7 +159,9 @@ class DerivedProvenance(CandidateModel):
     kind: Literal["DERIVED"] = "DERIVED"
     rule: ShortText
     rule_version: ShortText
-    inputs: Annotated[list[InformationRef], Field(min_length=1, max_length=200)]
+    # A saída soma até duas referências próprias às 200 dependências de entrada.
+    inputs: Annotated[list[InformationRef], Field(min_length=1, max_length=202)]
+    depends_on_simulation: StrictBool = Field(default=False, exclude_if=lambda value: not value)
 
 
 OutputProvenance = Annotated[
@@ -179,4 +201,92 @@ def source_fields(value, path=""):
             yield path, value
         else:
             for key, item in value.items():
+                if key == "business_basis":
+                    continue  # Snapshot financeiro auditado, não uma nova fonte de informação.
                 yield from source_fields(item, f"{path}/{key}".lstrip("/"))
+
+
+def information_value(content, path):
+    """Valor atestado pelo source; metadados não fazem parte do fato relatado."""
+    parts = path.split("/")
+    node = content
+    try:
+        for part in parts[:-1]:
+            node = node[int(part)] if isinstance(node, list) else node[part]
+        if parts[-1] == "method_source":
+            return node.get("method")
+        if parts[-1] == "context_source":
+            return node.get("operational_context")
+        if isinstance(node, list):
+            return None
+        excluded = {"source", "quantity_source", "line_id", "id", "status"}
+        if parts[:1] == ["ingredients"] and parts[-2:] != ["original_measure", "source"]:
+            excluded |= {"original_measure", "quantity", "quantity_gap"}
+        return {key: value for key, value in node.items() if key not in excluded}
+    except (KeyError, IndexError, TypeError, ValueError):
+        return None
+
+
+def inherited_sources(content, original):
+    sources = dict(source_fields(original))
+    inherited = {}
+    for path, source in source_fields(content):
+        previous = sources.get(path)
+        if (
+            previous is None
+            or path.startswith("origin/")
+            or information_value(content, path) != information_value(original, path)
+        ):
+            continue
+        new_measurement = (
+            source["kind"] == "USER_REPORTED_MEASUREMENT" and previous["kind"] != "USER_SIMULATION"
+        )
+        if source["kind"] == "USER_SIMULATION" or new_measurement:
+            if any(
+                source.get(key) != previous.get(key)
+                for key in ("kind", "method", "context", "scenario", "inputs")
+            ):
+                continue
+        inherited[path] = previous
+    return inherited
+
+
+def context_labels(mode, content):
+    depends, pending = False, [content]
+    while pending:
+        value = pending.pop()
+        if isinstance(value, dict):
+            depends |= (
+                value.get("kind") == "USER_SIMULATION" or value.get("depends_on_simulation") is True
+            )
+            pending.extend(value.values())
+        elif isinstance(value, list):
+            pending.extend(value)
+    return {
+        "context_mode": mode or "REAL",
+        "depends_on_simulation": depends,
+        "hypothetical": mode == "SIMULATION" or depends,
+    }
+
+
+def transitive_inputs(references, resolve):
+    """Expande referências locais com limite total e detecção de ciclos."""
+    result, visited = [], set()
+
+    def visit(reference, ancestors):
+        key = (reference.entity, reference.entity_id, reference.version, reference.field)
+        if key in ancestors:
+            raise ValueError("Referência circular.")
+        if key in visited:
+            return
+        if len(visited) >= 200:
+            raise ValueError("Dependências excedem 200 referências.")
+        visited.add(key)
+        result.append(reference)
+        source = resolve(reference)
+        for entry in source.get("inputs", []):
+            visit(InformationRef.model_validate(entry), ancestors | {key})
+
+    for reference in references:
+        visit(reference, set())
+    return result

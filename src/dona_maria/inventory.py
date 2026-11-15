@@ -13,12 +13,6 @@ from typing import Literal
 from uuid import NAMESPACE_URL, UUID, uuid5
 from xml.etree import ElementTree
 
-from openpyxl import load_workbook
-from openpyxl.cell.read_only import ReadOnlyCell
-from openpyxl.packaging.manifest import Manifest
-from openpyxl.utils.cell import range_boundaries
-from openpyxl.utils.exceptions import InvalidFileException
-from openpyxl.xml.constants import XLSM, XLSX, XLTM, XLTX
 from pydantic import BaseModel, ConfigDict
 
 from dona_maria.provenance import UserProvidedSource
@@ -91,6 +85,9 @@ UNITS = {
 
 
 def import_inventory(path: Path, *, allowed_directory: Path) -> InventorySnapshot:
+    from openpyxl import load_workbook
+    from openpyxl.utils.exceptions import InvalidFileException
+
     path = path.resolve()
     if not path.is_relative_to(allowed_directory.resolve()) or path.suffix.lower() != ".xlsx":
         raise ValueError("Importação exige XLSX no diretório autorizado.")
@@ -279,6 +276,8 @@ def import_inventory(path: Path, *, allowed_directory: Path) -> InventorySnapsho
 
 
 def _inventory_rows(sheet, max_col):
+    from openpyxl.cell.read_only import ReadOnlyCell
+
     # Dimensões declaradas menores não podem truncar silenciosamente os dados.
     sheet.reset_dimensions()
     return [
@@ -391,6 +390,8 @@ def _number(
 
 
 def _validate_archive(content: bytes) -> None:
+    from openpyxl.utils.cell import range_boundaries
+
     expanded = 0
     rows = 0
     with zipfile.ZipFile(io.BytesIO(content)) as archive:
@@ -453,6 +454,9 @@ def _validate_archive(content: bytes) -> None:
 
 
 def _worksheet_members(archive):
+    from openpyxl.packaging.manifest import Manifest
+    from openpyxl.xml.constants import XLSM, XLSX, XLTM, XLTX
+
     manifest = Manifest.from_tree(ElementTree.fromstring(archive.read("[Content_Types].xml")))
     workbooks = [part for part in manifest.Override if part.ContentType in {XLTM, XLTX, XLSM, XLSX}]
     if (

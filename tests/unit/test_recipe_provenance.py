@@ -188,7 +188,12 @@ def test_proposal_refuses_unattested_authority_and_unavailable_source_flows(
         {"kind": "USER_PROVIDED", "url": "https://example.org/fake"},
         {"kind": "DERIVED", "rule": "O modelo confirma"},
         {"kind": "USER_SIMULATION", "scenario": "Simulação"},
-        {"kind": "USER_REPORTED_MEASUREMENT", "method": "Balança", "context": "Casa"},
+        {
+            "kind": "USER_REPORTED_MEASUREMENT",
+            "method": "Balança",
+            "context": "Casa",
+            "local_event_id": str(uuid4()),
+        },
         {
             "kind": "WEB",
             "research_result_id": str(uuid4()),

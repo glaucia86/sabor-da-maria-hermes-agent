@@ -1,5 +1,6 @@
 """Contratos de candidatas pesquisadas, sem aceite ou decisões financeiras."""
 
+from copy import deepcopy
 from decimal import Decimal
 from typing import Annotated, Literal
 from uuid import UUID, uuid4
@@ -8,6 +9,7 @@ from pydantic import (
     AwareDatetime,
     Field,
     StrictInt,
+    create_model,
     field_validator,
     model_validator,
 )
@@ -179,6 +181,9 @@ class CandidateInput(CandidateModel):
 
 
 class RecipeCandidate(CandidateInput):
+    depends_on_simulation: bool = Field(default=False, exclude_if=lambda value: not value)
+    # Projeção financeira anterior, produzida pelo servidor em revisões neutras.
+    business_basis: dict | None = Field(default=None, exclude_if=lambda value: value is None)
     ingredients: list[RecipeIngredient]
     requirements: list[CriticalRequirement] = []
     id: UUID
@@ -219,7 +224,28 @@ class RecipeCandidate(CandidateInput):
             requirement["status"] = "UNKNOWN"
         return data
 
+    def operational_content(self) -> dict:
+        return {
+            "method": self.method,
+            "context": self.operational_context,
+            "requirements": [r.model_dump(exclude={"id", "source"}) for r in self.requirements],
+            "yield": self.yield_per_batch.model_dump(exclude={"source"})
+            if self.yield_per_batch
+            else None,
+            "ingredients": [
+                (
+                    line.original_measure.value,
+                    line.original_measure.unit_label,
+                    line.ingredient_id,
+                    line.preparation_basis,
+                )
+                for line in self.ingredients
+            ],
+        }
+
     def business_content(self) -> dict:
+        if self.business_basis is not None:
+            return deepcopy(self.business_basis)
         payload = self.model_dump(mode="json")
         data = {name: payload[name] for name in CandidateInput.model_fields if name in payload}
         data.pop("title")
@@ -243,6 +269,53 @@ class RecipeCandidate(CandidateInput):
             )
         return data
 
+    def business_premises(self) -> dict:
+        data = self.business_content()
+        data.pop("origin", None)
+        data.pop("provenance_version", None)
+        for ingredient in data["ingredients"]:
+            ingredient.pop("quantity_source", None)
+        return data
+
+
+CandidateChanges = create_model(
+    "CandidateChanges",
+    __base__=CandidateModel,
+    **{
+        name: (field.rebuild_annotation() | None, None)
+        for name, field in CandidateInput.model_fields.items()
+        if name not in {"origin", "provenance_version", "sources"}
+    },
+)
+
+
+class CandidateAdaptation(CandidateModel):
+    origin: RecipeOrigin
+    changes: CandidateChanges
+
+    @model_validator(mode="after")
+    def historical_changes(self):
+        if self.origin.derived_from is None or not self.changes.model_fields_set:
+            raise ValueError("Adaptação exige versão histórica e alterações explícitas.")
+        return self
+
+    def resolve(self, original):
+        data = original.model_dump(mode="json")
+        data = {key: value for key, value in data.items() if key in CandidateInput.model_fields}
+        data.pop("provenance_version", None)
+        for line in data["ingredients"]:
+            line.pop("line_id", None)
+            line.pop("quantity_source", None)
+        for requirement in data["requirements"]:
+            requirement.pop("id", None)
+        for _, source in source_fields(data):
+            if source["kind"] != "WEB":
+                for key in ("evidence", "local_event_id", "information_ref"):
+                    source.pop(key, None)
+        data.update(self.changes.model_dump(mode="json", exclude_unset=True))
+        data["origin"] = self.origin.model_dump(mode="json")
+        return CandidateInput.model_validate(data)
+
 
 class RegisterCandidateRequest(CandidateModel):
     workspace_id: UUIDText
@@ -250,7 +323,7 @@ class RegisterCandidateRequest(CandidateModel):
     expected_revision: Annotated[StrictInt, Field(ge=0)]
     recipe_id: UUIDText | None = None
     expected_recipe_version: Annotated[StrictInt, Field(gt=0)] | None = None
-    candidate: CandidateInput
+    candidate: CandidateInput | CandidateAdaptation
 
     @model_validator(mode="after")
     def revision_pair(self):

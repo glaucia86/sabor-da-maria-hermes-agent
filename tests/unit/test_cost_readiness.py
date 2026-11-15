@@ -3,6 +3,7 @@
 import json
 import sqlite3
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
 from uuid import uuid4
 
 import pytest
@@ -16,6 +17,8 @@ from dona_maria.approvals import ApprovalService, migrate_proposals
 from dona_maria.business_state import AttendanceService, BusinessStateReader
 from dona_maria.persistence import SQLiteWorkspaceRepository
 from dona_maria.planning import BusinessRuleError
+from dona_maria.provenance import InformationRef
+from dona_maria.research import migrate_research
 
 
 def propose_acquisition(reader, workspace, local, **changes):
@@ -53,6 +56,110 @@ def local_decision(reader, workspace, local, kind, **payload):
     return local.approve(workspace, proposal["id"], proposal["hash"], attest=True)
 
 
+@pytest.mark.parametrize("entity", ["INVENTORY_ACQUISITION", "OPERATIONAL_RESOURCE"])
+def test_financial_information_resolves_exact_historical_entity_and_field(
+    pricing_workspace, tmp_path, entity
+):
+    reader, workspace, recipe, _, _, _ = pricing_workspace(accept=False)
+    migrate_proposals(reader.repository, tmp_path / "references-v1.sqlite3")
+    local = ApprovalService(reader.repository)
+    records = []
+    for version in (1, 2):
+        if entity == "INVENTORY_ACQUISITION":
+            proposal = propose_acquisition(
+                reader,
+                workspace,
+                local,
+                replaces_acquisition_id=records[-1]["id"] if records else None,
+            )
+            record = local.approve(workspace, proposal["id"], proposal["hash"], attest=True)[
+                "data"
+            ]["acquisition"]
+            field = "available_quantity"
+        else:
+            record = local_decision(
+                reader,
+                workspace,
+                local,
+                "record_operational_resource",
+                recipe_id=recipe["id"],
+                recipe_version=1,
+                resource_name="Água",
+                purpose="Limpeza externa ao alimento.",
+                classification="EXTERNAL_OPERATIONAL_RESOURCE",
+                quantity_gap="Volume não informado.",
+                cost_gap="Custo não informado.",
+                context="Relato sintético de limpeza.",
+                replaces_resource_id=records[-1]["id"] if records else None,
+            )["data"]["operational_resource"]
+            field = "purpose"
+        assert record["version"] == version
+        records.append(record)
+    migrate_research(reader.repository, tmp_path / "references-v2.sqlite3")
+    before = reader.repository.load(workspace, with_snapshot=True)
+    with closing(reader.repository._connect("ro")) as db:
+        for record in records:
+            reference = dict(
+                entity=entity, entity_id=record["id"], version=record["version"], field=field
+            )
+            assert (
+                reader.repository.resolve_information(
+                    db, workspace, InformationRef.model_validate(reference)
+                )
+                == record["sources"][field]
+            )
+            for changes in ({"field": "conversion"}, {"version": 999}, {"entity_id": str(uuid4())}):
+                with pytest.raises(BusinessRuleError) as refused:
+                    reader.repository.resolve_information(
+                        db, workspace, InformationRef.model_validate(reference | changes)
+                    )
+                assert refused.value.code == "NOT_FOUND"
+            with pytest.raises(BusinessRuleError) as foreign:
+                reader.repository.resolve_information(
+                    db, str(uuid4()), InformationRef.model_validate(reference)
+                )
+            assert foreign.value.code == "NOT_FOUND"
+    assert reader.repository.load(workspace, with_snapshot=True) == before
+
+
+@pytest.mark.parametrize("entity", ["INVENTORY_ACQUISITION", "OPERATIONAL_RESOURCE"])
+def test_financial_reference_cannot_alias_a_conversion(clarification, tmp_path, entity):
+    reader, workspace, _, _, chocolate, _, _, _ = clarification
+    migrate_proposals(reader.repository, tmp_path / "alias-backup.sqlite3")
+    conversion = local_decision(
+        reader,
+        workspace,
+        ApprovalService(reader.repository),
+        "record_ingredient_conversion",
+        ingredient_id=chocolate["id"],
+        from_unit="un",
+        to_unit="g",
+        factor="1000",
+        scope="HISTORICAL_PACKAGE",
+        context="Embalagem histórica da fotografia.",
+        source=dict(
+            kind="USER_REPORTED_MEASUREMENT",
+            method="Relato da pesagem.",
+            context="Mesma embalagem histórica.",
+        ),
+    )["data"]["conversion"]
+    with closing(reader.repository._connect("ro")) as db:
+        reference = dict(
+            entity="CONVERSION", entity_id=conversion["id"], version=1, field="conversion"
+        )
+        assert (
+            reader.repository.resolve_information(
+                db, workspace, InformationRef.model_validate(reference)
+            )
+            == conversion["source"]
+        )
+        with pytest.raises(BusinessRuleError) as refused:
+            reader.repository.resolve_information(
+                db, workspace, InformationRef.model_validate(reference | {"entity": entity})
+            )
+        assert refused.value.code == "NOT_FOUND"
+
+
 def test_available_stock_without_historical_cost_remains_operational_but_blocks_acceptance(
     pricing_workspace,
 ):
@@ -65,6 +172,7 @@ def test_available_stock_without_historical_cost_remains_operational_but_blocks_
     assert line["stock_available"] == "5000"
     assert line["shortage"] == "0"
     assert evaluation["financial_readiness"]["status"] == "PENDING"
+    assert evaluation["data_complete"] is False
     gap = evaluation["financial_readiness"]["gaps"][0]
     assert gap["ingredient_id"] == line["ingredient_id"]
     assert gap["quantity"] == "100"
@@ -109,10 +217,37 @@ def test_reported_acquisition_needs_local_approval_and_keeps_original_snapshot(
     assert acquisition["sources"]["acquisition_total"]["local_event_id"]
     evaluation = reader.evaluate_purchase_plan({"workspace_id": workspace})["data"]
     assert evaluation["financial_readiness"]["status"] == "READY"
+    assert evaluation["data_complete"] is True
     assert evaluation["demand"][0]["stock_available"] == "500"
     assert evaluation["demand"][0]["historical_consumed_cost"] == "2.00"
     assert reader.get_inventory_snapshot({"workspace_id": workspace})["data"] == original["data"]
     assert local.approve(workspace, proposal["id"], proposal["hash"], attest=True) == approved
+
+    before_migration = reader.repository.load(workspace, with_snapshot=True)
+    backup = tmp_path / "before-research.sqlite3"
+    migrate_research(reader.repository, backup)
+    assert reader.repository.load(workspace, with_snapshot=True) == before_migration
+    with sqlite3.connect(backup) as old, sqlite3.connect(database) as migrated:
+        for table in (
+            "workspaces",
+            "inventory_snapshots",
+            "decisions",
+            "operations",
+            "user_change_proposals",
+        ):
+            query = f"SELECT * FROM {table} ORDER BY rowid"
+            assert migrated.execute(query).fetchall() == old.execute(query).fetchall()
+        assert old.execute("SELECT version FROM schema_migrations ORDER BY version").fetchall() == [
+            (1,),
+            (2,),
+        ]
+        assert migrated.execute(
+            "SELECT version FROM schema_migrations ORDER BY version"
+        ).fetchall() == [(1,), (2,), (3,)]
+    reopened = ApprovalService(SQLiteWorkspaceRepository(database))
+    before_replay = database.read_bytes()
+    assert reopened.approve(workspace, proposal["id"], proposal["hash"], attest=True) == approved
+    assert database.read_bytes() == before_replay
 
 
 def test_material_acquisition_change_invalidates_prices_and_reprices_from_reported_origin(

@@ -18,6 +18,7 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, Field, StrictBool, StrictInt, create_model
 
 from dona_maria.candidates import (
+    CandidateAdaptation,
     CandidateModel,
     Category,
     RegisterCandidateRequest,
@@ -39,7 +40,7 @@ from dona_maria.production import (
     PreferenceInput,
     PreferencesRequest,
 )
-from dona_maria.provenance import source_fields
+from dona_maria.provenance import RegisteredWebReference, WebSource, source_fields
 from dona_maria.quotes import (
     ConfirmQuoteRequest,
     RegisterQuoteRequest,
@@ -197,6 +198,8 @@ _INJECTED_FIELDS = {
 
 @lru_cache
 def _bound_type(annotation):
+    if annotation is WebSource:
+        return RegisteredWebReference
     if annotation is UUID:
         return Annotated[StrictInt, Field(ge=1)]
     origin, args = get_origin(annotation), get_args(annotation)
@@ -256,6 +259,16 @@ def _expand_bound_command(command, state, snapshot, revision, now):
             recipe = state.candidates[index - 1]
         result = {}
         for key, item in value.items():
+            if key == "entity_id" and value.get("entity") in {"RECIPE", "CONVERSION"}:
+                entries = (
+                    state.candidates
+                    if value["entity"] == "RECIPE"
+                    else state.ingredient_conversions
+                )
+                if not 1 <= item <= len(entries):
+                    raise BusinessRuleError("NOT_FOUND", "Informação não pertence ao contexto.")
+                result[key] = str(entries[item - 1].id)
+                continue
             if item is not None and (key in collections or key == "line_id"):
                 entries = (
                     recipe.ingredients if key == "line_id" and recipe else collections.get(key, [])
@@ -287,7 +300,8 @@ def _expand_bound_command(command, state, snapshot, revision, now):
     if kind == "register_recipe_candidate":
         if recipe:
             payload["expected_recipe_version"] = recipe.version
-        for review in payload["candidate"]["category_reviews"]:
+        candidate = payload["candidate"]
+        for review in candidate.get("changes", candidate).get("category_reviews", []) or []:
             review["method_version"] = recipe.version + 1 if recipe else 1
     if kind in ("confirm_complement_quote", "register_complement_quote") and quote:
         payload[
@@ -495,9 +509,9 @@ def _materialize(document, event_id, now, state):
         "statement": statement,
         "captured_at": now.isoformat(),
     }
-    if kind == "register_recipe_candidate":
-        for _, source in source_fields(payload["candidate"]):
-            if source["kind"] == "USER_PROVIDED":
+    if kind in {"register_recipe_candidate", "record_ingredient_conversion"}:
+        for _, source in source_fields(payload):
+            if source["kind"] in {"USER_PROVIDED", "USER_REPORTED_MEASUREMENT", "USER_SIMULATION"}:
                 source.update(evidence=evidence, local_event_id=event_id)
     if kind in ("record_kitchen_facts", "record_user_preferences"):
         key = "facts" if kind == "record_kitchen_facts" else "preferences"
@@ -518,8 +532,12 @@ def _without_evidence(value):
     if isinstance(value, list):
         return [_without_evidence(item) for item in value]
     if isinstance(value, dict):
-        if value.get("kind") == "USER_PROVIDED":
-            return {"kind": "USER_PROVIDED"}
+        if value.get("kind") in {"USER_PROVIDED", "USER_REPORTED_MEASUREMENT", "USER_SIMULATION"}:
+            return {
+                key: item
+                for key, item in value.items()
+                if key not in {"evidence", "local_event_id", "information_ref"}
+            }
         return {key: _without_evidence(item) for key, item in value.items() if key != "evidence"}
     return value
 
@@ -601,29 +619,37 @@ class ApprovalService:
     def propose(self, arguments: dict, *, client_hash: str | None = None) -> dict:
         if client_hash is None and not call_fits(arguments):
             raise BusinessRuleError("INPUT_LIMIT", "Pedido excede o limite permitido.")
+        from dona_maria.research import resolve_web_references, verify_web_sources
+
+        arguments = resolve_web_references(
+            self.repository, arguments.get("workspace_id"), arguments
+        )
         request = ProposalRequest.model_validate(arguments)
         # Autoridade e derivações nunca entram pela proposta, nem como evento reaproveitado.
-        candidate = arguments.get("command", {}).get("payload", {}).get("candidate")
+        payload = arguments.get("command", {}).get("payload", {})
+        candidate = payload.get("candidate")
+        if (
+            request.command.kind == "record_ingredient_conversion"
+            and (payload.get("source") or {}).get("kind") == "WEB"
+        ):
+            raise BusinessRuleError(
+                "SOURCE_NOT_LINKED", "Nova fonte web exige resultado registrado."
+            )
+        for _, source in source_fields(payload):
+            if source["kind"] == "DERIVED" or (
+                source["kind"] != "WEB"
+                and any(key in source for key in ("evidence", "local_event_id", "information_ref"))
+            ):
+                raise BusinessRuleError(
+                    "AUTHORIZATION_REQUIRED", "A origem exige aprovação local exata."
+                )
         if isinstance(candidate, dict):
-            for _, source in source_fields(candidate):
-                if source["kind"] == "DERIVED" or (
-                    source["kind"] == "USER_PROVIDED" and set(source) != {"kind"}
-                ):
-                    raise BusinessRuleError(
-                        "AUTHORIZATION_REQUIRED", "A origem exige aprovação local exata."
-                    )
-                if source["kind"] in {"USER_SIMULATION", "USER_REPORTED_MEASUREMENT"}:
-                    raise BusinessRuleError(
-                        "SOURCE_NOT_LINKED", "Esse fluxo ainda não está habilitado."
-                    )
             if candidate.get("provenance_version") is not None or any(
                 i.get("quantity_source") is not None for i in candidate.get("ingredients", [])
             ):
                 raise BusinessRuleError(
                     "AUTHORIZATION_REQUIRED", "Metadados são produzidos pelo servidor."
                 )
-            if (candidate.get("origin") or {}).get("derived_from"):
-                raise BusinessRuleError("SOURCE_NOT_LINKED", "Adaptação ainda não está habilitada.")
         request_json = request.model_dump(mode="json")
         workspace, operation = str(request.workspace_id), str(request.operation_id)
         with self.repository.transaction() as db:
@@ -631,6 +657,27 @@ class ApprovalService:
             loaded = self.repository.load_state(db, workspace)
             if loaded is None:
                 raise BusinessRuleError("NOT_FOUND", "Workspace não encontrado.")
+            if isinstance(getattr(request.command.payload, "candidate", None), CandidateAdaptation):
+                adaptation = request.command.payload.candidate
+                historical = self.repository.historical_recipe(
+                    db, workspace, adaptation.origin.derived_from
+                )
+                request_json["command"]["payload"]["candidate"] = adaptation.resolve(
+                    historical
+                ).model_dump(mode="json")
+            if loaded[1].context_mode != "SIMULATION" and any(
+                source["kind"] == "USER_SIMULATION" for _, source in source_fields(payload)
+            ):
+                raise BusinessRuleError(
+                    "CONTEXT_MISMATCH", "Origem fictícia exige contexto SIMULATION."
+                )
+            from dona_maria.provenance import InformationRef, transitive_inputs
+
+            for _, source in source_fields(payload):
+                transitive_inputs(
+                    [InformationRef.model_validate(ref) for ref in source.get("inputs", [])],
+                    lambda ref: self.repository.resolve_information(db, workspace, ref),
+                )
             now = self.clock()
             identifier = str(uuid4())
             normalized = _materialize(
@@ -668,30 +715,51 @@ class ApprovalService:
                     (r for r in state.candidates if str(r.id) == payload.get("recipe_id")), None
                 )
                 original = previous.model_dump(mode="json") if previous else {}
-                human = any(
-                    s["kind"] == "USER_PROVIDED" for _, s in source_fields(payload["candidate"])
-                )
-                if human and (
-                    _web_sources(payload["candidate"])
-                    or previous is not None
-                    and previous.provenance_version != "2.0"
+                origin = payload["candidate"].get("origin") or {}
+                reference = origin.get("derived_from")
+                if reference:
+                    from dona_maria.provenance import RecipeVersionRef, inherited_sources
+
+                    historical = self.repository.historical_recipe(
+                        db, workspace, RecipeVersionRef.model_validate(reference)
+                    )
+                    original = historical.model_dump(mode="json")
+                    inherited = inherited_sources(payload["candidate"], original)
+                    if any(
+                        source["kind"] == "WEB" and path not in inherited
+                        for path, source in source_fields(payload["candidate"])
+                    ):
+                        raise BusinessRuleError(
+                            "SOURCE_NOT_LINKED", "Alteração exige nova origem humana."
+                        )
+                human = any(s["kind"] != "WEB" for _, s in source_fields(payload["candidate"]))
+                if (
+                    human
+                    and not reference
+                    and (
+                        _web_sources(payload["candidate"])
+                        or previous is not None
+                        and previous.provenance_version != "2.0"
+                    )
                 ):
                     raise BusinessRuleError(
                         "SOURCE_NOT_LINKED", "Adaptação histórica ainda não está habilitada."
                     )
                 if not _web_sources(payload["candidate"]).issubset(_web_sources(original)):
-                    raise BusinessRuleError(
-                        "SOURCE_NOT_LINKED", "Novas fontes não são habilitadas nesta etapa."
+                    verify_web_sources(
+                        db,
+                        workspace,
+                        payload["candidate"],
+                        purpose="RECIPE",
+                        legacy=_web_sources(original),
                     )
-                if previous is None and not human:
+                if previous is None and not human and not _web_sources(payload["candidate"]):
                     raise BusinessRuleError(
                         "SOURCE_REQUIRED", "Informe a origem humana da receita."
                     )
-                if (
-                    human
-                    and payload["candidate"].get("origin", {}).get("source", {}).get("kind")
-                    != "USER_PROVIDED"
-                ):
+                if human and payload["candidate"].get("origin", {}).get("source", {}).get(
+                    "kind"
+                ) not in {"USER_PROVIDED", "USER_REPORTED_MEASUREMENT", "USER_SIMULATION"}:
                     raise BusinessRuleError(
                         "SOURCE_REQUIRED", "Informe a origem da receita própria."
                     )
@@ -704,12 +772,11 @@ class ApprovalService:
                     ),
                     None,
                 )
-                if previous is None:
-                    raise BusinessRuleError("NOT_FOUND", "S14 revisa somente ofertas existentes.")
-                if payload["quote"]["source"] != previous.model_dump(mode="json")["source"]:
-                    raise BusinessRuleError(
-                        "SOURCE_NOT_LINKED", "Novas fontes não são habilitadas nesta etapa."
-                    )
+                if (
+                    previous is None
+                    or payload["quote"]["source"] != previous.model_dump(mode="json")["source"]
+                ):
+                    verify_web_sources(db, workspace, payload["quote"]["source"], purpose="QUOTE")
             document = {
                 "id": identifier,
                 "workspace_id": workspace,
@@ -757,8 +824,14 @@ class ApprovalService:
         loaded = self.repository.load(workspace_id, with_snapshot=True)
         if loaded is None:
             raise BusinessRuleError("NOT_FOUND", "Workspace não encontrado.")
+        command = request.model_dump(mode="json")["command"]
+        candidate = getattr(request.command.payload, "candidate", None)
+        if hasattr(candidate, "changes"):
+            command["payload"]["candidate"]["changes"] = candidate.changes.model_dump(
+                mode="json", exclude_unset=True
+            )
         command = _expand_bound_command(
-            request.model_dump(mode="json")["command"],
+            command,
             loaded[1],
             loaded[2],
             loaded[0],

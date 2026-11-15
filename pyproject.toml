@@ -25,6 +25,7 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "dona_maria.hermes_policy" = ["plugin.yaml"]
+"dona_maria.hermes_research" = ["plugin.yaml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests/unit", "tests/integration"]

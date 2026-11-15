@@ -1,0 +1,30 @@
+# Complemento de referência; não substitua uma configuração privada existente.
+# Somente no perfil isolado S17, após conferir versão/commit, binding e catálogo.
+# Substitua localmente PROVIDER_NAME/PROVIDER_PLUGIN e todos os paths/UUIDs.
+plugins:
+  enabled:
+    - dona-maria-attendance-policy
+    - dona-maria-mediated-research
+    - PROVIDER_PLUGIN
+  entries:
+    dona-maria-mediated-research:
+      allow_tool_override: false
+      settings:
+        application_source: /ABSOLUTE/PATH/TO/CHECKOUT/src
+        database: /ABSOLUTE/PATH/TO/S17-ONLY/workspace.sqlite3
+        workspace_id: WORKSPACE_UUID_FROM_LOCAL_IMPORT
+        search_provider: PROVIDER_NAME
+        # Exemplos, não uma liberação automática: operador aprova o texto publicável.
+        public_terms:
+          arroz: arroz
+platform_toolsets:
+  cli: [mcp-dona_maria, culinary_research]
+web:
+  search_backend: PROVIDER_NAME
+  keyless_fallback: false
+security:
+  allow_private_urls: false
+  fake_ip_ranges: []
+# Reutilize do exemplo base: seis ferramentas MCP, resources/prompts desligados,
+# tool_search off, memória/perfil pessoal desligados e binding/launcher privados.
+# Credenciais ficam no perfil Hermes; nunca no MCP ou neste arquivo.
