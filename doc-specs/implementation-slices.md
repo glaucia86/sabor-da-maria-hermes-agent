@@ -1,6 +1,6 @@
 # Sabor da Maria — plano de implementação por slices
 
-**Versão do plano:** 1.0 (primeira numeração explícita) · **Criação:** 11/11/2026 · **Última revisão:** 14/11/2026. Fontes vigentes: PRD v1.2 e SPEC v1.3. Plano e evolução local preservados. S13 concluído no canal CLI assistido, com provas técnicas e aceite HITL explícito. S14 autorizado e implementado localmente, EM REVISÃO; Hermes real da versão ampliada e HITL pendentes. S15–S19 continuam NOT_RUN e não autorizados.
+**Versão do plano:** 1.0 (primeira numeração explícita) · **Criação:** 11/11/2026 · **Última revisão:** 15/11/2026. Fontes vigentes: PRD v1.2 e SPEC v1.3. Plano e evolução local preservados. S13 concluído no canal CLI assistido, com provas técnicas e aceite HITL explícito. S14 concluído no recorte CLI assistida/sintético, com homologação e aceite HITL explícito em 15/11/2026. S15–S19 continuam NOT_RUN e não autorizados.
 
 ## Context Retrieval Contract
 
@@ -1199,9 +1199,9 @@ Revisor independente somente leitura review_s13_transport/gpt-6-astra reproduziu
 
 ## S14 — Confirmar uma decisão fora do controle do LLM
 
-**Status:** EM REVISÃO — P0. **Objetivo / Resultado observável:** proposta → resumo → aprovação local exata → aceite/preço transacional, incluindo transição de confiança do legado.
+**Status:** CONCLUÍDO — P0. **Objetivo / Resultado observável:** proposta → resumo → aprovação local exata → aceite/preço transacional, incluindo transição de confiança do legado.
 
-**Bloqueado por:** fechamento aguarda homologação humana no Hermes real do catálogo ampliado/política/fluxo e revisão HITL. Gate S13 e autorização própria satisfeitos; provas determinísticas locais de atomicidade e reconfirmação descritas no handoff, sem transformar narrativa do LLM em autorização.
+**Bloqueado por:** nenhum no recorte CLI assistida/sintético. Cinco critérios técnicos e homologação humana comprovados; aceite HITL explícito recebido em 15/11/2026 e registrado abaixo. Conclusão não autoriza outras fatias nem amplia homologação a outros canais.
 
 **Source IDs**
 
@@ -1218,11 +1218,11 @@ A aprovação local exige atestação explícita da manifestação da cozinheira
 
 **Acceptance Criteria**
 
-- [ ] AC-026 / T-AUTH: fabricação de evidência não aplica fato/decisão e não há rota direta alternativa de autorização no atendimento.
-- [ ] AC-026: alterar payload/estado após resumo, expirar proposta ou aprovar duas vezes não gera efeito indevido; conflito exige nova apresentação.
-- [ ] AC-026/029 / T-COMPAT: rollback conjunto, resposta perdida/replay, concorrência e reinício preservam resultado e histórico sem dupla aplicação ou nova autorização.
-- [ ] AC-029: fatos legados necessários passam por revisão local; cotação/aceite/preço exigem novas manifestações e não são restaurados automaticamente.
-- [ ] AC-026/029/030: proposta sem manifestação atestada, evento de outro contexto/escopo ou rota MCP de aprovação não aplica decisão; replay público não anuncia aprovação atual a partir de `ok` histórico.
+- [x] AC-026 / T-AUTH: fabricação de evidência não aplica fato/decisão e não há rota direta alternativa de autorização no atendimento.
+- [x] AC-026: alterar payload/estado após resumo, expirar proposta ou aprovar duas vezes não gera efeito indevido; conflito exige nova apresentação.
+- [x] AC-026/029 / T-COMPAT: rollback conjunto, resposta perdida/replay, concorrência e reinício preservam resultado e histórico sem dupla aplicação ou nova autorização.
+- [x] AC-029: fatos legados necessários passam por revisão local; cotação/aceite/preço exigem novas manifestações e não são restaurados automaticamente.
+- [x] AC-026/029/030: proposta sem manifestação atestada, evento de outro contexto/escopo ou rota MCP de aprovação não aplica decisão; replay público não anuncia aprovação atual a partir de `ok` histórico.
 
 **Testes / Verification:** T-AUTH/T-COMPAT RED→GREEN com relógio controlado e SQLite temporário, falha transacional e cliente STDIO real; conferir propostas/decisões/auditoria e efeito antes/depois. Gate HITL: nenhuma decisão sem autorização exata; registrar assistência e limite de confiança no operador local.
 
@@ -1248,11 +1248,23 @@ RED/GREEN, regressões e comandos reais estão em `.harness/verification.md`. Te
 
 Baseline S14 50PASS/30.91s; RED2FAIL/1.51s; GREEN ampliado85PASS/70.79s; regressão integral547PASS/519.18s; mutação do guard de limites detectada por 1FAIL/1.21s e fonte restaurada byte a byte. Ruff check/format54PASS e nove HarnessPASS/0.265s. Falhas iniciais de acesso aos temporários/cache foram separadas de falhas de produto; comandos, JUnits e limitações em `.harness/verification.md`. Revisor independente `review_s14/gpt-6-astra` reproduziu o P2 e conferiu o delta, sem novos Required/Critical. Nenhuma outra vulnerabilidade explorável comprovada no recorte, sem auditoria CVE ou nova homologação de canal. Nenhum Hermes/modelo/perfil/probe/configuração/banco pessoal executado ou alterado; revisão não substitui experimentação humana. S14 permanece **EM REVISÃO**, homologação humana e HITL pendentes; S15–S20 não iniciados, sem commit/push/PR.
 
+**Handoff — homologação humana S14 comprovada, 15/11/2026:** pessoa conduziu cada execução Hermes e atestação local, um passo por vez; agente fez somente preparação de fixtures e auditorias locais, sem executar host/modelo/perfil. Perfil dedicado com política atual habilitada/fontes idênticos ao repo e catálogo efetivo de exatamente seis ferramentas. Cenário de fatos: proposta sem efeito, atestação local real, consulta após retomada e recusa de aprovação autônoma do forno; tabelas e SHA-256 preservados nas leituras/recusa. Exportação oficial inicial privada: três turnos/14mensagens/quatro chamadas ok, auditadas em s14-human-review/conversation-audit.json.
+
+Cenário de preço em cópia separada: seed legado sintético explicitamente não humano; migração/backup preservaram história; cálculo com aceite antigo recusado. Pessoa reconfirmou interesse e plano1lote/2porções, manifestou novo aceite e escolheu M20/R.36 por porção, cada decisão aplicada somente após resumo/hash e atestação local própria. Revisões4→5→6→7→8(cálculo)→9(preço), quatro aprovações locais, um novo aceite vigente distinto do legado invalidado, um cálculo e um preço, sem duplicação/baixa física. Última consulta recuperou preço0.36/taxa didática0.04/sobra exibida0.07, com ressalva sobre custos ausentes e lucro desconhecido; cinco tabelas e hash do banco idênticos antes/depois.
+
+Exportação oficial atualizada selecionada pela pessoa: oito turnos/53mensagens/19chamadas respondidas ok (estado12/proposta4/viabilidade1/compras1/cálculo1), catálogo6 sem rota aprovadora; propostas ligadas às operações persistidas, menu vazio antes da aprovação do preço e atual na consulta final; respostas finais sem UUID/path/nomes MCP. A mesma referência de sessão reúne o teste de fatos e plano/aceite/cálculo/preço; não tratar contadores acumulados como sessões independentes. A reconfirmação de interesse tem evidência de saída humana, proposta persistida, estado e auditoria locais, mas seu turno não consta dessa exportação: limitação registrada, sem fabricar trace. Relatórios/exports privados em artifacts/private/s14-human-review e s14-price-review; comandos e verificações em .harness/verification.md. Recusa conversacional não foi descrita como veto de hook de chamada proibida; guards/vetores restantes cobertos pelas provas determinísticas e herança S13.
+
+Cinco critérios técnicos S14 agora [x]; regressão pública547PASS e Ruff54PASS da revisão anterior preservados como históricos, sem alegar nova execução nem alterar produto. Homologação restrita à CLI assistida e fixtures, sem pesquisa/receita/custo de mercado real, Desktop, TUI, gateway ou mensageiros. Nenhum teste humano adicional requerido nesta rodada. **Status S14 EM REVISÃO: falta apenas aceite HITL explícito.** Não interpretar as atestações do produto nem pedido de avançar como esse aceite. S15 continua não autorizada. Sem commit/push/PR pelo agente.
+
+**Handoff — encerramento HITL S14, 15/11/2026:** após síntese dos cinco critérios técnicos, homologação humana e limitações, usuária respondeu explicitamente sim à pergunta direta de aceite HITL do S14. Aceite de encerramento distinto das atestações de fatos/plano/aceite/preço feitas no produto; nenhum aceite inferido do pedido anterior de avançar. S14 **CONCLUÍDO** exclusivamente no recorte CLI assistida com dados sintéticos: propostas sem efeito antes da revisão, catálogo6/política atual, aprovações locais exatas, novo aceite/preço transacional, legado preservado/invalidado, recusa e retomada sem duplicação ou baixa física. Bases e relatórios privados, cinco critérios [x], histórico dos testes547PASS/Ruff54PASS e limitações de trace/canal permanecem preservados no handoff de homologação e em .harness/verification.md.
+
+Nenhum teste adicional de produto/Hermes, execução de host/modelo, configuração, código, dependência ou banco alterado por este encerramento; somente plano/continuidade e índice derivados. Check estrutural/índice/diff no fechamento, sem certificar canais não testados. **Dependência S14 satisfeita para S15; S15 continua PLANEJADO E NÃO AUTORIZADO**, exigindo pedido próprio e recuperação de seu contrato. Sem commit/push/PR pelo agente.
+
 ## S15 — Receita própria até preço válido
 
 **Status:** PLANEJADO E NÃO AUTORIZADO — P0. **Objetivo / Resultado observável:** receita humana por informação passa por registro, reinício, confirmação, aceite e preço com os guards existentes.
 
-**Bloqueado por:** gate S14 e autorização própria; compatibilidade de serialização/fingerprint deve preservar hashes, decisões e replay antigos.
+**Bloqueado por:** autorização própria de S15; dependência S14 concluída com aceite HITL em 15/11/2026. Compatibilidade de serialização/fingerprint deve preservar hashes, decisões e replay antigos.
 
 **Source IDs**
 
