@@ -148,6 +148,31 @@ Não recrie, clone ou substitua outro perfil para seguir este guia.
 
 ## 4. Conecte a aplicação e a skill
 
+Instale primeiro a política local de atendimento. Consulte a pasta do perfil:
+
+```sh
+hermes -p sabor-da-maria config path
+```
+
+Na pasta que contém esse arquivo de configuração, crie
+`plugins/dona-maria-attendance-policy/` e copie para ela somente `__init__.py`
+e `plugin.yaml` de `src/dona_maria/hermes_policy/` deste checkout. Preserve
+arquivos preexistentes; não clone nem substitua o perfil inteiro. Habilite:
+
+```sh
+hermes -p sabor-da-maria plugins enable dona-maria-attendance-policy --no-allow-tool-override
+```
+
+A política não registra ferramentas. Ela compara o nome original emitido
+pelo modelo com o nome que o host pretende executar e veta nomes proibidos,
+inclusive após correção automática do Hermes. Ausência de observação válida
+também recusa a chamada. Usa os hooks públicos `post_api_request` e
+`pre_tool_call`, conferidos na versão instalada; não altera o código do host.
+Mantenha somente essa política na allowlist de plugins do perfil de leitura.
+Não disponibilize o atendimento sem repetir o teste de catálogo e de chamada
+proibida no host efetivo. Após atualizar a política, copie novamente apenas
+esses dois arquivos e inicie uma sessão nova.
+
 Obtenha os três caminhos absolutos desta máquina:
 
 ```sh
@@ -209,16 +234,20 @@ Descoberta não prova, por si só, uso das ferramentas pelo modelo.
 Na raiz do checkout:
 
 ```sh
-hermes -p sabor-da-maria chat --toolsets mcp-dona_maria --skills dona-maria-cardapio -Q
+hermes -p sabor-da-maria chat --oneshot -Q --toolsets mcp-dona_maria --skills dona-maria-cardapio -q "Olá! Quero saber o que posso preparar com os ingredientes que tenho." 2>> artifacts/private/atendimento-operador.log
 ```
 
 A skill é pré-carregada de fonte local confiável. Use apresentação sem cartões
 técnicos (`-Q` na CLI assistida; `display.tool_progress: "off"` no perfil).
+O canal validado é a CLI assistida: a pessoa operadora executa os comandos e
+mantém `stderr` no log privado acima; a cliente recebe apenas a resposta de
+`stdout`. O diretório `artifacts/private/` deve existir. O metadado de sessão
+do Hermes fica no log do operador, sem ser solicitado à cozinheira.
 Confira o canal real antes de disponibilizá-lo: texto, cartões e retornos
 automáticos não devem mostrar identificadores, caminhos ou detalhes privados.
 Perfil não constitui sandbox do sistema operacional.
 
-Envie, sem substituir marcadores ou informar identificadores:
+A fala inicial já está no argumento `-q`, sem identificadores:
 
 ```text
 Olá! Quero saber o que posso preparar com os ingredientes que tenho.
@@ -235,7 +264,14 @@ Confira durante a conversa:
 - Recusa de troca de contexto, diagnóstico e operações não disponíveis.
 - Nenhuma gravação, decisão ou pesquisa executada nesta etapa.
 
-Depois, abra uma nova conversa com o mesmo perfil, checkout e banco:
+Para retomar, a pessoa operadora usa privadamente o identificador da sessão
+registrado no log. Não o peça nem o apresente à cozinheira:
+
+```sh
+hermes -p sabor-da-maria chat --oneshot -Q --resume ID_DA_SESSAO --toolsets mcp-dona_maria --skills dona-maria-cardapio -q "Vamos continuar. Mostre o que já está confirmado e o que ainda falta." 2>> artifacts/private/atendimento-operador.log
+```
+
+A fala da cliente continua sem conceitos técnicos:
 
 ```text
 Vamos continuar. Mostre o que já está confirmado e o que ainda falta.

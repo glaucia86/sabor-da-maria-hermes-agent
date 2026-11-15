@@ -191,7 +191,15 @@ class AttendanceService:
                             "conditions": [
                                 {
                                     key: requirement[key]
-                                    for key in ("category", "key", "status", "reason")
+                                    for key in (
+                                        "category",
+                                        "key",
+                                        "condition",
+                                        "value",
+                                        "unit",
+                                        "status",
+                                        "reason",
+                                    )
                                 }
                                 for requirement in recipe["requirements"]
                             ],
@@ -209,10 +217,7 @@ class AttendanceService:
                             data["plan"]["items"] if data["plan"] else [], 1
                         )
                     ],
-                    "kitchen_facts": [
-                        {key: fact[key] for key in ("category", "key", "value", "unit")}
-                        for fact in data["kitchen_facts"]
-                    ],
+                    "kitchen_facts": _attendance_kitchen_facts(data),
                     "preferences": [
                         {key: preference[key] for key in ("category", "term", "value")}
                         for preference in data["preferences"]
@@ -277,6 +282,17 @@ class AttendanceService:
         except Exception:
             # Exceções de persistência/domínio nunca atravessam a fronteira de atendimento.
             return _attendance_failure()
+
+
+def _attendance_kitchen_facts(data):
+    plan = data["plan"]
+    context = f"{plan['id']}:{plan['version']}" if plan else None
+    return [
+        {key: fact[key] for key in ("category", "key", "value", "unit")}
+        for fact in data["kitchen_facts"]
+        if (fact["category"], fact["key"]) != ("OPERATION", "production_arrangement")
+        or (plan is not None and fact["context"] == context)
+    ]
 
 
 def _attendance_menu(data, recipes):

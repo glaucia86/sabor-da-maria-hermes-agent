@@ -2,6 +2,9 @@
 # All paths are placeholders; they are not expanded automatically.
 # Do not replace the entire private profile with this example.
 # Provider credentials belong only in Hermes' private configuration.
+plugins:
+  enabled:
+    - dona-maria-attendance-policy
 platform_toolsets:
   cli: [mcp-dona_maria]
 tools:

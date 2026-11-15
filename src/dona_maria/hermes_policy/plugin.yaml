@@ -1,0 +1,6 @@
+name: dona-maria-attendance-policy
+version: 0.1.0
+description: "Recusa chamadas fora das quatro leituras, inclusive após reparo de nome pelo host."
+provides_hooks:
+  - post_api_request
+  - pre_tool_call

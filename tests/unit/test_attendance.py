@@ -174,6 +174,160 @@ def test_resume_reuses_current_facts_preferences_and_price_without_new_decisions
         assert private not in json.dumps(data)
 
 
+@pytest.mark.parametrize("remove_plan", [False, True])
+def test_resume_omits_outdated_plan_confirmation_and_preserves_other_facts(
+    pricing_workspace, remove_plan
+):
+    reader, workspace, recipe, _, command, database = pricing_workspace(batches=2)
+    recorded = command(
+        "record_kitchen_facts",
+        facts=[
+            {
+                "category": "EQUIPMENT",
+                "key": "oven",
+                "value": "AVAILABLE",
+                "evidence": {
+                    "statement": "Tenho forno disponível.",
+                    "turn_ref": "synthetic-oven",
+                    "captured_at": "2026-11-11T00:00:00Z",
+                },
+            }
+        ],
+    )
+    assert recorded["ok"]
+    service = AttendanceService(database, workspace, "ATTENDANCE")
+    opening = service.call("get_business_state", {})
+    assert any(fact["key"] == "production_arrangement" for fact in opening["data"]["kitchen_facts"])
+    changed = command(
+        "set_production_plan",
+        items=[]
+        if remove_plan
+        else [{"recipe_id": recipe["id"], "recipe_version": 1, "batches": 3, "position": 1}],
+        evidence={
+            "statement": "Confirmo a alteração do plano.",
+            "turn_ref": "synthetic-changed-plan",
+            "captured_at": "2026-11-11T00:00:00Z",
+        },
+    )
+    assert changed["ok"]
+    before = reader.get_business_state({"workspace_id": workspace})
+    contents = database.read_bytes()
+    resumed = service.call("get_business_state", {})
+    assert resumed["ok"]
+    assert resumed == AttendanceService(database, workspace, "ATTENDANCE").call(
+        "get_business_state", {}
+    )
+    assert resumed["data"]["kitchen_facts"] == [
+        {"category": "EQUIPMENT", "key": "oven", "value": "AVAILABLE", "unit": None}
+    ]
+    assert any(fact["key"] == "production_arrangement" for fact in before["data"]["kitchen_facts"])
+    assert reader.get_business_state({"workspace_id": workspace}) == before
+    assert database.read_bytes() == contents
+    assert workspace not in json.dumps(resumed)
+    if not remove_plan:
+        feasibility = service.call("evaluate_recipe_feasibility", {"recipe": 1, "plan_item": 1})
+        assert feasibility["data"]["status"] == "PENDING"
+        assert any("plano atual" in gap for gap in feasibility["data"]["missing_information"])
+
+
+@pytest.mark.parametrize(
+    "condition,category,key,required,unit,available",
+    [
+        ("MIN_CAPACITY", "EQUIPMENT", "pot", "2", "L", "1"),
+        ("MIN_AVAILABLE_TIME", "OPERATION", "time", "30", "min", "29"),
+        ("EXPLICIT_CONDITION", "OPERATION", "storage", "refrigerado", None, "ambiente"),
+        ("EXPLICIT_CONDITION", "OPERATION", "cooled", True, None, False),
+    ],
+)
+def test_resume_preserves_requirement_thresholds_to_explain_a_block(
+    pricing_workspace, recipe_candidate, condition, category, key, required, unit, available
+):
+    reader, workspace, recipe, _, command, database = pricing_workspace()
+    recipe_candidate["requirements"] = [
+        {
+            "category": category,
+            "key": key,
+            "condition": condition,
+            "value": required,
+            "unit": unit,
+            "reason": "Condição necessária para este preparo.",
+            "source": recipe_candidate["sources"][0],
+        }
+    ]
+    for review in recipe_candidate["category_reviews"]:
+        review["requirement_keys"] = [key] if review["category"] == category else []
+        if review["category"] == category:
+            review["not_applicable_reason"] = None
+    revised = command(
+        "register_recipe_candidate",
+        recipe_id=recipe["id"],
+        expected_recipe_version=recipe["version"],
+        candidate=recipe_candidate,
+    )
+    assert revised["ok"]
+    plan = command(
+        "set_production_plan",
+        items=[
+            {
+                "recipe_id": recipe["id"],
+                "recipe_version": revised["data"]["candidate"]["version"],
+                "batches": 1,
+                "position": 0,
+            }
+        ],
+        evidence={
+            "statement": "Confirmo o plano revisado.",
+            "turn_ref": "synthetic-threshold-plan",
+            "captured_at": "2026-11-11T00:00:00Z",
+        },
+    )
+    assert plan["ok"]
+    recorded = command(
+        "record_kitchen_facts",
+        facts=[
+            {
+                "category": category,
+                "key": key,
+                "value": available,
+                "unit": unit,
+                "evidence": {
+                    "statement": "Informo esta condição da minha cozinha.",
+                    "turn_ref": "synthetic-threshold-fact",
+                    "captured_at": "2026-11-11T00:00:00Z",
+                },
+            }
+        ],
+    )
+    assert recorded["ok"]
+    before = reader.get_business_state({"workspace_id": workspace})
+    contents = database.read_bytes()
+    service = AttendanceService(database, workspace, "ATTENDANCE")
+    opening = service.call("get_business_state", {})
+    assert opening["ok"]
+    requirement = opening["data"]["recipes"][0]["conditions"][0]
+    assert requirement == {
+        "category": category,
+        "key": key,
+        "condition": condition,
+        "value": required,
+        "unit": unit,
+        "status": "BLOCKED",
+        "reason": "Condição necessária para este preparo.",
+    }
+    assert type(requirement["value"]) is type(required)
+    assert (
+        AttendanceService(database, workspace, "ATTENDANCE").call("get_business_state", {})
+        == opening
+    )
+    feasibility = service.call("evaluate_recipe_feasibility", {"recipe": 1, "plan_item": 1})
+    assert feasibility["data"]["status"] == "BLOCKED"
+    assert feasibility["data"]["conditions"][0]["question"] is None
+    assert reader.get_business_state({"workspace_id": workspace}) == before
+    assert database.read_bytes() == contents
+    for private in (workspace, recipe["id"], "source_sha256", "fingerprint", "evidence"):
+        assert private not in json.dumps(opening)
+
+
 def test_purchase_read_explains_shortage_without_internal_references(pricing_workspace):
     _, workspace, recipe, _, command, database = pricing_workspace()
     plan = command(
