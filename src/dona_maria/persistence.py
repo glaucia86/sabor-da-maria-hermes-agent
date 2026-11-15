@@ -589,7 +589,9 @@ class SQLiteWorkspaceRepository:
                         or str(acquisition.version) != allocation.source_version
                         or base_quantity(acquisition.acquired_quantity)
                         != (allocation.unit, Decimal(allocation.purchase_quantity_base))
-                        or allocation.acquisition_total != acquisition.acquisition_total
+                        or acquisition.acquisition_total is None
+                        or Decimal(allocation.acquisition_total)
+                        != Decimal(acquisition.acquisition_total)
                         or allocation.source
                         != acquisition.sources["acquisition_total"].model_dump(mode="json")
                     ):

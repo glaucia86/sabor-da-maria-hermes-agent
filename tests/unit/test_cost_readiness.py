@@ -250,9 +250,11 @@ def test_reported_acquisition_needs_local_approval_and_keeps_original_snapshot(
     assert database.read_bytes() == before_replay
 
 
+@pytest.mark.parametrize("acquisition_total", ["20.00", "020.00"])
 def test_material_acquisition_change_invalidates_prices_and_reprices_from_reported_origin(
     pricing_workspace,
     reconfirm_attendance,
+    acquisition_total,
 ):
     reader, workspace, recipe, _, command, database = pricing_workspace()
     decide = reconfirm_attendance(reader, workspace, database)
@@ -269,7 +271,7 @@ def test_material_acquisition_change_invalidates_prices_and_reprices_from_report
         scenario_id="M20",
     )
     local = ApprovalService(reader.repository, clock=reader.clock)
-    proposal = propose_acquisition(reader, workspace, local)
+    proposal = propose_acquisition(reader, workspace, local, acquisition_total=acquisition_total)
     changed = local.approve(workspace, proposal["id"], proposal["hash"], attest=True)
     assert acceptance["id"] in changed["data"]["invalidated_decisions"]
     reopened = BusinessStateReader(SQLiteWorkspaceRepository(database), clock=reader.clock)
@@ -284,14 +286,21 @@ def test_material_acquisition_change_invalidates_prices_and_reprices_from_report
         plan_item_id=current["plan"]["items"][0]["plan_item_id"],
         evaluation_id=evaluation["evaluation_id"],
     )["data"]["acceptance"]
-    result = command(
-        "calculate_pricing_scenarios", recipe_id=recipe["id"], acceptance_id=accepted["id"]
+    pricing_request = dict(
+        workspace_id=workspace,
+        operation_id=str(uuid4()),
+        expected_revision=reader.get_business_state({"workspace_id": workspace})["revision"],
+        recipe_id=recipe["id"],
+        acceptance_id=accepted["id"],
     )
+    result = reader.calculate_pricing_scenarios(pricing_request)
     assert result["ok"], result
     calculated = result["data"]["calculation"]
     assert calculated["cmv_production"] == "2.00"
     allocation = calculated["allocations"][0]
     assert allocation["origin"] == "REPORTED_ACQUISITION"
+    assert changed["data"]["acquisition"]["acquisition_total"] == acquisition_total
+    assert allocation["acquisition_total"] == "20.00"
     assert allocation["source_id"] == changed["data"]["acquisition"]["id"]
     assert allocation["purchase_quantity_base"] == "1000"
     assert reopened.get_business_state({"workspace_id": workspace})["ok"]
@@ -320,6 +329,61 @@ def test_material_acquisition_change_invalidates_prices_and_reprices_from_report
     assert all(a["validity"] == "INVALIDATED" for a in final["acceptances"])
     assert len(final["inventory_acquisitions"]) == 3
     assert len(final["pricing_calculations"]) == 2
+    before_replay = database.read_bytes()
+    assert reopened.calculate_pricing_scenarios(pricing_request) == result
+    assert local.approve(workspace, proposal["id"], proposal["hash"], attest=True) == changed
+    assert database.read_bytes() == before_replay
+
+
+@pytest.mark.parametrize(
+    ("total", "purchase_quantity"),
+    [("20.01", "1000.5"), ("20.00000000000000000000000000000000001", "1000")],
+)
+def test_historical_reported_allocation_rejects_divergent_total_with_consistent_unit_cost(
+    pricing_workspace, reconfirm_attendance, total, purchase_quantity
+):
+    reader, workspace, recipe, _, command, database = pricing_workspace()
+    decide = reconfirm_attendance(reader, workspace, database)
+    local = ApprovalService(reader.repository, clock=reader.clock)
+    proposal = propose_acquisition(reader, workspace, local, acquisition_total="020.00")
+    acquisition = local.approve(workspace, proposal["id"], proposal["hash"], attest=True)["data"][
+        "acquisition"
+    ]
+    current = reader.get_business_state({"workspace_id": workspace})["data"]
+    accepted = decide(
+        "accept_recipe",
+        recipe_id=recipe["id"],
+        plan_item_id=current["plan"]["items"][0]["plan_item_id"],
+        evaluation_id=current["evaluation"]["evaluation_id"],
+    )["data"]["acceptance"]
+    assert command(
+        "calculate_pricing_scenarios", recipe_id=recipe["id"], acceptance_id=accepted["id"]
+    )["ok"]
+    replacement = propose_acquisition(
+        reader,
+        workspace,
+        local,
+        acquisition_total="30.00",
+        replaces_acquisition_id=acquisition["id"],
+    )
+    local.approve(workspace, replacement["id"], replacement["hash"], attest=True)
+    state = reader.get_business_state({"workspace_id": workspace})["data"]
+    assert state["pricing_calculations"][0]["validity"] == "INVALIDATED"
+    with sqlite3.connect(database) as db:
+        stored = json.loads(
+            db.execute("SELECT state_json FROM workspaces WHERE id=?", (workspace,)).fetchone()[0]
+        )
+        allocation = stored["pricing_calculations"][0]["allocations"][0]
+        # Preserve unit cost and all derived prices to isolate historical provenance.
+        allocation["acquisition_total"] = total
+        allocation["purchase_quantity_base"] = purchase_quantity
+        db.execute("UPDATE workspaces SET state_json=? WHERE id=?", (json.dumps(stored), workspace))
+    before = database.read_bytes()
+    reopened = BusinessStateReader(SQLiteWorkspaceRepository(database), clock=reader.clock)
+    assert reopened.get_business_state({"workspace_id": workspace})["error"]["code"] == (
+        "STORAGE_UNAVAILABLE"
+    )
+    assert database.read_bytes() == before
 
 
 def test_water_in_food_requires_cost_while_cleaning_water_is_explicitly_external(
@@ -701,7 +765,9 @@ def test_failed_financial_transaction_rolls_back_and_preserves_pending_proposal(
     assert local.approve(workspace, proposal["id"], proposal["hash"], attest=True)["ok"]
 
 
-@pytest.mark.parametrize("corruption", ["foreign", "scope", "missing_version"])
+@pytest.mark.parametrize(
+    "corruption", ["foreign", "scope", "missing_version", "changed_total", "equivalent_total"]
+)
 def test_invalid_financial_provenance_is_preserved_and_refused_on_reopening(
     pricing_workspace,
     tmp_path,
@@ -722,6 +788,10 @@ def test_invalid_financial_provenance_is_preserved_and_refused_on_reopening(
             state["inventory_acquisitions"][0]["sources"]["acquisition_total"]["information_ref"][
                 "field"
             ] = "available_quantity"
+        elif corruption == "changed_total":
+            state["inventory_acquisitions"][0]["acquisition_total"] = "20.01"
+        elif corruption == "equivalent_total":
+            state["inventory_acquisitions"][0]["acquisition_total"] = "020.00"
         else:
             state.pop("financial_data_version")
         db.execute("UPDATE workspaces SET state_json=? WHERE id=?", (json.dumps(state), workspace))
