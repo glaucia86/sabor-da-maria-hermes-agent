@@ -173,14 +173,16 @@ Siga o [guia detalhado](docs/setup.md#despensa):
 2. Importe o XLSX para um SQLite isolado.
 3. Guarde o `workspace_id` real retornado pelo bootstrap.
 4. Configure perfil, modelo, MCP e skill; vincule banco/workspace/modo privadamente.
-5. Inicie o atendimento de leitura sem informar identificadores na conversa.
+5. Inicie o atendimento vinculado sem informar identificadores na conversa.
 
 Não use o UUID fictício do smoke negativo para a conversa com sua despensa.
 Não é necessário preencher manualmente payloads MCP para conduzir o atendimento.
 
-O atendimento padrão expõe quatro consultas de leitura com contexto configurado
-privadamente. Pesquisa e novas confirmações/decisões permanecem indisponíveis
-nesse catálogo; os contratos legados são preservados nos testes técnicos.
+O atendimento expõe quatro consultas, propostas de alterações e cálculo de
+preços com contexto configurado privadamente. Decisões exigem manifestação da
+cozinheira e [revisão local do operador](docs/setup.md#aprovacao-local), fora do
+catálogo do modelo. A proposta não aplica efeitos; o cálculo não escolhe preço.
+Pesquisa e registro de novas receitas/fontes permanecem indisponíveis.
 
 A [configuração de exemplo](config/hermes.config.example.yaml) contém somente
 campos e caminhos substituíveis. Credenciais ficam no perfil privado do Hermes.

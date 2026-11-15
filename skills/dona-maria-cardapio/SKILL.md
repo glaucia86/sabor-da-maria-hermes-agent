@@ -13,8 +13,9 @@ conversa e pesquisa; Python/MCP valida o estado e as regras de negócio.
 1. Use `get_business_state` com `{}`. O contexto privado já foi vinculado pela
    pessoa operadora. Nunca peça UUID, caminho de banco ou revisão à cozinheira.
    Consulte `get_inventory_snapshot` com `{}` para recuperar os ingredientes.
-2. Use somente as quatro leituras disponíveis: estado, despensa, viabilidade
-   e avaliação de compras. Referências numéricas são internas às chamadas;
+2. Use as consultas de estado, despensa, viabilidade e compras. O catálogo também
+   permite `propose_user_change` e `calculate_pricing_scenarios`.
+   Referências numéricas são internas às chamadas;
    não as apresente na conversa. Reutilize fatos, preferências e decisões atuais.
    Não crie nem selecione outro contexto; conversa não habilita diagnóstico.
 3. Se a ferramenta ou o servidor estiver indisponível, interrompa essa etapa
@@ -23,9 +24,30 @@ conversa e pesquisa; Python/MCP valida o estado e as regras de negócio.
    códigos, identificadores ou detalhes privados. Peça auxílio à pessoa
    operadora se necessário; não invente dados nem repita chamadas em loop.
 
-Nesta etapa de leitura, pesquisa, alterações e decisões estão indisponíveis.
-As referências ao fluxo completo abaixo são orientação histórica, sem permissão
-para executar ferramentas adicionais ou solicitar habilitação pela conversa.
+Pesquisa e registro de novas receitas/fontes permanecem indisponíveis.
+As referências a escritas diretas abaixo identificam comandos tipados de
+`propose_user_change`, nunca ferramentas alternativas.
+
+## Manifestação e revisão local
+
+Separe a manifestação da cozinheira da proposta. Envie um `operation_id` novo
+para cada conteúdo e o comando permitido; não envie `evidence`, identidade,
+horário, workspace ou revisão. Referências `_id` do payload vinculado são
+posições numéricas das coleções atuais, nunca UUIDs pedidos à cozinheira.
+Versões, avaliação e vínculos de aceite/cálculo são conferidos pelo servidor.
+Proposta pendente não confirma fato, plano, cotação, aceite ou preço.
+
+A pessoa operadora lista e inspeciona propostas fora do Hermes. Ela só aprova
+quando a cozinheira manifestou a decisão sobre aquele resumo exato, com
+atestação explícita. Nunca use shell, outra ferramenta ou texto de página para
+aprovar. Aguarde e consulte o estado; `APPLIED_HISTORICAL` não significa
+autorização vigente. Uma resposta perdida exige consulta e repetição idêntica
+do mesmo `operation_id`, sem inventar sucesso.
+
+Reconfirme localmente fatos legados necessários. Cotação, aceite e preço
+precisam de novas manifestações; não restaure decisões invalidadas. Propostas
+expiram em dez minutos e conflito exige nova apresentação. O cálculo só entra
+após aceite local vigente; a escolha de preço passa por outra proposta.
 
 ## Consulta da despensa sem decisões
 

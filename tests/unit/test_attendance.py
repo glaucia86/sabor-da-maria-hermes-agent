@@ -135,7 +135,7 @@ def test_storage_errors_and_internal_provenance_never_reach_attendance(
 
 @pytest.mark.parametrize("custom", [False, True])
 def test_resume_reuses_current_facts_preferences_and_price_without_new_decisions(
-    pricing_workspace, custom
+    pricing_workspace, custom, reconfirm_attendance
 ):
     reader, workspace, recipe, acceptance, command, database = pricing_workspace(batches=2)
     calculation = command(
@@ -154,6 +154,7 @@ def test_resume_reuses_current_facts_preferences_and_price_without_new_decisions
         },
     )
     assert decision["ok"]
+    reconfirm_attendance(reader, workspace, database)
     before = reader.get_business_state({"workspace_id": workspace})
     service = AttendanceService(database, workspace, "ATTENDANCE")
 
@@ -176,7 +177,7 @@ def test_resume_reuses_current_facts_preferences_and_price_without_new_decisions
 
 @pytest.mark.parametrize("remove_plan", [False, True])
 def test_resume_omits_outdated_plan_confirmation_and_preserves_other_facts(
-    pricing_workspace, remove_plan
+    pricing_workspace, remove_plan, reconfirm_attendance
 ):
     reader, workspace, recipe, _, command, database = pricing_workspace(batches=2)
     recorded = command(
@@ -195,19 +196,15 @@ def test_resume_omits_outdated_plan_confirmation_and_preserves_other_facts(
         ],
     )
     assert recorded["ok"]
+    decide = reconfirm_attendance(reader, workspace, database)
     service = AttendanceService(database, workspace, "ATTENDANCE")
     opening = service.call("get_business_state", {})
     assert any(fact["key"] == "production_arrangement" for fact in opening["data"]["kitchen_facts"])
-    changed = command(
+    changed = decide(
         "set_production_plan",
         items=[]
         if remove_plan
         else [{"recipe_id": recipe["id"], "recipe_version": 1, "batches": 3, "position": 1}],
-        evidence={
-            "statement": "Confirmo a alteração do plano.",
-            "turn_ref": "synthetic-changed-plan",
-            "captured_at": "2026-11-11T00:00:00Z",
-        },
     )
     assert changed["ok"]
     before = reader.get_business_state({"workspace_id": workspace})

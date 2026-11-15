@@ -135,7 +135,7 @@ hermes -p sabor-da-maria tools
 ```
 
 No seletor de modelo, configure um provedor acessível e um modelo com
-suporte a chamadas de ferramentas. No atendimento de leitura, habilite somente
+suporte a chamadas de ferramentas. No atendimento vinculado, habilite somente
 `mcp-dona_maria`. Pesquisa, arquivos, shell, memória, administração e outros
 servidores/plugins ficam desabilitados. A skill será pré-carregada.
 
@@ -168,7 +168,7 @@ pelo modelo com o nome que o host pretende executar e veta nomes proibidos,
 inclusive após correção automática do Hermes. Ausência de observação válida
 também recusa a chamada. Usa os hooks públicos `post_api_request` e
 `pre_tool_call`, conferidos na versão instalada; não altera o código do host.
-Mantenha somente essa política na allowlist de plugins do perfil de leitura.
+Mantenha somente essa política na allowlist de plugins do perfil vinculado.
 Não disponibilize o atendimento sem repetir o teste de catálogo e de chamada
 proibida no host efetivo. Após atualizar a política, copie novamente apenas
 esses dois arquivos e inicie uma sessão nova.
@@ -223,10 +223,14 @@ hermes -p sabor-da-maria skills list --enabled-only
 
 A listagem deve incluir `dona-maria-cardapio`; o MCP deve descobrir exatamente
 `get_business_state`, `get_inventory_snapshot`, `evaluate_recipe_feasibility`
-e `evaluate_purchase_plan`. A configuração de exemplo aplica os mesmos nomes
+`evaluate_purchase_plan`, `propose_user_change` e `calculate_pricing_scenarios`.
+A configuração de exemplo aplica os mesmos nomes
 em `tools.include` e desabilita wrappers resources/prompts, ferramentas adiadas
 e memória. Não habilite o canal se catálogo ou execução divergirem, inclusive
-após refresh/retomada/gateway. Nenhuma escrita ou aprovação é exposta.
+após refresh/retomada/gateway. Aprovação e decisões diretas nunca são expostas.
+As duas novas ferramentas persistem proposta e cálculo técnico, respectivamente.
+O catálogo de seis ferramentas precisa de conferência no perfil real; as provas
+anteriores do catálogo de quatro não homologam esta configuração.
 Descoberta não prova, por si só, uso das ferramentas pelo modelo.
 
 ## 5. Inicie uma conversa natural
@@ -309,7 +313,7 @@ processo. Não faça esse experimento contra o banco real da demonstração.
 | Importação recusada | Arquivo XLSX, abas/colunas, diretório autorizado e diretório pai do SQLite existente. |
 | Banco indisponível | Caminho, permissões e versão do schema; banco corrompido ou mais novo é recusado e preservado. Registros exigem escrita no SQLite e no diretório pai. |
 | Atendimento indisponível | Operador confere banco absoluto, workspace explícito e modo; não pede UUID à cozinheira. |
-| Busca indisponível | Atendimento atual somente de leitura; pesquisa ainda não está habilitada. Não use ferramentas alternativas. |
+| Busca indisponível | Pesquisa ainda não está habilitada. Não use ferramentas alternativas. |
 | Skill ausente | Perfil correto, lista `skills.external_dirs` e caminho somente da skill de domínio. |
 | Referência da skill não lida | Pré-carregue a skill confiável; não habilite ferramentas genéricas de arquivo. |
 | Catálogo ou banco antigo | Confira a conexão ativa antes de repetir consultas. Use a reconexão abaixo; não apague banco nem reinicie gateways alheios. |
@@ -347,7 +351,9 @@ atendimento, inclui `get_business_state`, `get_inventory_snapshot`,
 `register_complement_quote` e `confirm_complement_quote`.
 
 Os contratos internos abaixo preservam compatibilidade; não estão disponíveis
-como decisões no atendimento de leitura. Nos testes legados, o agente usa o workspace importado, fontes
+como decisões diretas no atendimento. Use propostas e aprovação local; no schema
+migrado, novas escritas humanas diretas são recusadas também pelo repositório.
+Nos testes legados, o agente usa o workspace importado, fontes
 efetivamente extraídas e os schemas descobertos no MCP. Rendimento, medidas
 ou contexto ausentes precisam de lacunas explícitas. `complete` e outros
 campos derivados não são entradas.
@@ -399,6 +405,58 @@ A ausência de ferramentas perigosas deve ser conferida no catálogo efetivo.
 Uma skill builtin essencial pode permanecer no contexto conforme a versão;
 isso não justifica habilitar shell, execução de código ou gestão de memória.
 O contrato de leitura não autentica consentimento humano.
+
+<a id="aprovacao-local"></a>
+### Revisão local de decisões
+
+Este é um fluxo assistido. A pessoa operadora atesta que a cozinheira manifestou
+a decisão sobre o conteúdo exato; não escolhe prato ou preço em seu lugar.
+A identidade registrada é a sessão local do sistema operacional, sem alegar
+autenticação da cozinheira. Não disponibilize este comando, shell ou SQL ao
+Hermes. O perfil é controle de capacidades, sem isolamento contra código já
+executando na mesma conta do sistema.
+
+Banco legado continua legível. Antes de habilitar propostas, faça a migração
+local explícita de schema 1 para 2, com aplicação parada. Ela cria somente a
+tabela de propostas e um backup consistente que inclui WAL, sem regravar
+snapshots, estado, decisões, operações ou hashes antigos. O backup deve ser
+novo; não sobrescreva cópia existente. Banco futuro ou corrompido é recusado.
+Não há migração no startup do atendimento.
+
+Defina `BANCO_LOCAL`, `WORKSPACE_LOCAL` e `BACKUP_NOVO` com os valores privados
+do operador. Execute cada ação separadamente na raiz do checkout:
+
+```text
+uv run --locked --no-sync python -m dona_maria.approval_cli --database BANCO_LOCAL --workspace WORKSPACE_LOCAL migrate --backup BACKUP_NOVO
+uv run --locked --no-sync python -m dona_maria.approval_cli --database BANCO_LOCAL --workspace WORKSPACE_LOCAL list
+uv run --locked --no-sync python -m dona_maria.approval_cli --database BANCO_LOCAL --workspace WORKSPACE_LOCAL inspect PROPOSTA
+uv run --locked --no-sync python -m dona_maria.approval_cli --database BANCO_LOCAL --workspace WORKSPACE_LOCAL approve PROPOSTA --hash HASH_REVISADO
+uv run --locked --no-sync python -m dona_maria.approval_cli --database BANCO_LOCAL --workspace WORKSPACE_LOCAL reject PROPOSTA --hash HASH_REVISADO
+```
+
+`inspect` mostra payload canônico, dependências, resumo, revisão, hash e prazo.
+`approve` apresenta o resumo e exige digitar `ATESTO HASH_REVISADO`, declarando
+a manifestação da cozinheira sobre aquele conteúdo. Não aprove com base apenas
+na narrativa do modelo. A aplicação revalida contexto, hash, revisão, prazo e
+guards; efeito, auditoria, consumo e resultado são gravados juntos.
+
+Propostas duram dez minutos. Expiração, alteração de conteúdo ou conflito de
+estado exigem nova proposta/apresentação. Rejeição não modifica o negócio.
+Resposta perdida pede consulta e replay idêntico; não gere outra decisão para
+compensar incerteza. O resultado anterior continua histórico e não renova
+autorizações. Fatos legados necessários precisam de revisão local; cotação,
+aceite e preço exigem novas manifestações. Decisões invalidadas não são
+restauradas automaticamente.
+
+Os comandos tipados cobrem preferências, feedback, fatos, plano/seleções,
+equivalências, conversões e aquisição histórica por conversão, confirmação
+de cotação, aceite, preço e revisões de candidatas/ofertas já existentes.
+Novos overlays de estoque/aquisição, proveniência expandida e pesquisa mediada
+não são habilitados aqui. Snapshot original permanece imutável.
+
+Provas determinísticas usam SQLite sintético, CLI em processo separado e MCP
+stdio real. A homologação do catálogo ampliado no Hermes real e o aceite humano
+da entrega permanecem pendentes; siga a experimentação humana um passo por vez.
 
 <a id="teste-do-original"></a>
 ### Teste opcional do anexo original

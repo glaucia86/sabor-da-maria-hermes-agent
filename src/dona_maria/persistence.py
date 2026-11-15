@@ -14,10 +14,12 @@ from dona_maria.ingredients import (
     ConversionRequest,
     ResolveIngredientRequest,
     apply_overlays,
+    current_conversions,
+    recipe_conversion_applies,
     validate_overlay_references,
     with_complements,
 )
-from dona_maria.inventory import InventorySnapshot
+from dona_maria.inventory import InventorySnapshot, normalize_name
 from dona_maria.planning import (
     BusinessRuleError,
     WorkspaceState,
@@ -126,6 +128,57 @@ def _invalidation_summary(state: WorkspaceState, previously_invalid: set[UUID]) 
     }
 
 
+def requires_local_review(state: WorkspaceState, references: set[str]) -> bool:
+    """Reconfirmação conservadora das premissas humanas usadas pelo plano ativo."""
+    active = {i.recipe_id for i in state.plan.items} if state.plan else set()
+    keys = {(r.category, r.key) for c in state.candidates if c.id in active for r in c.requirements}
+    if state.plan and (len(state.plan.items) > 1 or any(i.batches > 1 for i in state.plan.items)):
+        keys.add(("OPERATION", "production_arrangement"))
+    ingredients = {
+        i.ingredient_id for c in state.candidates if c.id in active for i in c.ingredients
+    }
+    current_preferences = {(p.category, normalize_name(p.term)): p for p in state.preferences}
+    evidence = [p.evidence for p in current_preferences.values()]
+    evidence.extend(f.evidence for f in state.feedback if f.recipe_id in active)
+    evidence.extend(f.evidence for f in state.kitchen_facts if (f.category, f.key) in keys)
+    if state.plan:
+        evidence.append(state.plan.evidence)
+        for selection in state.plan.quote_selections:
+            confirmation = next(
+                (
+                    c
+                    for c in reversed(state.quote_confirmations)
+                    if c.quote_id == selection.quote_id
+                    and c.quote_version == selection.quote_version
+                ),
+                None,
+            )
+            if confirmation is not None:
+                evidence.append(confirmation.evidence)
+    for conversion in current_conversions(state.ingredient_conversions):
+        if conversion.ingredient_id in ingredients and (
+            conversion.scope == "HISTORICAL_PACKAGE"
+            or any(
+                r.id in active and recipe_conversion_applies(conversion, r)
+                for r in state.candidates
+            )
+        ):
+            evidence.append(conversion.evidence)
+    resolutions = {(r.recipe_id, r.line_id): r for r in state.ingredient_resolutions}
+    reviewed_ingredients = set()
+    for resolution in resolutions.values():
+        if resolution.recipe_id in active and resolution.ingredient_id in ingredients:
+            evidence.append(resolution.evidence)
+            if getattr(resolution.evidence, "turn_ref", None) in references:
+                reviewed_ingredients.add(resolution.ingredient_id)
+    evidence.extend(
+        i.evidence
+        for i in state.complement_ingredients
+        if i.id in ingredients and i.id not in reviewed_ingredients
+    )
+    return any(getattr(e, "turn_ref", None) not in references for e in evidence)
+
+
 SCHEMA = (
     "CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)",
     """CREATE TABLE inventory_snapshots (
@@ -163,6 +216,76 @@ class SQLiteWorkspaceRepository:
         connection.execute("PRAGMA foreign_keys=ON")
         return connection
 
+    @staticmethod
+    def _approval_refs(db, workspace_id):
+        if not db.execute("SELECT 1 FROM schema_migrations WHERE version=2").fetchone():
+            return set()
+        references = set()
+        for row in db.execute(
+            "SELECT * FROM user_change_proposals WHERE workspace_id=? AND status='APPROVED'",
+            (workspace_id,),
+        ):
+            event = _decode_json(row["event_json"])
+            document = _decode_json(row["document_json"])
+            if (
+                not isinstance(event, dict)
+                or not {"id", "workspace_id", "proposal_id", "hash", "action"} <= event.keys()
+                or not isinstance(document, dict)
+                or not {"id", "workspace_id", "operation_id", "command"} <= document.keys()
+                or not isinstance(document["command"], dict)
+                or "kind" not in document["command"]
+            ):
+                raise sqlite3.DatabaseError("Evento local inconsistente.")
+            audit = db.execute(
+                "SELECT * FROM decisions WHERE workspace_id=? AND id=?", (workspace_id, event["id"])
+            ).fetchone()
+            operation = db.execute(
+                "SELECT * FROM operations WHERE workspace_id=? AND operation_id=?",
+                (workspace_id, row["operation_id"]),
+            ).fetchone()
+            if (
+                event["workspace_id"] != workspace_id
+                or event["action"] != "APPROVE"
+                or document["workspace_id"] != workspace_id
+                or document["id"] != row["id"]
+                or event["proposal_id"] != row["id"]
+                or document["operation_id"] != row["operation_id"]
+                or fingerprint(document) != row["review_hash"]
+                or event["hash"] != row["review_hash"]
+                or audit is None
+                or audit["kind"] != "LOCAL_APPROVAL"
+                or audit["fingerprint"] != row["review_hash"]
+                or audit["payload_json"] != canonical_json(event)
+                or operation is None
+                or operation["tool"] != document["command"]["kind"]
+                or operation["result_json"] != row["result_json"]
+            ):
+                raise sqlite3.DatabaseError("Evento local inconsistente.")
+            references.add("local:" + event["id"])
+        return references
+
+    def approval_refs(self, workspace_id):
+        with closing(self._connect("ro")) as db:
+            self.check_schema(db)
+            return self._approval_refs(db, workspace_id)
+
+    def operation_revision(self, workspace_id, operation_id, tool):
+        with closing(self._connect("ro")) as db:
+            self.check_schema(db)
+            loaded = self.load_state(db, workspace_id)
+            if loaded is None:
+                raise BusinessRuleError("NOT_FOUND", "Workspace não encontrado.")
+            row = db.execute(
+                "SELECT * FROM operations WHERE workspace_id=? AND operation_id=?",
+                (workspace_id, operation_id),
+            ).fetchone()
+            if row is None:
+                return loaded[0]
+            if row["tool"] != tool:
+                raise BusinessRuleError("IDEMPOTENCY_CONFLICT", "Operação já utilizada.")
+            _replay_result(row, loaded[0])
+            return row["committed_revision"] - 1
+
     @contextmanager
     def transaction(self, *, bootstrap: bool = False):
         with self._write_lock, closing(self._connect("rwc" if bootstrap else "rw")) as db:
@@ -182,8 +305,10 @@ class SQLiteWorkspaceRepository:
             return False
         if "schema_migrations" not in tables:
             raise sqlite3.DatabaseError("Schema não suportado.")
-        versions = [row[0] for row in db.execute("SELECT version FROM schema_migrations")]
-        if versions != [1]:
+        versions = [
+            row[0] for row in db.execute("SELECT version FROM schema_migrations ORDER BY version")
+        ]
+        if versions not in ([1], [1, 2]):
             raise sqlite3.DatabaseError("Versão de schema não suportada.")
         return True
 
@@ -439,158 +564,160 @@ class SQLiteWorkspaceRepository:
         return result
 
     def register_candidate(self, request: RegisterCandidateRequest, now: datetime) -> dict:
+        with self.transaction() as db:
+            return self._register_candidate(db, request, now)
+
+    def _register_candidate(self, db, request, now, *, locally_approved=False):
         workspace_id, operation_id = str(request.workspace_id), str(request.operation_id)
         payload_hash = fingerprint(request.model_dump(mode="json"))
-        with self.transaction() as db:
-            self.check_schema(db)
-            loaded = self.load_state(db, workspace_id)
-            if loaded is None:
-                raise BusinessRuleError("NOT_FOUND", "Workspace não encontrado.")
-            replay = db.execute(
-                "SELECT * FROM operations WHERE workspace_id=? AND operation_id=?",
-                (workspace_id, operation_id),
-            ).fetchone()
-            if replay:
-                if (
-                    replay["tool"] != "register_recipe_candidate"
-                    or replay["payload_hash"] != payload_hash
-                ):
-                    raise BusinessRuleError(
-                        "IDEMPOTENCY_CONFLICT", "Operação já usada com outro conteúdo."
-                    )
-                return _replay_result(replay, loaded[0])
-            revision, state, snapshot = loaded
-            if revision != request.expected_revision:
-                raise BusinessRuleError(
-                    "STALE_REVISION", "Recarregue a revisão atual do workspace."
-                )
-            if not request.candidate.sources:
-                raise BusinessRuleError("SOURCE_REQUIRED", "Candidata pesquisada exige fonte.")
-            _validate_ingredient_references(
-                snapshot, request.candidate, state.complement_ingredients
-            )
-            previous = next(
-                (item for item in state.candidates if item.id == request.recipe_id), None
-            )
-            if request.recipe_id is not None and previous is None:
-                raise BusinessRuleError("NOT_FOUND", "Candidata não pertence ao workspace.")
-            if previous and previous.version != request.expected_recipe_version:
-                raise BusinessRuleError("STALE_REVISION", "Recarregue a versão atual da candidata.")
-            candidate = RecipeCandidate(
-                **request.candidate.model_dump(mode="json"),
-                id=previous.id if previous else uuid4(),
-                version=previous.version + 1 if previous else 1,
-                recorded_at=now,
-            )
-            material_change = (
-                previous is None or candidate.business_content() != previous.business_content()
-            )
-            candidate.business_version = (
-                previous.business_version + int(material_change) if previous else 1
-            )
-            if previous and not material_change:
-                candidate.ingredients = previous.ingredients
-                candidate.requirements = previous.requirements
-            previously_invalid = set(state.invalidated_acceptance_ids)
-            invalidate_expired_acceptances(state, snapshot, revision, now)
+        self.check_schema(db)
+        loaded = self.load_state(db, workspace_id)
+        if loaded is None:
+            raise BusinessRuleError("NOT_FOUND", "Workspace não encontrado.")
+        replay = db.execute(
+            "SELECT * FROM operations WHERE workspace_id=? AND operation_id=?",
+            (workspace_id, operation_id),
+        ).fetchone()
+        if replay:
             if (
-                previous
-                and material_change
-                and state.plan
-                and any(item.recipe_id == previous.id for item in state.plan.items)
+                replay["tool"] != "register_recipe_candidate"
+                or replay["payload_hash"] != payload_hash
             ):
-                _invalidate_acceptances(state)
-            state.candidates = [item for item in state.candidates if item.id != candidate.id]
-            state.candidates.append(candidate)
-            avoided = avoided_preference(state, candidate)
-            if avoided:
-                _record_feedback(
-                    state,
-                    RecipeFeedback(
-                        recipe_id=str(candidate.id),
-                        feedback="REJECTED",
-                        evidence=avoided.evidence,
-                    ),
+                raise BusinessRuleError(
+                    "IDEMPOTENCY_CONFLICT", "Operação já usada com outro conteúdo."
                 )
-            state.updated_at = now
-            state = WorkspaceState.model_validate_json(state.model_dump_json())
-            revision += 1
-            summary = evaluate_plan(
-                state.candidates,
-                state.plan,
-                state.kitchen_facts,
-                state.feedback,
-                snapshot,
-                state.pricing_policy_version,
-                revision,
-                conversions=state.ingredient_conversions,
-                complement_ingredients=state.complement_ingredients,
-                quotes=state.complement_quotes,
-                confirmations=state.quote_confirmations,
-                now=now,
+            return _replay_result(replay, loaded[0])
+        revision, state, snapshot = loaded
+        if (
+            not locally_approved
+            and db.execute("SELECT 1 FROM schema_migrations WHERE version=2").fetchone()
+        ):
+            raise BusinessRuleError("AUTHORIZATION_REQUIRED", "Use proposta e aprovação local.")
+        if revision != request.expected_revision:
+            raise BusinessRuleError("STALE_REVISION", "Recarregue a revisão atual do workspace.")
+        if not request.candidate.sources:
+            raise BusinessRuleError("SOURCE_REQUIRED", "Candidata pesquisada exige fonte.")
+        _validate_ingredient_references(snapshot, request.candidate, state.complement_ingredients)
+        previous = next((item for item in state.candidates if item.id == request.recipe_id), None)
+        if request.recipe_id is not None and previous is None:
+            raise BusinessRuleError("NOT_FOUND", "Candidata não pertence ao workspace.")
+        if previous and previous.version != request.expected_recipe_version:
+            raise BusinessRuleError("STALE_REVISION", "Recarregue a versão atual da candidata.")
+        candidate = RecipeCandidate(
+            **request.candidate.model_dump(mode="json"),
+            id=previous.id if previous else uuid4(),
+            version=previous.version + 1 if previous else 1,
+            recorded_at=now,
+        )
+        material_change = (
+            previous is None or candidate.business_content() != previous.business_content()
+        )
+        candidate.business_version = (
+            previous.business_version + int(material_change) if previous else 1
+        )
+        if previous and not material_change:
+            candidate.ingredients = previous.ingredients
+            candidate.requirements = previous.requirements
+        previously_invalid = set(state.invalidated_acceptance_ids)
+        invalidate_expired_acceptances(state, snapshot, revision, now)
+        if (
+            previous
+            and material_change
+            and state.plan
+            and any(item.recipe_id == previous.id for item in state.plan.items)
+        ):
+            _invalidate_acceptances(state)
+        state.candidates = [item for item in state.candidates if item.id != candidate.id]
+        state.candidates.append(candidate)
+        avoided = avoided_preference(state, candidate)
+        if avoided:
+            _record_feedback(
+                state,
+                RecipeFeedback(
+                    recipe_id=str(candidate.id),
+                    feedback="REJECTED",
+                    evidence=avoided.evidence,
+                ),
             )
-            result = {
-                "schema_version": "1.0",
-                "ok": True,
-                "workspace_id": workspace_id,
-                "revision": revision,
-                "operation_id": operation_id,
-                "data": {
-                    "candidate": candidate.public()
-                    | {
-                        "interest": next(
-                            (f.feedback for f in state.feedback if f.recipe_id == candidate.id),
-                            "UNDECIDED",
-                        )
-                    },
-                    "summary": summary,
-                    **_invalidation_summary(state, previously_invalid),
-                    "next_action": correction_next_action(state, summary)
-                    if avoided
-                    or state.plan
-                    and any(i.recipe_id == candidate.id for i in state.plan.items)
-                    else "CLARIFY_CANDIDATE_GAPS",
+        state.updated_at = now
+        state = WorkspaceState.model_validate_json(state.model_dump_json())
+        revision += 1
+        summary = evaluate_plan(
+            state.candidates,
+            state.plan,
+            state.kitchen_facts,
+            state.feedback,
+            snapshot,
+            state.pricing_policy_version,
+            revision,
+            conversions=state.ingredient_conversions,
+            complement_ingredients=state.complement_ingredients,
+            quotes=state.complement_quotes,
+            confirmations=state.quote_confirmations,
+            now=now,
+        )
+        result = {
+            "schema_version": "1.0",
+            "ok": True,
+            "workspace_id": workspace_id,
+            "revision": revision,
+            "operation_id": operation_id,
+            "data": {
+                "candidate": candidate.public()
+                | {
+                    "interest": next(
+                        (f.feedback for f in state.feedback if f.recipe_id == candidate.id),
+                        "UNDECIDED",
+                    )
                 },
-                "warnings": [],
-                "error": None,
-            }
-            db.execute(
-                "UPDATE workspaces SET revision=?, state_json=?, updated_at=? WHERE id=?",
-                (
-                    revision,
-                    state.model_dump_json(),
-                    now.isoformat(),
-                    workspace_id,
+                "summary": summary,
+                **_invalidation_summary(state, previously_invalid),
+                "next_action": correction_next_action(state, summary)
+                if avoided
+                or state.plan
+                and any(i.recipe_id == candidate.id for i in state.plan.items)
+                else "CLARIFY_CANDIDATE_GAPS",
+            },
+            "warnings": [],
+            "error": None,
+        }
+        db.execute(
+            "UPDATE workspaces SET revision=?, state_json=?, updated_at=? WHERE id=?",
+            (
+                revision,
+                state.model_dump_json(),
+                now.isoformat(),
+                workspace_id,
+            ),
+        )
+        db.execute(
+            "INSERT INTO decisions VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                str(uuid4()),
+                workspace_id,
+                "REGISTER_RECIPE_CANDIDATE",
+                fingerprint(
+                    {
+                        "snapshot_id": str(state.inventory_snapshot_id),
+                        "candidate": candidate.model_dump(mode="json"),
+                        "pricing_policy_version": state.pricing_policy_version,
+                    }
                 ),
-            )
-            db.execute(
-                "INSERT INTO decisions VALUES (?, ?, ?, ?, ?, ?)",
-                (
-                    str(uuid4()),
-                    workspace_id,
-                    "REGISTER_RECIPE_CANDIDATE",
-                    fingerprint(
-                        {
-                            "snapshot_id": str(state.inventory_snapshot_id),
-                            "candidate": candidate.model_dump(mode="json"),
-                            "pricing_policy_version": state.pricing_policy_version,
-                        }
-                    ),
-                    candidate.model_dump_json(),
-                    now.isoformat(),
-                ),
-            )
-            db.execute(
-                "INSERT INTO operations VALUES (?, ?, ?, ?, ?, ?)",
-                (
-                    workspace_id,
-                    operation_id,
-                    "register_recipe_candidate",
-                    payload_hash,
-                    canonical_json(result),
-                    revision,
-                ),
-            )
+                candidate.model_dump_json(),
+                now.isoformat(),
+            ),
+        )
+        db.execute(
+            "INSERT INTO operations VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                workspace_id,
+                operation_id,
+                "register_recipe_candidate",
+                payload_hash,
+                canonical_json(result),
+                revision,
+            ),
+        )
         return result
 
     def production_command(
@@ -609,107 +736,127 @@ class SQLiteWorkspaceRepository:
         | ConfirmQuoteRequest,
         now: datetime,
     ) -> dict:
+        with self.transaction() as db:
+            return self._production_command(db, tool, request, now)
+
+    def _production_command(self, db, tool, request, now, *, locally_approved=False):
         workspace_id, operation_id = str(request.workspace_id), str(request.operation_id)
         payload_hash = fingerprint(request.model_dump(mode="json"))
-        with self.transaction() as db:
-            self.check_schema(db)
-            loaded = self.load_state(db, workspace_id)
-            if loaded is None:
-                raise BusinessRuleError("NOT_FOUND", "Workspace não encontrado.")
-            replay = db.execute(
-                "SELECT * FROM operations WHERE workspace_id=? AND operation_id=?",
-                (workspace_id, operation_id),
-            ).fetchone()
-            if replay:
-                if replay["tool"] != tool or replay["payload_hash"] != payload_hash:
-                    raise BusinessRuleError("IDEMPOTENCY_CONFLICT", "Operação já utilizada.")
-                return _replay_result(replay, loaded[0])
-            revision, state, snapshot = loaded
-            if revision != request.expected_revision:
-                raise BusinessRuleError("STALE_REVISION", "Recarregue o workspace.")
-            previously_invalid = set(state.invalidated_acceptance_ids)
-            invalidate_expired_acceptances(state, snapshot, revision, now)
-            if isinstance(request, ConfirmQuoteRequest):
-                data = confirm_quote(state, request, now)
-            elif isinstance(request, RegisterQuoteRequest):
-                data = register_quote(state, request, snapshot, now)
-            elif isinstance(request, ResolveIngredientRequest):
-                data = resolve_ingredient(state, request, snapshot, now)
-            elif isinstance(request, ConversionRequest):
-                data = record_conversion(state, request, snapshot, now)
-            elif isinstance(request, SaveMenuDecisionRequest):
-                data = _save_menu_decision(state, request, snapshot, revision, now)
-            elif isinstance(request, CalculatePricingRequest):
-                data = _calculate_pricing(state, request, snapshot, revision, now)
-            elif isinstance(request, AcceptanceRequest):
-                evaluation = evaluate_plan(
-                    state.candidates,
-                    state.plan,
-                    state.kitchen_facts,
-                    state.feedback,
-                    snapshot,
-                    state.pricing_policy_version,
-                    revision,
-                    conversions=state.ingredient_conversions,
-                    complement_ingredients=state.complement_ingredients,
-                    quotes=state.complement_quotes,
-                    confirmations=state.quote_confirmations,
-                    now=now,
-                )
-                data = _accept_recipe(state, request, evaluation, now)
-            else:
-                data = _apply_production_command(state, request, now)
-            state.updated_at = now
-            state = WorkspaceState.model_validate_json(state.model_dump_json())
-            revision += 1
-            if isinstance(
-                request, (PlanRequest, KitchenFactsRequest, FeedbackRequest, PreferencesRequest)
-            ):
-                data["summary"] = evaluate_plan(
-                    state.candidates,
-                    state.plan,
-                    state.kitchen_facts,
-                    state.feedback,
-                    snapshot,
-                    state.pricing_policy_version,
-                    revision,
-                    conversions=state.ingredient_conversions,
-                    complement_ingredients=state.complement_ingredients,
-                    quotes=state.complement_quotes,
-                    confirmations=state.quote_confirmations,
-                    now=now,
-                )
-                data["next_action"] = correction_next_action(state, data["summary"])
-            data.update(_invalidation_summary(state, previously_invalid))
-            result = {
-                "schema_version": "1.0",
-                "ok": True,
-                "workspace_id": workspace_id,
-                "revision": revision,
-                "operation_id": operation_id,
-                "data": data,
-                "warnings": [],
-                "error": None,
-            }
-            db.execute(
-                "UPDATE workspaces SET revision=?, state_json=?, updated_at=? WHERE id=?",
-                (revision, state.model_dump_json(), now.isoformat(), workspace_id),
+        self.check_schema(db)
+        loaded = self.load_state(db, workspace_id)
+        if loaded is None:
+            raise BusinessRuleError("NOT_FOUND", "Workspace não encontrado.")
+        replay = db.execute(
+            "SELECT * FROM operations WHERE workspace_id=? AND operation_id=?",
+            (workspace_id, operation_id),
+        ).fetchone()
+        if replay:
+            if replay["tool"] != tool or replay["payload_hash"] != payload_hash:
+                raise BusinessRuleError("IDEMPOTENCY_CONFLICT", "Operação já utilizada.")
+            return _replay_result(replay, loaded[0])
+        revision, state, snapshot = loaded
+        if db.execute("SELECT 1 FROM schema_migrations WHERE version=2").fetchone():
+            if not locally_approved and type(request) is not CalculatePricingRequest:
+                raise BusinessRuleError("AUTHORIZATION_REQUIRED", "Use proposta e aprovação local.")
+            if isinstance(request, (AcceptanceRequest, CalculatePricingRequest)):
+                references = self._approval_refs(db, workspace_id)
+                if requires_local_review(state, references):
+                    raise BusinessRuleError(
+                        "AUTHORIZATION_REQUIRED", "Revise localmente as premissas legadas."
+                    )
+                if isinstance(request, CalculatePricingRequest):
+                    acceptance = next(
+                        (a for a in state.acceptances if a.id == request.acceptance_id), None
+                    )
+                    if acceptance is not None and acceptance.evidence.turn_ref not in references:
+                        raise BusinessRuleError(
+                            "AUTHORIZATION_REQUIRED", "É necessário novo aceite local."
+                        )
+        if revision != request.expected_revision:
+            raise BusinessRuleError("STALE_REVISION", "Recarregue o workspace.")
+        previously_invalid = set(state.invalidated_acceptance_ids)
+        invalidate_expired_acceptances(state, snapshot, revision, now)
+        if isinstance(request, ConfirmQuoteRequest):
+            data = confirm_quote(state, request, now)
+        elif isinstance(request, RegisterQuoteRequest):
+            data = register_quote(state, request, snapshot, now)
+        elif isinstance(request, ResolveIngredientRequest):
+            data = resolve_ingredient(state, request, snapshot, now)
+        elif isinstance(request, ConversionRequest):
+            data = record_conversion(state, request, snapshot, now)
+        elif isinstance(request, SaveMenuDecisionRequest):
+            data = _save_menu_decision(state, request, snapshot, revision, now)
+        elif isinstance(request, CalculatePricingRequest):
+            data = _calculate_pricing(state, request, snapshot, revision, now)
+        elif isinstance(request, AcceptanceRequest):
+            evaluation = evaluate_plan(
+                state.candidates,
+                state.plan,
+                state.kitchen_facts,
+                state.feedback,
+                snapshot,
+                state.pricing_policy_version,
+                revision,
+                conversions=state.ingredient_conversions,
+                complement_ingredients=state.complement_ingredients,
+                quotes=state.complement_quotes,
+                confirmations=state.quote_confirmations,
+                now=now,
             )
-            db.execute(
-                "INSERT INTO decisions VALUES (?, ?, ?, ?, ?, ?)",
-                (
-                    str(uuid4()),
-                    workspace_id,
-                    tool.upper(),
-                    payload_hash,
-                    canonical_json(data),
-                    now.isoformat(),
-                ),
+            data = _accept_recipe(state, request, evaluation, now)
+        else:
+            data = _apply_production_command(state, request, now)
+        state.updated_at = now
+        state = WorkspaceState.model_validate_json(state.model_dump_json())
+        revision += 1
+        if isinstance(
+            request, (PlanRequest, KitchenFactsRequest, FeedbackRequest, PreferencesRequest)
+        ):
+            data["summary"] = evaluate_plan(
+                state.candidates,
+                state.plan,
+                state.kitchen_facts,
+                state.feedback,
+                snapshot,
+                state.pricing_policy_version,
+                revision,
+                conversions=state.ingredient_conversions,
+                complement_ingredients=state.complement_ingredients,
+                quotes=state.complement_quotes,
+                confirmations=state.quote_confirmations,
+                now=now,
             )
-            db.execute(
-                "INSERT INTO operations VALUES (?, ?, ?, ?, ?, ?)",
-                (workspace_id, operation_id, tool, payload_hash, canonical_json(result), revision),
-            )
+            data["next_action"] = correction_next_action(state, data["summary"])
+        data.update(_invalidation_summary(state, previously_invalid))
+        result = {
+            "schema_version": "1.0",
+            "ok": True,
+            "workspace_id": workspace_id,
+            "revision": revision,
+            "operation_id": operation_id,
+            "data": data,
+            "warnings": [],
+            "error": None,
+        }
+        db.execute(
+            "UPDATE workspaces SET revision=?, state_json=?, updated_at=? WHERE id=?",
+            (revision, state.model_dump_json(), now.isoformat(), workspace_id),
+        )
+        db.execute(
+            "INSERT INTO decisions VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                str(uuid4()),
+                workspace_id,
+                tool.upper(),
+                payload_hash,
+                canonical_json(data),
+                now.isoformat(),
+            ),
+        )
+        db.execute(
+            "INSERT INTO operations VALUES (?, ?, ?, ?, ?, ?)",
+            (workspace_id, operation_id, tool, payload_hash, canonical_json(result), revision),
+        )
         return result
 
     def feasibility(self, request: FeasibilityRequest) -> dict:
