@@ -80,6 +80,20 @@ def test_missing_observation_or_another_request_is_refused():
     )
 
 
+@pytest.mark.parametrize("name", ["search_culinary_sources", "extract_culinary_source"])
+def test_mediated_research_requires_the_exact_original_tool_name(name):
+    hooks = callbacks()
+    context = {"session_id": "research-session", "api_request_id": "research-request"}
+    hooks["post_api_request"](**context, assistant_message=provider_message(name))
+    assert hooks["pre_tool_call"](**context, tool_call_id="synthetic-call", tool_name=name) is None
+    hooks["post_api_request"](**context, assistant_message=provider_message(name))
+    context["api_request_id"] = "another-request"
+    assert (
+        hooks["pre_tool_call"](**context, tool_call_id="synthetic-call", tool_name=name)["action"]
+        == "block"
+    )
+
+
 def test_ambiguous_ids_or_malformed_observation_cannot_reuse_an_authorized_call():
     hooks = callbacks()
     context = {"session_id": "synthetic-session", "api_request_id": "synthetic-request"}

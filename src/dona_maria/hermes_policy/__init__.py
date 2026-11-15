@@ -13,7 +13,7 @@ ALLOWED = frozenset(
         "propose_user_change",
         "calculate_pricing_scenarios",
     )
-)
+) | frozenset({"search_culinary_sources", "extract_culinary_source"})
 REFUSAL = {"action": "block", "message": "Esta ação não está disponível neste atendimento."}
 
 

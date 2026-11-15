@@ -178,7 +178,9 @@ pelo modelo com o nome que o host pretende executar e veta nomes proibidos,
 inclusive após correção automática do Hermes. Ausência de observação válida
 também recusa a chamada. Usa os hooks públicos `post_api_request` e
 `pre_tool_call`, conferidos na versão instalada; não altera o código do host.
-Mantenha somente essa política na allowlist de plugins do perfil vinculado.
+No perfil sem pesquisa mediada, mantenha somente essa política na allowlist de plugins.
+O perfil isolado de pesquisa tem configuração e gate próprios em
+[S17](s17-mediated-research.md); não amplie automaticamente este perfil.
 Não disponibilize o atendimento sem repetir o teste de catálogo e de chamada
 proibida no host efetivo. Após atualizar a política, copie novamente apenas
 esses dois arquivos e inicie uma sessão nova.
@@ -195,10 +197,12 @@ não variáveis expandidas automaticamente.
 
 ```sh
 hermes -p sabor-da-maria config set skills.external_dirs "['SKILLS_ABSOLUTO']"
-hermes -p sabor-da-maria mcp add dona_maria --command "PYTHON_ABSOLUTO" --connect-timeout 15 --env "DONA_MARIA_DB_PATH=SQLITE_ABSOLUTO" --env "DONA_MARIA_WORKSPACE_ID=WORKSPACE_IMPORTADO" --env "DONA_MARIA_MODE=ATTENDANCE" --args -X utf8 -B -m dona_maria.launcher
+hermes -p sabor-da-maria mcp add dona_maria --command "PYTHON_ABSOLUTO" --connect-timeout 15 --env "DONA_MARIA_DB_PATH=SQLITE_ABSOLUTO" "DONA_MARIA_WORKSPACE_ID=WORKSPACE_IMPORTADO" "DONA_MARIA_MODE=ATTENDANCE" --args -X utf8 -B -m dona_maria.launcher
 ```
 
 Mantenha `--args` como a última opção: o restante pertence ao subprocesso.
+No Hermes0.23.1, use `--env` uma única vez, seguido de todos os pares:
+repetir a opção conserva somente os valores da última ocorrência.
 
 A descoberta MCP pode pedir seleção das ferramentas. Confira o catálogo
 de negócio apresentado e habilite as ferramentas necessárias da aplicação.

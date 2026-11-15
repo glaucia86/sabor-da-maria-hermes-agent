@@ -39,7 +39,7 @@ from dona_maria.production import (
     PreferenceInput,
     PreferencesRequest,
 )
-from dona_maria.provenance import source_fields
+from dona_maria.provenance import RegisteredWebReference, WebSource, source_fields
 from dona_maria.quotes import (
     ConfirmQuoteRequest,
     RegisterQuoteRequest,
@@ -181,6 +181,8 @@ _INJECTED_FIELDS = {
 
 @lru_cache
 def _bound_type(annotation):
+    if annotation is WebSource:
+        return RegisteredWebReference
     if annotation is UUID:
         return Annotated[StrictInt, Field(ge=1)]
     origin, args = get_origin(annotation), get_args(annotation)
@@ -586,6 +588,11 @@ class ApprovalService:
     def propose(self, arguments: dict, *, client_hash: str | None = None) -> dict:
         if client_hash is None and not call_fits(arguments):
             raise BusinessRuleError("INPUT_LIMIT", "Pedido excede o limite permitido.")
+        from dona_maria.research import resolve_web_references, verify_web_sources
+
+        arguments = resolve_web_references(
+            self.repository, arguments.get("workspace_id"), arguments
+        )
         request = ProposalRequest.model_validate(arguments)
         # Autoridade e derivações nunca entram pela proposta, nem como evento reaproveitado.
         payload = arguments.get("command", {}).get("payload", {})
@@ -708,10 +715,14 @@ class ApprovalService:
                         "SOURCE_NOT_LINKED", "Adaptação histórica ainda não está habilitada."
                     )
                 if not _web_sources(payload["candidate"]).issubset(_web_sources(original)):
-                    raise BusinessRuleError(
-                        "SOURCE_NOT_LINKED", "Novas fontes não são habilitadas nesta etapa."
+                    verify_web_sources(
+                        db,
+                        workspace,
+                        payload["candidate"],
+                        purpose="RECIPE",
+                        legacy=_web_sources(original),
                     )
-                if previous is None and not human:
+                if previous is None and not human and not _web_sources(payload["candidate"]):
                     raise BusinessRuleError(
                         "SOURCE_REQUIRED", "Informe a origem humana da receita."
                     )
@@ -730,12 +741,11 @@ class ApprovalService:
                     ),
                     None,
                 )
-                if previous is None:
-                    raise BusinessRuleError("NOT_FOUND", "S14 revisa somente ofertas existentes.")
-                if payload["quote"]["source"] != previous.model_dump(mode="json")["source"]:
-                    raise BusinessRuleError(
-                        "SOURCE_NOT_LINKED", "Novas fontes não são habilitadas nesta etapa."
-                    )
+                if (
+                    previous is None
+                    or payload["quote"]["source"] != previous.model_dump(mode="json")["source"]
+                ):
+                    verify_web_sources(db, workspace, payload["quote"]["source"], purpose="QUOTE")
             document = {
                 "id": identifier,
                 "workspace_id": workspace,
