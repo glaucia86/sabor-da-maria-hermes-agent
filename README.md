@@ -69,8 +69,9 @@ e atestação local dos campos exatos. A receita é recuperada após reinício e
 segue as mesmas verificações antes do aceite e da escolha de preço. Esse caminho
 foi verificado com fixtures, MCP STDIO e uma jornada assistida no Hermes em
 base sintética, com atestações locais e retomada do preço. Isso não comprova
-autonomia geral nem operação comercial. Novas fontes web continuam
-indisponíveis no atendimento.
+autonomia geral nem operação comercial. A pesquisa mediada possui implementação
+local e exige homologação própria no perfil isolado antes de disponibilização;
+não habilita busca ou URLs livres. Veja [configuração e limites](docs/s17-mediated-research.md).
 
 <a id="arquitetura"></a>
 ## 🏗️ Explore a arquitetura
@@ -190,7 +191,9 @@ O atendimento expõe quatro consultas, propostas de alterações e cálculo de
 preços com contexto configurado privadamente. Decisões exigem manifestação da
 cozinheira e [revisão local do operador](docs/setup.md#aprovacao-local), fora do
 catálogo do modelo. A proposta não aplica efeitos; o cálculo não escolhe preço.
-Pesquisa e registro de novas receitas/fontes permanecem indisponíveis.
+Fontes novas de pesquisa exigem o plugin mediado e sua homologação no host real.
+O MCP permanece com seis capacidades; as duas capacidades de pesquisa pertencem
+ao plugin, sem ferramenta administrativa ou web genérica no catálogo.
 
 A [configuração de exemplo](config/hermes.config.example.yaml) contém somente
 campos e caminhos substituíveis. Credenciais ficam no perfil privado do Hermes.

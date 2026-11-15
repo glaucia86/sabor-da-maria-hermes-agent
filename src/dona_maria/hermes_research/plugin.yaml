@@ -1,0 +1,6 @@
+name: dona-maria-mediated-research
+version: 0.1.2
+description: "Pesquisa culinária por termos públicos e resultados registrados no contexto privado."
+provides_tools:
+  - search_culinary_sources
+  - extract_culinary_source

@@ -67,6 +67,9 @@ class WebSource(CandidateModel):
         default=None, exclude_if=lambda value: value is None
     )
     segment: ShortText | None = Field(default=None, exclude_if=lambda value: value is None)
+    content_sha256: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
 
     @field_validator("retrieved_at", mode="before")
     @classmethod
@@ -100,6 +103,12 @@ class InformationRef(CandidateModel):
     entity_id: UUIDText
     version: Annotated[StrictInt, Field(gt=0)]
     field: ShortText
+
+
+class RegisteredWebReference(CandidateModel):
+    kind: Literal["WEB"]
+    research_result_id: UUIDText
+    segment: ShortText
 
 
 class UserProvidedSource(CandidateModel):

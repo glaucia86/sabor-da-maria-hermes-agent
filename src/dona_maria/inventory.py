@@ -12,8 +12,6 @@ from typing import Literal
 from uuid import NAMESPACE_URL, UUID, uuid5
 from xml.etree import ElementTree
 
-from openpyxl import load_workbook
-from openpyxl.utils.exceptions import InvalidFileException
 from pydantic import BaseModel, ConfigDict
 
 
@@ -84,6 +82,9 @@ UNITS = {
 
 
 def import_inventory(path: Path, *, allowed_directory: Path) -> InventorySnapshot:
+    from openpyxl import load_workbook
+    from openpyxl.utils.exceptions import InvalidFileException
+
     path = path.resolve()
     if not path.is_relative_to(allowed_directory.resolve()) or path.suffix.lower() != ".xlsx":
         raise ValueError("Importação exige XLSX no diretório autorizado.")

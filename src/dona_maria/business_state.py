@@ -42,6 +42,7 @@ from dona_maria.production import (
     PlanRequest,
     PreferencesRequest,
 )
+from dona_maria.provenance import source_fields
 from dona_maria.quotes import ConfirmQuoteRequest, RegisterQuoteRequest, current_confirmation
 
 
@@ -127,6 +128,27 @@ ATTENDANCE_TOOLS = {
 
 def _attendance_failure(message="Não foi possível consultar. Peça auxílio à pessoa operadora."):
     return {"ok": False, "data": None, "message": message}
+
+
+def _attendance_provenance(recipe):
+    sources = []
+    for _, source in source_fields(recipe):
+        if source["kind"] == "WEB" and source.get("research_result_id"):
+            public = {key: source[key] for key in ("url", "title", "excerpt", "retrieved_at")}
+            if public not in sources:
+                sources.append(public)
+    if sources:
+        return {
+            "origin": "Pesquisa web registrada; condições da cozinha exigem confirmação.",
+            "sources": sources,
+        }
+    return {
+        "origin": (
+            "Informada pela cozinheira; campos atestados localmente, sem comprovação independente."
+            if recipe.get("provenance_version") == "2.0"
+            else "Fonte histórica preservada."
+        )
+    }
 
 
 @dataclass(frozen=True)
@@ -359,12 +381,7 @@ class AttendanceService:
                             "title": recipe["title"],
                             "status": recipe["status"],
                             "interest": recipe["interest"],
-                            "origin": (
-                                "Informada pela cozinheira; campos atestados localmente, "
-                                "sem comprovação independente."
-                                if recipe.get("provenance_version") == "2.0"
-                                else "Fonte histórica preservada."
-                            ),
+                            **_attendance_provenance(recipe),
                             "missing_information": recipe["gaps"],
                             "ingredients": [
                                 {key: ingredient[key] for key in ("description", "quantity")}

@@ -308,7 +308,7 @@ class SQLiteWorkspaceRepository:
         versions = [
             row[0] for row in db.execute("SELECT version FROM schema_migrations ORDER BY version")
         ]
-        if versions not in ([1], [1, 2]):
+        if versions not in ([1], [1, 2], [1, 2, 3]):
             raise sqlite3.DatabaseError("Versão de schema não suportada.")
         return True
 
@@ -362,6 +362,22 @@ class SQLiteWorkspaceRepository:
     @staticmethod
     def _validate_recipe_provenance(db, workspace_id, state):
         from dona_maria.provenance import source_fields
+        from dona_maria.research import verify_web_sources
+
+        try:
+            for recipe in state.candidates:
+                registered = [
+                    s
+                    for _, s in source_fields(recipe.model_dump(mode="json"))
+                    if s["kind"] == "WEB" and s.get("research_result_id") is not None
+                ]
+                verify_web_sources(db, workspace_id, registered, purpose="RECIPE")
+            for quote in state.complement_quotes:
+                source = quote.source.model_dump(mode="json")
+                if source.get("research_result_id") is not None:
+                    verify_web_sources(db, workspace_id, source, purpose="QUOTE")
+        except BusinessRuleError as exc:
+            raise sqlite3.DatabaseError("Fonte registrada inválida.") from exc
 
         expanded_recipes = {
             str(r.id)
@@ -718,6 +734,21 @@ class SQLiteWorkspaceRepository:
             raise BusinessRuleError("NOT_FOUND", "Candidata não pertence ao workspace.")
         if previous and previous.version != request.expected_recipe_version:
             raise BusinessRuleError("STALE_REVISION", "Recarregue a versão atual da candidata.")
+        if db.execute("SELECT 1 FROM schema_migrations WHERE version=3").fetchone():
+            from dona_maria.research import verify_web_sources
+
+            legacy = {
+                canonical_json(s)
+                for _, s in source_fields(previous.model_dump(mode="json") if previous else {})
+                if s["kind"] == "WEB"
+            }
+            verify_web_sources(
+                db,
+                workspace_id,
+                request.candidate.model_dump(mode="json"),
+                purpose="RECIPE",
+                legacy=legacy,
+            )
         candidate = RecipeCandidate(
             **request.candidate.model_dump(mode="json"),
             id=previous.id if previous else uuid4(),
@@ -745,7 +776,9 @@ class SQLiteWorkspaceRepository:
                     version=candidate.version,
                     field=path,
                 ).model_dump(mode="json")
-        if human:
+        if human or any(
+            s["kind"] == "WEB" and s.get("research_result_id") for _, s in source_fields(content)
+        ):
             content["provenance_version"] = "2.0"
             candidate = RecipeCandidate.model_validate(content)
             from dona_maria.ingredients import materialize_recipe_quantities
@@ -921,6 +954,22 @@ class SQLiteWorkspaceRepository:
         if isinstance(request, ConfirmQuoteRequest):
             data = confirm_quote(state, request, now)
         elif isinstance(request, RegisterQuoteRequest):
+            if db.execute("SELECT 1 FROM schema_migrations WHERE version=3").fetchone():
+                from dona_maria.research import verify_web_sources
+
+                previous = next(
+                    (q for q in reversed(state.complement_quotes) if q.id == request.quote_id), None
+                )
+                legacy = (
+                    {canonical_json(previous.source.model_dump(mode="json"))} if previous else set()
+                )
+                verify_web_sources(
+                    db,
+                    workspace_id,
+                    request.quote.model_dump(mode="json"),
+                    purpose="QUOTE",
+                    legacy=legacy,
+                )
             data = register_quote(state, request, snapshot, now)
         elif isinstance(request, ResolveIngredientRequest):
             data = resolve_ingredient(state, request, snapshot, now)

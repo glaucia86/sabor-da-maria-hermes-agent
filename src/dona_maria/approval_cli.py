@@ -22,6 +22,8 @@ def main() -> None:
     commands.add_parser("list")
     migration = commands.add_parser("migrate")
     migration.add_argument("--backup", type=Path, required=True)
+    research_migration = commands.add_parser("migrate-research")
+    research_migration.add_argument("--backup", type=Path, required=True)
     inspect = commands.add_parser("inspect")
     inspect.add_argument("proposal", type=UUID)
     for action in ("approve", "reject"):
@@ -38,6 +40,11 @@ def main() -> None:
         if args.action == "migrate":
             migrate_proposals(repository, args.backup)
             result = {"migrated": True, "schema": 2}
+        elif args.action == "migrate-research":
+            from dona_maria.research import migrate_research
+
+            migrate_research(repository, args.backup)
+            result = {"migrated": True, "schema": 3}
         elif args.action == "list":
             result = service.list(workspace)
         elif args.action == "inspect":
