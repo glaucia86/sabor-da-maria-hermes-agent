@@ -1,6 +1,6 @@
 # Sabor da Maria — plano de implementação por slices
 
-**Versão do plano:** 1.0 (primeira numeração explícita) · **Criação:** 11/11/2026 · **Última revisão:** 15/11/2026. Fontes vigentes: PRD v1.2 e SPEC v1.3. Plano e evolução local preservados. S13 concluído no canal CLI assistido, com provas técnicas e aceite HITL explícito. S14 concluído no recorte CLI assistida/sintético, com homologação e aceite HITL explícito em 15/11/2026. S15 tem implementação local em revisão, com EV-13/HITL pendentes; S16–S19 continuam NOT_RUN e não autorizados.
+**Versão do plano:** 1.0 (primeira numeração explícita) · **Criação:** 11/11/2026 · **Última revisão:** 15/11/2026. Fontes vigentes: PRD v1.2 e SPEC v1.3. Plano e evolução local preservados. S13 concluído no canal CLI assistido, com provas técnicas e aceite HITL explícito. S14 concluído no recorte CLI assistida/sintético, com homologação e aceite HITL explícito em 15/11/2026. S15 concluído com EV-13 PASS assistido e aceite HITL explícito em 15/11/2026; S16–S19 continuam NOT_RUN e não autorizados.
 
 ## Context Retrieval Contract
 
@@ -118,8 +118,8 @@ A descoberta partiu dos identificadores efetivamente presentes nas duas fontes, 
 | S12 | Demo/vídeo desejável mostra a versão verificada | S11 | BLOCKED BY DECISION — herança S11; P1, sem bloquear P0 |
 | S13 | Atendimento inicia no contexto privado correto | S00, S09, S10 | PLANEJADO — liberação explícita após checagem documental; execução não autorizada |
 | S14 | Decisão aprovada localmente fora do LLM | S13, S02, S03, S06 | CONCLUÍDO — CLI assistida/sintética e HITL em 15/11 |
-| S15 | Receita própria chega a preço válido com origem | S14, S01, S04, S08 | EM REVISÃO — implementação local; EV-13/HITL pendentes |
-| S16 | Adaptar, medir e demonstrar preservando origem | S15 | PLANEJADO E NÃO AUTORIZADO — gate S15 |
+| S15 | Receita própria chega a preço válido com origem | S14, S01, S04, S08 | CONCLUÍDO — EV-13 PASS assistido e aceite HITL explícito |
+| S16 | Adaptar, medir e demonstrar preservando origem | S15 | PLANEJADO E NÃO AUTORIZADO — autorização própria pendente |
 | S17 | Pesquisa real com saída controlada | S13, S15 | PLANEJADO E NÃO AUTORIZADO — compatibilidade/pesquisa real |
 | S18 | Custos incompletos explicados e bloqueados | S15, S06, S07 | PLANEJADO E NÃO AUTORIZADO — gate S15 |
 | S19 | Jornada acessível/adversarial atual revalidada | S13, S14, S15, S16, S17, S18, S11 | PLANEJADO E NÃO AUTORIZADO — gates anteriores e revisão S11 |
@@ -1262,9 +1262,9 @@ Nenhum teste adicional de produto/Hermes, execução de host/modelo, configuraç
 
 ## S15 — Receita própria até preço válido
 
-**Status:** EM REVISÃO — P0. **Objetivo / Resultado observável:** receita humana por informação passa por registro, reinício, confirmação, aceite e preço com os guards existentes.
+**Status:** CONCLUÍDO — P0. **Objetivo / Resultado observável:** receita humana por informação passa por registro, reinício, confirmação, aceite e preço com os guards existentes.
 
-**Bloqueado por:** encerramento ainda depende de EV-13 conduzido pela pessoa conforme RULES §5 e revisão HITL. Autorização exclusiva S15 recebida nesta sessão; dependência S14 concluída com HITL em 15/11/2026. Regressão final571PASS/337.29s; provas técnicas locais registradas, sem conclusão da fatia nem homologação Hermes inferidas.
+**Bloqueado por:** nenhum bloqueio remanescente no recorte S15 autorizado. EV-13 PASS na CLI assistida/sintética e aceite HITL explícito em 15/11/2026, com trace oficial, estado auditado e decisão de encerramento no handoff final abaixo. Provas anteriores preservadas; regressão da revisão578PASS recuperada por JUnit e51hashes de fontes idênticos ao checkout. S16 exige autorização própria, ainda não recebida.
 
 **Source IDs**
 
@@ -1314,11 +1314,26 @@ Jornada STDIO sintética:100g arroz,24.90/5000g,duas porções; proposta/CLI em 
 
 TDD: downgrade1FAIL, convers?o2FAIL, t?tulo1FAIL e corrup??o estrutural4FAIL observados antes das corre??es. Compatibilidade ampliada78PASS/18.85s; regress?o final578PASS/291.28s com hashes de fontes est?veis; Ruff check/format57PASS, nove HarnessPASS/0.257s, diffPASS. Muta??o da detec??o de proveni?ncia auditada foi detectada por1FAIL e fonte restaurada byte a byte. Regress?o intermedi?ria573PASS/1FAIL identificou checagem antecipada indevida na abertura legada, corrigida sem relaxar expectativa; rodada574PASS ? hist?rica. Comandos/JUnits/limites e falhas de ambiente em `.harness/verification.md`. Revis?o independente nos cinco eixos sem Required/Critical remanescente no recorte. Sem auditoria geral/CVEs, Hermes/modelo/host, configura??es/credenciais/banco pessoal, commit/push/PR ou outra fatia. **S15 permanece EM REVIS?O; EV-13/HITL pendentes**, sem nova homologa??o humana inferida. Pr?ximo passo: revisar o diff/evid?ncias e EV-13 assistido conforme RULES ?5; S16 n?o liberada.
 
+**Handoff — EV-13 assistido auditado, 15/11/2026:** PASS no recorte CLI assistida/Hermes real/MCP real/SQLite sintético isolado. A pessoa executou host, configuração, recarga, mensagens, sete atestações locais e exportação oficial; o agente preparou somente base nova/snapshot, inspecionou propostas/estado e auditou o trace, sem executar Hermes/modelo nem aprovar decisões. Perfil de revisão homologado no S14; base `s15-human-review-01` copiou apenas a despensa sintética, sem decisões prévias. Fonte S14 preservada. Nova sessão recebeu receita humana sem URL:100g arroz cru, pilão, método manual/sem aquecer, rendimento2porções e requisitos declarados. Lacunas e condições UNKNOWN não viraram confirmação.
+
+Proposta→atestação→receita v1/revisão1; fatos exatos→revisão2; revisão autorizada da ficha para retirar a anotação operacional superada→receita v2/revisão3; interesse→4; plano1lote/2porções→5; avaliação operacional ELIGIBLE, três requisitos CONFIRMED, estoque5000g/demanda100g, compra0.00/saldo80.00; aceite vigente→6; duas solicitações técnicas de cálculo→7/8, reutilizando um snapshot; escolha humana explícita M10/0.32→9. Nenhuma proposta produziu efeito antes da atestação. Receita/revisão, fontes, eventos e campos exatos foram ligados aos resultados/auditoria; nenhum WEB inventado e nenhuma rota aprovadora no catálogo.
+
+Exportação oficial seleciona uma sessão:12turnos com papel USER,89mensagens,34chamadas reais respondidas ok (estado21/despensa2/proposta7/viabilidade1/compras1/cálculo2). Catálogo efetivo de exatamente seis capacidades; nenhum shell/arquivo/SQL/aprovador. Sete propostas correspondem às sete operações de domínio e sete LOCAL_APPROVAL do SQLite, todas dentro do TTL; IDs/eventos não vieram como autoridade nos argumentos do modelo. A fala humana de escolha0.32 consta no trace antes da proposta. Respostas finais sem UUID/path/nome MCP. Model reportado openai/gpt-6.1-sol; seed/temperatura não controlados, sem orçamento numérico de custo prefixado.
+
+CMV técnico0.49800/lote e0.24900/porção, mínimo0.28 e cenários0.32/0.36/0.42, fee_theoretical exatamente10% do preço; um aceite/cálculo/escolha válidos. Última CLI encerrada e reaberta: consulta recuperou0.32/lote/condições, sem refazer cálculo. Cinco tabelas e SHA-256 do banco idênticos ao pós-preço; payload do inventário igual ao original S14. Dados integrais/export privados; relatório sanitizado em `.harness/s15-ev13-summary.json`, auditoria/financeiro/retomada em arquivos locais de `artifacts/private/s15-human-review-01`. Hash do export e comandos em `.harness/verification.md`.
+
+Rubrica local do implementador: clareza2, pergunta contextualizada2 (lacunas concretas e pergunta de aceite após resumo1lote/2porções), autonomia1, total5/6; assertions críticas PASS. Limitações preservadas: jornada guiada/sintética, sem generalizar autonomia, operação comercial ou segurança alimentar; correção da cópia rasa do payload encontrada durante execução e comprovada por RED/GREEN, histórico anterior preservado; retirada0/reconexão6 do MCP realizada pela pessoa para carregar correção, sem confundir primeiro reload no-op com reinício. Houve revisão adicional da ficha pelo texto de pendência mantido e dois pedidos técnicos de cálculo. Retorno resumido não expõe CMV/lote nem percentual da taxa; Hermes declarou a limitação e operador conferiu snapshot do servidor, sem inventar valores. Não houve nova pesquisa, EV-14/15 ou outros slices.
+
+Qualidade paralela pré-existente preservada: JUnit `.harness/s15-quality-review/final2.xml` confirma578testes/zero falhas/erros/skips;51hashes de fontes e testes conferem com checkout observado HEAD11489e48c7c20b753e67970f43ae1073945346a3. Esta é evidência recuperada, não nova execução dessa suíte pelo agente nesta rodada. A regressão574PASS da correção de cópia e seus comandos anteriores permanecem históricos. Nenhum código de produto mudou nesta auditoria final.
+
+**Handoff — aceite HITL e encerramento S15, 15/11/2026:** após a síntese do EV-13 PASS assistido, das provas técnicas e das limitações, a pessoa respondeu **“sim”** à pergunta explícita “Você dá o aceite HITL explícito para encerrar o S15 com essas evidências e limitações?”. Esse é o aceite de encerramento, distinto das sete atestações de domínio. **S15 CONCLUÍDO**, preservando a rubrica local5/6, o recorte assistido/sintético e as limitações descritas acima. AC-023 e AC-029 comprovados no recorte S15; AC-030 comprovado nos vetores S15, sem aprovação global S19. Nenhum teste humano adicional solicitado nem nova execução de produto nesta consolidação documental. Dependência S15 satisfeita para S16; **S16 continua PLANEJADO E NÃO AUTORIZADO**, exigindo pedido próprio. Sem commit/push/PR/merge/publicação pelo agente.
+
 ## S16 — Adaptar, medir e demonstrar sem perder origem
+
 
 **Status:** PLANEJADO E NÃO AUTORIZADO — P0. **Objetivo / Resultado observável:** adaptação conserva origem histórica e relato de medição; demonstração fictícia permanece isolada após reinício.
 
-**Bloqueado por:** gate S15 e autorização própria; origem de medições não certifica instrumento/resultado, e contexto fictício não pode ser promovido a real.
+**Bloqueado por:** autorização própria, ainda não recebida; dependência S15 satisfeita pelo encerramento HITL em 15/11/2026. Origem de medições não certifica instrumento/resultado, e contexto fictício não pode ser promovido a real.
 
 **Source IDs**
 

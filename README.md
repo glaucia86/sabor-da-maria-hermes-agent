@@ -67,8 +67,10 @@ Uma condição desconhecida gera uma pergunta. A conversa, sozinha, não autoriz
 Receitas próprias também podem ser propostas sem URL, com origem por informação
 e atestação local dos campos exatos. A receita é recuperada após reinício e
 segue as mesmas verificações antes do aceite e da escolha de preço. Esse caminho
-foi exercitado com fixtures e MCP STDIO; a avaliação conversacional no Hermes
-permanece pendente. Novas fontes web continuam indisponíveis no atendimento.
+foi verificado com fixtures, MCP STDIO e uma jornada assistida no Hermes em
+base sintética, com atestações locais e retomada do preço. Isso não comprova
+autonomia geral nem operação comercial. Novas fontes web continuam
+indisponíveis no atendimento.
 
 <a id="arquitetura"></a>
 ## 🏗️ Explore a arquitetura
