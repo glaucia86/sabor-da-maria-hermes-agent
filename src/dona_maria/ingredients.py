@@ -17,6 +17,7 @@ from dona_maria.candidates import (
 )
 from dona_maria.inventory import InventoryItem, InventorySnapshot, normalize_name
 from dona_maria.production import CommandMeta, UserEvidence
+from dona_maria.provenance import DerivedProvenance, InformationRef, PrimaryProvenance
 
 _CONVERSION_CONTEXT = Context(prec=34, traps=[DivisionByZero, InvalidOperation, Overflow])
 _STANDARD_UNITS = {
@@ -26,6 +27,33 @@ _STANDARD_UNITS = {
     "L": ("ml", Decimal("1000")),
     "un": ("un", Decimal("1")),
 }
+
+
+def materialize_recipe_quantities(recipe):
+    """Confere equivalência métrica e atribui origem apenas à saída calculada."""
+    for index, line in enumerate(recipe.ingredients):
+        if line.quantity is None:
+            continue
+        measure = line.original_measure
+        original = _STANDARD_UNITS.get(measure.unit_label)
+        target = _STANDARD_UNITS[line.quantity.unit]
+        if measure.value is None or original is None or original[0] != target[0]:
+            raise ValueError("Medida exige conversão contextual confirmada; mantenha a lacuna.")
+        with localcontext(_CONVERSION_CONTEXT):
+            if Decimal(measure.value) * original[1] != Decimal(line.quantity.value) * target[1]:
+                raise ValueError("Quantidade diverge da medida original atestada.")
+        line.quantity_source = DerivedProvenance(
+            rule="STANDARD_UNIT",
+            rule_version="1.0",
+            inputs=[
+                InformationRef(
+                    entity="RECIPE",
+                    entity_id=str(recipe.id),
+                    version=recipe.version,
+                    field=f"ingredients/{index}/original_measure/source",
+                )
+            ],
+        )
 
 
 class ConversionRequest(CommandMeta):
@@ -73,6 +101,7 @@ class ConversionRequest(CommandMeta):
 
 
 class IngredientConversion(ConversionRequest):
+    source: PrimaryProvenance | None = Field(default=None, exclude_if=lambda value: value is None)
     id: UUIDText
     version: Annotated[StrictInt, Field(gt=0)]
     recorded_at: AwareDatetime
@@ -310,6 +339,25 @@ def apply_overlays(candidates, snapshot, conversions):
                 line.quantity = Quantity.model_construct(
                     value=format(amount, "f"), unit=conversion.to_unit
                 )
+                if recipe.provenance_version == "2.0":
+                    line.quantity_source = DerivedProvenance(
+                        rule="CONTEXTUAL_CONVERSION",
+                        rule_version="1.0",
+                        inputs=[
+                            InformationRef(
+                                entity="RECIPE",
+                                entity_id=str(recipe.id),
+                                version=recipe.version,
+                                field=f"ingredients/{recipe.ingredients.index(line)}/original_measure/source",
+                            ),
+                            InformationRef(
+                                entity="CONVERSION",
+                                entity_id=str(conversion.id),
+                                version=conversion.version,
+                                field="conversion",
+                            ),
+                        ],
+                    )
                 line.quantity_gap = None
                 line.preparation_basis = "RAW"
     return recipes, effective

@@ -44,9 +44,11 @@ from dona_maria.production import (
     ProductionPlan,
     RecipeAcceptance,
     RecipeFeedback,
+    UserEvidence,
     UserPreference,
     explicit_acceptance,
 )
+from dona_maria.provenance import InformationRef, UserProvidedSource
 from dona_maria.quotes import (
     ComplementQuote,
     QuoteConfirmation,
@@ -590,6 +592,8 @@ def evaluate_plan(
             inputs["plan"].pop("quote_selections")
         for item in inputs["plan"]["items"]:
             item["recipe_version"] = item["business_recipe_version"]
+    if any(r.provenance_version == "2.0" and r.id in active_ids for r in candidates):
+        inputs["fingerprint_version"] = "2.0"
     digest = fingerprint(inputs)
     feasibility = []
     gaps = [] if plan and plan.items else ["Confirme o plano de produção."]
@@ -1080,6 +1084,18 @@ def record_conversion(state, request, snapshot, now):
         version=previous.version + 1 if previous else 1,
         recorded_at=now,
     )
+    if recipe and recipe.provenance_version == "2.0" and isinstance(request.evidence, UserEvidence):
+        conversion.source = UserProvidedSource(
+            kind="USER_PROVIDED",
+            evidence=request.evidence,
+            local_event_id=request.evidence.turn_ref.removeprefix("local:"),
+            information_ref=InformationRef(
+                entity="CONVERSION",
+                entity_id=str(conversion.id),
+                version=conversion.version,
+                field="conversion",
+            ),
+        )
     state.ingredient_conversions.append(conversion)
     evaluation = current_evaluation()
     if evaluation["fingerprint"] != before:

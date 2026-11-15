@@ -355,8 +355,108 @@ class SQLiteWorkspaceRepository:
                 _validate_ingredient_references(snapshot, candidate, state.complement_ingredients)
         except (BusinessRuleError, ValueError) as exc:
             raise sqlite3.DatabaseError("Referência de candidata inválida.") from exc
+        SQLiteWorkspaceRepository._validate_recipe_provenance(db, workspace_id, state)
         SQLiteWorkspaceRepository._validate_pricing(state, snapshot, row["revision"])
         return row["revision"], state, snapshot
+
+    @staticmethod
+    def _validate_recipe_provenance(db, workspace_id, state):
+        from dona_maria.provenance import source_fields
+
+        expanded_recipes = {
+            str(r.id)
+            for r in state.candidates
+            if r.provenance_version is not None
+            or any(s["kind"] != "WEB" for _, s in source_fields(r.model_dump(mode="json")))
+        }
+        if not db.execute("SELECT 1 FROM schema_migrations WHERE version=2").fetchone():
+            if expanded_recipes:
+                raise sqlite3.DatabaseError("Proveniência exige aprovação local.")
+            return
+        snapshots = {}
+        events = {}
+        conversions = {}
+        for row in db.execute(
+            "SELECT event_json, result_json FROM user_change_proposals "
+            "WHERE workspace_id=? AND status='APPROVED'",
+            (workspace_id,),
+        ):
+            try:
+                event = _decode_json(row["event_json"])
+                result = _decode_json(row["result_json"])
+                if not isinstance(result, dict) or not isinstance(result.get("data"), dict):
+                    raise sqlite3.DatabaseError("Resultado local inválido.")
+                conversion = result["data"].get("conversion")
+                if conversion and conversion.get("source") is not None:
+                    conversions[conversion["id"]] = (conversion, event["id"])
+                candidate = result["data"].get("candidate")
+                if candidate:
+                    content = {
+                        k: v for k, v in candidate.items() if k in RecipeCandidate.model_fields
+                    }
+                    content["requirements"] = [
+                        {k: v for k, v in requirement.items() if k != "status"}
+                        for requirement in content["requirements"]
+                    ]
+                    snapshots[(candidate["id"], candidate["version"])] = content
+                    events[event["id"]] = (candidate["id"], candidate["version"])
+                    if candidate.get("provenance_version") == "2.0":
+                        expanded_recipes.add(candidate["id"])
+            except (KeyError, TypeError, AttributeError) as exc:
+                raise sqlite3.DatabaseError("Registro local inválido.") from exc
+        if (
+            not expanded_recipes
+            and not conversions
+            and not any(c.source is not None for c in state.ingredient_conversions)
+        ):
+            return
+        references = SQLiteWorkspaceRepository._approval_refs(db, workspace_id)
+        for conversion in state.ingredient_conversions:
+            attested = conversions.get(str(conversion.id))
+            if conversion.source is not None or attested is not None:
+                content = conversion.model_dump(mode="json")
+                source = content.get("source") or {}
+                if (
+                    attested != (content, source.get("local_event_id"))
+                    or source.get("evidence", {}).get("turn_ref") not in references
+                    or source.get("information_ref")
+                    != {
+                        "entity": "CONVERSION",
+                        "entity_id": str(conversion.id),
+                        "version": conversion.version,
+                        "field": "conversion",
+                    }
+                ):
+                    raise sqlite3.DatabaseError("Conversão sem atestação exata.")
+        for recipe in state.candidates:
+            if str(recipe.id) not in expanded_recipes:
+                continue
+            if recipe.provenance_version != "2.0":
+                raise sqlite3.DatabaseError("Versão de proveniência ausente.")
+            content = recipe.model_dump(mode="json")
+            if snapshots.get((str(recipe.id), recipe.version)) != content:
+                raise sqlite3.DatabaseError("Receita diverge da manifestação local.")
+            for path, source in source_fields(content):
+                if source["kind"] != "USER_PROVIDED":
+                    continue
+                ref = source.get("information_ref")
+                evidence = source.get("evidence")
+                event = source.get("local_event_id")
+                if (
+                    not ref
+                    or not evidence
+                    or evidence["turn_ref"] != "local:" + str(event)
+                    or evidence["turn_ref"] not in references
+                    or ref["entity"] != "RECIPE"
+                    or ref["entity_id"] != str(recipe.id)
+                    or ref["field"] != path
+                    or events.get(event) != (str(recipe.id), ref["version"])
+                    or dict(source_fields(snapshots.get((str(recipe.id), ref["version"]), {}))).get(
+                        path
+                    )
+                    != source
+                ):
+                    raise sqlite3.DatabaseError("Origem sem atestação do campo exato.")
 
     @staticmethod
     def _validate_pricing(
@@ -587,6 +687,21 @@ class SQLiteWorkspaceRepository:
                     "IDEMPOTENCY_CONFLICT", "Operação já usada com outro conteúdo."
                 )
             return _replay_result(replay, loaded[0])
+        from dona_maria.provenance import source_fields
+
+        declared_sources = list(source_fields(request.candidate.model_dump(mode="json")))
+        if any(
+            s["kind"] in {"USER_SIMULATION", "USER_REPORTED_MEASUREMENT"}
+            for _, s in declared_sources
+        ):
+            raise BusinessRuleError("SOURCE_NOT_LINKED", "Esse fluxo ainda não está habilitado.")
+        if not locally_approved and (
+            request.candidate.origin is not None
+            or request.candidate.provenance_version is not None
+            or any(line.quantity_source is not None for line in request.candidate.ingredients)
+            or any(s["kind"] != "WEB" for _, s in declared_sources)
+        ):
+            raise BusinessRuleError("AUTHORIZATION_REQUIRED", "Use proposta e aprovação local.")
         revision, state, snapshot = loaded
         if (
             not locally_approved
@@ -595,7 +710,7 @@ class SQLiteWorkspaceRepository:
             raise BusinessRuleError("AUTHORIZATION_REQUIRED", "Use proposta e aprovação local.")
         if revision != request.expected_revision:
             raise BusinessRuleError("STALE_REVISION", "Recarregue a revisão atual do workspace.")
-        if not request.candidate.sources:
+        if not request.candidate.sources and request.candidate.origin is None:
             raise BusinessRuleError("SOURCE_REQUIRED", "Candidata pesquisada exige fonte.")
         _validate_ingredient_references(snapshot, request.candidate, state.complement_ingredients)
         previous = next((item for item in state.candidates if item.id == request.recipe_id), None)
@@ -609,6 +724,33 @@ class SQLiteWorkspaceRepository:
             version=previous.version + 1 if previous else 1,
             recorded_at=now,
         )
+        from dona_maria.provenance import InformationRef
+
+        content = candidate.model_dump(mode="json")
+        human = False
+        for path, source in source_fields(content):
+            if source["kind"] == "USER_PROVIDED":
+                if (
+                    not locally_approved
+                    or not source.get("evidence")
+                    or not source.get("local_event_id")
+                ):
+                    raise BusinessRuleError(
+                        "AUTHORIZATION_REQUIRED", "A origem humana exige aprovação local."
+                    )
+                human = True
+                source["information_ref"] = InformationRef(
+                    entity="RECIPE",
+                    entity_id=str(candidate.id),
+                    version=candidate.version,
+                    field=path,
+                ).model_dump(mode="json")
+        if human:
+            content["provenance_version"] = "2.0"
+            candidate = RecipeCandidate.model_validate(content)
+            from dona_maria.ingredients import materialize_recipe_quantities
+
+            materialize_recipe_quantities(candidate)
         material_change = (
             previous is None or candidate.business_content() != previous.business_content()
         )

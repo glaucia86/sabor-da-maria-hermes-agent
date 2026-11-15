@@ -1,72 +1,34 @@
 """Contratos de candidatas pesquisadas, sem aceite ou decisões financeiras."""
 
-from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Annotated, Literal
 from uuid import UUID, uuid4
 
 from pydantic import (
     AwareDatetime,
-    BaseModel,
-    BeforeValidator,
-    ConfigDict,
     Field,
-    HttpUrl,
     StrictInt,
     field_validator,
     model_validator,
 )
 
+from dona_maria.provenance import (
+    CandidateModel,
+    Note,
+    OutputProvenance,
+    PrimaryProvenance,
+    RecipeOrigin,
+    ShortText,
+    UUIDText,
+    WebSource,
+    source_fields,
+)
+from dona_maria.provenance import (
+    require_uuid_text as require_uuid_text,
+)
 
-def require_uuid_text(value: object) -> str:
-    if not isinstance(value, str):
-        raise ValueError("UUID deve ser textual.")
-    return value
-
-
-UUIDText = Annotated[UUID, BeforeValidator(require_uuid_text)]
-ShortText = Annotated[str, Field(min_length=1, max_length=200)]
-Note = Annotated[str, Field(min_length=1, max_length=4000)]
 QuantityText = Annotated[str, Field(pattern=r"^[0-9]{1,12}(\.[0-9]{1,6})?$")]
 Category = Literal["EQUIPMENT", "SKILL", "OPERATION"]
-
-
-class CandidateModel(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-
-class WebSource(CandidateModel):
-    kind: Literal["WEB"] = "WEB"
-    url: HttpUrl
-    title: ShortText
-    excerpt: Note
-    retrieved_at: AwareDatetime
-
-    @field_validator("retrieved_at", mode="before")
-    @classmethod
-    def textual_retrieval(cls, value: object) -> str:
-        if not isinstance(value, str):
-            raise ValueError("Data de recuperação deve ser RFC 3339 textual com timezone.")
-        return value
-
-    @field_validator("retrieved_at")
-    @classmethod
-    def utc_retrieval(cls, value: datetime) -> datetime:
-        return value.astimezone(UTC)
-
-    @field_validator("url", mode="before")
-    @classmethod
-    def bounded_url(cls, value: object) -> object:
-        if not isinstance(value, str) or len(value) > 2048:
-            raise ValueError("URL deve ser HTTP/HTTPS textual até 2048 caracteres.")
-        return value
-
-    @field_validator("url")
-    @classmethod
-    def credential_free_url(cls, value: HttpUrl) -> HttpUrl:
-        if value.username is not None or value.password is not None:
-            raise ValueError("URL de fonte não pode conter credenciais.")
-        return value
 
 
 class Quantity(CandidateModel):
@@ -92,17 +54,20 @@ class OriginalMeasure(CandidateModel):
     raw_text: Note
     value: QuantityText | None = None
     unit_label: ShortText
-    source: WebSource
+    source: PrimaryProvenance
 
 
 class RecipeIngredientInput(CandidateModel):
+    quantity_source: OutputProvenance | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
     description: ShortText
     original_measure: OriginalMeasure
     ingredient_id: UUIDText | None = None
     quantity: Quantity | None = None
     quantity_gap: Note | None = None
     preparation_basis: Literal["RAW", "COOKED", "UNKNOWN"] = "UNKNOWN"
-    source: WebSource
+    source: PrimaryProvenance
 
     @model_validator(mode="after")
     def explicit_quantity_gap(self):
@@ -118,7 +83,7 @@ class RecipeIngredient(RecipeIngredientInput):
 class RecipeYield(CandidateModel):
     servings_per_batch: Annotated[StrictInt, Field(gt=0)]
     sale_unit_label: ShortText
-    source: WebSource
+    source: PrimaryProvenance
 
 
 class CriticalRequirementInput(CandidateModel):
@@ -130,7 +95,7 @@ class CriticalRequirementInput(CandidateModel):
     value: str | bool | None = None
     unit: ShortText | None = None
     reason: Note
-    source: WebSource
+    source: PrimaryProvenance
 
 
 class CriticalRequirement(CriticalRequirementInput):
@@ -142,7 +107,7 @@ class CategoryReview(CandidateModel):
     requirement_keys: list[ShortText]
     method_version: Annotated[StrictInt, Field(gt=0)]
     not_applicable_reason: Note | None = None
-    source: WebSource
+    source: PrimaryProvenance
 
     @model_validator(mode="after")
     def explain_empty_category(self):
@@ -152,16 +117,20 @@ class CategoryReview(CandidateModel):
 
 
 class CandidateInput(CandidateModel):
+    provenance_version: Literal["2.0"] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    origin: RecipeOrigin | None = Field(default=None, exclude_if=lambda value: value is None)
     title: ShortText
-    sources: list[WebSource] = []
+    sources: list[PrimaryProvenance] = []
     ingredients: list[RecipeIngredientInput]
     method: Annotated[str, Field(min_length=1, max_length=12000)] | None = None
-    method_source: WebSource | None = None
+    method_source: PrimaryProvenance | None = None
     method_gap: Note | None = None
     yield_per_batch: RecipeYield | None = None
     yield_gap: Note | None = None
     operational_context: Note | None = None
-    context_source: WebSource | None = None
+    context_source: PrimaryProvenance | None = None
     context_gap: Note | None = None
     requirements: list[CriticalRequirementInput] = []
     category_reviews: list[CategoryReview] = []
@@ -179,7 +148,7 @@ class CandidateInput(CandidateModel):
             raise ValueError("Contexto exige fonte.")
         if not self.operational_context and not self.context_gap:
             raise ValueError("Contexto ausente exige lacuna explícita.")
-        urls = {str(source.url) for source in self.sources}
+        urls = {str(source.url) for source in self.sources if isinstance(source, WebSource)}
         references = [
             self.method_source,
             self.context_source,
@@ -191,7 +160,9 @@ class CandidateInput(CandidateModel):
             for source in (item.source, item.original_measure.source)
         ]
         references += [item.source for item in [*self.requirements, *self.category_reviews]]
-        if urls and any(str(source.url) not in urls for source in references if source):
+        if urls and any(
+            str(source.url) not in urls for source in references if isinstance(source, WebSource)
+        ):
             raise ValueError("Origem do dado não pertence às fontes da candidata.")
         categories = [review.category for review in self.category_reviews]
         if len(categories) != len(set(categories)):
@@ -250,8 +221,17 @@ class RecipeCandidate(CandidateInput):
 
     def business_content(self) -> dict:
         payload = self.model_dump(mode="json")
-        data = {name: payload[name] for name in CandidateInput.model_fields}
+        data = {name: payload[name] for name in CandidateInput.model_fields if name in payload}
         data.pop("title")
+        # Uma nova atestação dos mesmos valores não altera a base financeira.
+        for _, source in source_fields(data):
+            if source["kind"] == "USER_PROVIDED":
+                for key in ("evidence", "local_event_id", "information_ref"):
+                    source.pop(key, None)
+            elif source["kind"] == "DERIVED":
+                for reference in source["inputs"]:
+                    if reference["entity"] == "RECIPE" and reference["entity_id"] == str(self.id):
+                        reference.pop("version")
         for ingredient in data["ingredients"]:
             ingredient.pop("line_id", None)
         for requirement in data["requirements"]:
