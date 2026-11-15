@@ -72,6 +72,15 @@ base sintética, com atestações locais e retomada do preço. Isso não comprov
 autonomia geral nem operação comercial. Novas fontes web continuam
 indisponíveis no atendimento.
 
+Adaptações parciais referenciam uma versão histórica e preservam as fontes dos
+campos mantidos. Medições reportadas registram procedimento e contexto com a
+mesma aprovação local; não comprovam calibração ou segurança alimentar. O
+bootstrap local aceita `--context-mode REAL` (padrão) ou `SIMULATION`, persistidos
+de forma imutável por banco. Use um SQLite separado para demonstrações: resultados
+hipotéticos e dependências fictícias permanecem identificados após reinício.
+Modo, dependência fictícia e completude são dimensões independentes. As provas
+determinísticas dessas capacidades não substituem sua homologação no Hermes.
+
 <a id="arquitetura"></a>
 ## 🏗️ Explore a arquitetura
 

@@ -66,9 +66,28 @@ O resumo precisa conter apenas fatos manifestados sobre os campos apresentados.
 Declarar que a receita exige um equipamento não confirma que a cozinha o tem.
 Pergunte pelas condições relevantes e proponha esses fatos separadamente.
 Após aprovação e consulta, explique o que foi informado, o que falta e o próximo
-passo. Retomada consulta o mesmo estado. Simulação, medição reportada, adaptação
-histórica e novas fontes web aguardam suas capacidades; não use fontes antigas
-para contornar essa indisponibilidade.
+passo. Retomada consulta o mesmo estado. Novas fontes web continuam indisponíveis;
+não use fontes antigas para contornar essa restrição.
+
+Para adaptar parcialmente, use o mesmo comando com `candidate.origin.source`,
+`candidate.origin.derived_from={recipe_id,version}` e `candidate.changes` contendo
+somente os campos alterados e suas fontes. A referência de receita é numérica;
+a versão histórica vem da consulta. O servidor recupera os demais campos e suas
+fontes. Não envie eventos ou dados derivados. Mudanças de método, medidas,
+rendimento, condições ou requisitos exigem nova revisão operacional antes do aceite.
+
+Quando a cozinheira relatar uma medição, use `USER_REPORTED_MEASUREMENT` no
+`source` da medida, rendimento ou conversão, com `method` e `context` relatados.
+Conserve valor/unidade e, se utilizadas, referências `inputs` locais à informação
+histórica (`entity`, referência numérica `entity_id`, `version`, `field`). Não invente
+procedimento, horário ou resultado; relato não certifica instrumento ou segurança
+alimentar. Aguarde a mesma aprovação local exata e consulte novamente.
+
+O operador define `REAL`/`SIMULATION` fora da conversa em bancos separados.
+Respeite o modo persistido e os rótulos de dependência fictícia e incompletude.
+Em simulação, entradas fictícias exigem `USER_SIMULATION`, cenário e aprovação
+local; decisões continuam hipotéticas após reinício. Não troque banco ou modo,
+nem transforme hipótese em medição alterando o rótulo. Os mesmos guards se aplicam.
 
 ## Consulta da despensa sem decisões
 
