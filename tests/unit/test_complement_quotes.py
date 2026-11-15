@@ -148,7 +148,7 @@ def test_purchase_simulation_distinguishes_whole_package_from_consumed_cost(clar
     )
     assert selected["ok"], selected
     evaluation = service.evaluate_purchase_plan({"workspace_id": workspace})["data"]
-    assert evaluation["is_simulation"] is True
+    assert evaluation["data_complete"] is False
     assert evaluation["purchase_status"] == "PENDING"
     assert evaluation["disbursement"] == "20.00"
     assert evaluation["remaining_budget"] == "60.00"
@@ -198,7 +198,7 @@ def test_unknown_offer_data_stays_a_gap_and_never_becomes_zero(clarification, mi
     )["ok"]
     evaluation = service.evaluate_purchase_plan({"workspace_id": workspace})["data"]
     assert evaluation["purchase_status"] == "PENDING"
-    assert evaluation["is_simulation"] is True
+    assert evaluation["data_complete"] is False
     if missing != "availability":
         assert evaluation["disbursement"] is None
         assert evaluation["remaining_budget"] is None

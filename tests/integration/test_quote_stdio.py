@@ -140,7 +140,7 @@ async def test_estimated_complement_roundtrip_and_replay_over_stdio(clarificatio
                 assert evaluation.is_error is False
                 data = evaluation.structured_content["data"]
                 assert data["purchase_status"] == "PENDING"
-                assert data["is_simulation"] is True
+                assert data["data_complete"] is False
                 assert data["disbursement"] == "20.00"
                 assert data["demand"][0]["purchase"]["planned_surplus"] == "800"
                 refused = await session.call_tool(

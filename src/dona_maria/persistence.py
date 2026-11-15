@@ -38,6 +38,7 @@ from dona_maria.planning import (
     evaluate_plan,
     fingerprint,
     invalidate_expired_acceptances,
+    plan_context,
     record_conversion,
     register_quote,
     resolve_ingredient,
@@ -341,6 +342,9 @@ class SQLiteWorkspaceRepository:
         if row is None:
             return None
         state = WorkspaceState.model_validate(_decode_json(row["state_json"]))
+        mode = SQLiteWorkspaceRepository.database_mode(db)
+        if (state.context_mode or "REAL") != mode:
+            raise sqlite3.DatabaseError("Modo do contexto diverge da origem imutável.")
         if str(state.id) != workspace_id or str(state.inventory_snapshot_id) != row["snapshot_id"]:
             raise sqlite3.DatabaseError("Referência de workspace inválida.")
         if row["state_schema_version"] != state.state_schema_version or row["revision"] < 0:
@@ -356,6 +360,29 @@ class SQLiteWorkspaceRepository:
         except (BusinessRuleError, ValueError) as exc:
             raise sqlite3.DatabaseError("Referência de candidata inválida.") from exc
         SQLiteWorkspaceRepository._validate_recipe_provenance(db, workspace_id, state)
+        if state.context_mode == "SIMULATION" or state.decision_simulation_dependencies:
+            expected = {}
+            for operation in db.execute(
+                "SELECT result_json FROM operations WHERE workspace_id=?", (workspace_id,)
+            ):
+                result = _decode_json(operation[0])
+                if not isinstance(result, dict) or not isinstance(result.get("data", {}), dict):
+                    raise sqlite3.DatabaseError("Operação histórica inválida.")
+                data = result.get("data", {})
+                for key in ("acceptance", "calculation", "decision"):
+                    decision = data.get(key)
+                    if decision is not None and not isinstance(decision, dict):
+                        raise sqlite3.DatabaseError("Decisão histórica inválida.")
+                    if decision and "depends_on_simulation" in decision:
+                        try:
+                            identifier = UUID(decision["id"])
+                        except (KeyError, TypeError, ValueError, AttributeError) as exc:
+                            raise sqlite3.DatabaseError("Identidade histórica inválida.") from exc
+                        if type(decision["depends_on_simulation"]) is not bool:
+                            raise sqlite3.DatabaseError("Origem fictícia inválida.")
+                        expected[identifier] = decision["depends_on_simulation"]
+            if expected != state.decision_simulation_dependencies:
+                raise sqlite3.DatabaseError("Origem fictícia diverge da operação histórica.")
         SQLiteWorkspaceRepository._validate_pricing(state, snapshot, row["revision"])
         return row["revision"], state, snapshot
 
@@ -383,6 +410,7 @@ class SQLiteWorkspaceRepository:
             str(r.id)
             for r in state.candidates
             if r.provenance_version is not None
+            or r.business_basis is not None
             or any(s["kind"] != "WEB" for _, s in source_fields(r.model_dump(mode="json")))
         }
         if not db.execute("SELECT 1 FROM schema_migrations WHERE version=2").fetchone():
@@ -453,8 +481,14 @@ class SQLiteWorkspaceRepository:
             if snapshots.get((str(recipe.id), recipe.version)) != content:
                 raise sqlite3.DatabaseError("Receita diverge da manifestação local.")
             for path, source in source_fields(content):
-                if source["kind"] != "USER_PROVIDED":
+                if source["kind"] not in {
+                    "USER_PROVIDED",
+                    "USER_REPORTED_MEASUREMENT",
+                    "USER_SIMULATION",
+                }:
                     continue
+                if source["kind"] == "USER_SIMULATION" and state.context_mode != "SIMULATION":
+                    raise sqlite3.DatabaseError("Origem fictícia fora da simulação.")
                 ref = source.get("information_ref")
                 evidence = source.get("evidence")
                 event = source.get("local_event_id")
@@ -464,12 +498,11 @@ class SQLiteWorkspaceRepository:
                     or evidence["turn_ref"] != "local:" + str(event)
                     or evidence["turn_ref"] not in references
                     or ref["entity"] != "RECIPE"
-                    or ref["entity_id"] != str(recipe.id)
                     or ref["field"] != path
-                    or events.get(event) != (str(recipe.id), ref["version"])
-                    or dict(source_fields(snapshots.get((str(recipe.id), ref["version"]), {}))).get(
-                        path
-                    )
+                    or events.get(event) != (ref["entity_id"], ref["version"])
+                    or dict(
+                        source_fields(snapshots.get((ref["entity_id"], ref["version"]), {}))
+                    ).get(path)
                     != source
                 ):
                     raise sqlite3.DatabaseError("Origem sem atestação do campo exato.")
@@ -603,13 +636,23 @@ class SQLiteWorkspaceRepository:
             return revision, snapshot
 
     def bootstrap(
-        self, snapshot: InventorySnapshot, now: datetime, workspace_id: str | None = None
+        self,
+        snapshot: InventorySnapshot,
+        now: datetime,
+        workspace_id: str | None = None,
+        *,
+        context_mode: str = "REAL",
     ) -> dict:
+        if context_mode not in {"REAL", "SIMULATION"}:
+            raise ValueError("Modo de contexto inválido.")
         with self.transaction(bootstrap=True) as db:
             if not self.check_schema(db):
                 for statement in SCHEMA:
                     db.execute(statement)
                 db.execute("INSERT INTO schema_migrations VALUES (1, ?)", (now.isoformat(),))
+            if db.execute("SELECT 1 FROM workspaces LIMIT 1").fetchone():
+                if self.database_mode(db) != context_mode:
+                    raise ValueError("Modo imutável; simulação exige banco separado.")
             if workspace_id is not None:
                 existing = self.load_state(db, str(UUID(workspace_id)))
                 if existing is None or existing[1].inventory_snapshot_id != snapshot.id:
@@ -627,6 +670,7 @@ class SQLiteWorkspaceRepository:
                 inventory_snapshot_id=snapshot.id,
                 created_at=now,
                 updated_at=now,
+                context_mode=context_mode,
             )
             db.execute(
                 "INSERT OR IGNORE INTO inventory_snapshots VALUES (?, ?, ?, ?, ?)",
@@ -657,7 +701,7 @@ class SQLiteWorkspaceRepository:
                     str(state.id),
                     "IMPORT_WORKSPACE",
                     fingerprint(snapshot.model_dump(mode="json")),
-                    canonical_json({"snapshot_id": str(snapshot.id)}),
+                    canonical_json({"snapshot_id": str(snapshot.id), "context_mode": context_mode}),
                     now.isoformat(),
                 ),
             )
@@ -679,11 +723,83 @@ class SQLiteWorkspaceRepository:
             )
         return result
 
+    @staticmethod
+    def database_mode(db):
+        modes = set()
+        for row in db.execute("SELECT payload_json FROM decisions WHERE kind='IMPORT_WORKSPACE'"):
+            payload = _decode_json(row[0])
+            if not isinstance(payload, dict) or payload.get("context_mode", "REAL") not in (
+                "REAL",
+                "SIMULATION",
+            ):
+                raise sqlite3.DatabaseError("Modo persistido inválido.")
+            modes.add(payload.get("context_mode", "REAL"))
+        if len(modes) != 1 or not modes <= {"REAL", "SIMULATION"}:
+            raise sqlite3.DatabaseError("Modo persistido inválido.")
+        return modes.pop()
+
+    @staticmethod
+    def historical_recipe(db, workspace_id, reference):
+        """Resolve somente versões comprometidas e auditadas no workspace vinculado."""
+        for row in db.execute(
+            "SELECT * FROM decisions WHERE workspace_id=? AND kind='REGISTER_RECIPE_CANDIDATE'",
+            (workspace_id,),
+        ):
+            content = _decode_json(row["payload_json"])
+            if (content.get("id"), content.get("version")) != (
+                str(reference.recipe_id),
+                reference.version,
+            ):
+                continue
+            candidate = RecipeCandidate.model_validate(content)
+            snapshot = db.execute(
+                "SELECT snapshot_id FROM workspaces WHERE id=?", (workspace_id,)
+            ).fetchone()
+            expected = fingerprint(
+                {"snapshot_id": snapshot[0], "candidate": content, "pricing_policy_version": "1.0"}
+            )
+            if row["fingerprint"] != expected:
+                raise sqlite3.DatabaseError("Versão histórica inconsistente.")
+            return candidate
+        raise BusinessRuleError("NOT_FOUND", "Versão histórica não pertence ao contexto.")
+
+    @staticmethod
+    def resolve_information(db, workspace_id, reference):
+        from dona_maria.provenance import RecipeVersionRef, source_fields
+
+        if reference.entity == "RECIPE":
+            recipe = SQLiteWorkspaceRepository.historical_recipe(
+                db,
+                workspace_id,
+                RecipeVersionRef(recipe_id=str(reference.entity_id), version=reference.version),
+            )
+            source = dict(source_fields(recipe.model_dump(mode="json"))).get(reference.field)
+            if source is not None:
+                return source
+        else:
+            for row in db.execute(
+                "SELECT result_json FROM operations WHERE workspace_id=? "
+                "AND tool='record_ingredient_conversion'",
+                (workspace_id,),
+            ):
+                conversion = _decode_json(row[0]).get("data", {}).get("conversion", {})
+                if (conversion.get("id"), conversion.get("version"), reference.field) == (
+                    str(reference.entity_id),
+                    reference.version,
+                    "conversion",
+                ) and conversion.get("source"):
+                    return conversion["source"]
+        raise BusinessRuleError("NOT_FOUND", "Informação não pertence à versão do contexto.")
+
     def register_candidate(self, request: RegisterCandidateRequest, now: datetime) -> dict:
         with self.transaction() as db:
             return self._register_candidate(db, request, now)
 
     def _register_candidate(self, db, request, now, *, locally_approved=False):
+        from dona_maria.candidates import CandidateAdaptation
+
+        if isinstance(request.candidate, CandidateAdaptation):
+            raise BusinessRuleError("AUTHORIZATION_REQUIRED", "Use proposta e aprovação local.")
         workspace_id, operation_id = str(request.workspace_id), str(request.operation_id)
         payload_hash = fingerprint(request.model_dump(mode="json"))
         self.check_schema(db)
@@ -706,11 +822,10 @@ class SQLiteWorkspaceRepository:
         from dona_maria.provenance import source_fields
 
         declared_sources = list(source_fields(request.candidate.model_dump(mode="json")))
-        if any(
-            s["kind"] in {"USER_SIMULATION", "USER_REPORTED_MEASUREMENT"}
-            for _, s in declared_sources
+        if loaded[1].context_mode != "SIMULATION" and any(
+            s["kind"] == "USER_SIMULATION" for _, s in declared_sources
         ):
-            raise BusinessRuleError("SOURCE_NOT_LINKED", "Esse fluxo ainda não está habilitado.")
+            raise BusinessRuleError("CONTEXT_MISMATCH", "Origem fictícia exige SIMULATION.")
         if not locally_approved and (
             request.candidate.origin is not None
             or request.candidate.provenance_version is not None
@@ -734,21 +849,6 @@ class SQLiteWorkspaceRepository:
             raise BusinessRuleError("NOT_FOUND", "Candidata não pertence ao workspace.")
         if previous and previous.version != request.expected_recipe_version:
             raise BusinessRuleError("STALE_REVISION", "Recarregue a versão atual da candidata.")
-        if db.execute("SELECT 1 FROM schema_migrations WHERE version=3").fetchone():
-            from dona_maria.research import verify_web_sources
-
-            legacy = {
-                canonical_json(s)
-                for _, s in source_fields(previous.model_dump(mode="json") if previous else {})
-                if s["kind"] == "WEB"
-            }
-            verify_web_sources(
-                db,
-                workspace_id,
-                request.candidate.model_dump(mode="json"),
-                purpose="RECIPE",
-                legacy=legacy,
-            )
         candidate = RecipeCandidate(
             **request.candidate.model_dump(mode="json"),
             id=previous.id if previous else uuid4(),
@@ -758,9 +858,34 @@ class SQLiteWorkspaceRepository:
         from dona_maria.provenance import InformationRef
 
         content = candidate.model_dump(mode="json")
+        from dona_maria.provenance import inherited_sources
+
+        inherited = {}
+        original = None
+        if candidate.origin and candidate.origin.derived_from:
+            original = self.historical_recipe(db, workspace_id, candidate.origin.derived_from)
+            inherited = inherited_sources(content, original.model_dump(mode="json"))
+        if db.execute("SELECT 1 FROM schema_migrations WHERE version=3").fetchone():
+            from dona_maria.research import verify_web_sources
+
+            legacy = {
+                canonical_json(s)
+                for _, s in source_fields(previous.model_dump(mode="json") if previous else {})
+                if s["kind"] == "WEB"
+            }
+            legacy.update(
+                canonical_json(s)
+                for s in inherited.values()
+                if s["kind"] == "WEB" and s.get("research_result_id") is None
+            )
+            verify_web_sources(db, workspace_id, content, purpose="RECIPE", legacy=legacy)
         human = False
         for path, source in source_fields(content):
-            if source["kind"] == "USER_PROVIDED":
+            if path in inherited:
+                source.clear()
+                source.update(inherited[path])
+                continue
+            if source["kind"] in {"USER_PROVIDED", "USER_REPORTED_MEASUREMENT", "USER_SIMULATION"}:
                 if (
                     not locally_approved
                     or not source.get("evidence")
@@ -776,21 +901,58 @@ class SQLiteWorkspaceRepository:
                     version=candidate.version,
                     field=path,
                 ).model_dump(mode="json")
-        if human or any(
-            s["kind"] == "WEB" and s.get("research_result_id") for _, s in source_fields(content)
+        if (
+            human
+            or inherited
+            or any(
+                s["kind"] == "WEB" and s.get("research_result_id")
+                for _, s in source_fields(content)
+            )
         ):
             content["provenance_version"] = "2.0"
             candidate = RecipeCandidate.model_validate(content)
             from dona_maria.ingredients import materialize_recipe_quantities
 
-            materialize_recipe_quantities(candidate)
+            materialize_recipe_quantities(
+                candidate, lambda ref: self.resolve_information(db, workspace_id, ref)
+            )
+        if original:
+            if candidate.operational_content() != original.operational_content():
+                candidate.category_reviews = []
+            else:
+                for review in candidate.category_reviews:
+                    if (
+                        review in original.category_reviews
+                        and review.method_version == original.version
+                    ):
+                        review.method_version = candidate.version
+        from dona_maria.provenance import InformationRef, context_labels, transitive_inputs
+
+        roots = []
+        for _, source in source_fields(candidate.model_dump(mode="json")):
+            if source["kind"] != "DERIVED":
+                roots.extend(
+                    transitive_inputs(
+                        [InformationRef.model_validate(ref) for ref in source.get("inputs", [])],
+                        lambda ref: self.resolve_information(db, workspace_id, ref),
+                    )
+                )
+        candidate.depends_on_simulation = context_labels(
+            None,
+            [
+                candidate.model_dump(mode="json"),
+                *[self.resolve_information(db, workspace_id, ref) for ref in roots],
+            ],
+        )["depends_on_simulation"]
         material_change = (
-            previous is None or candidate.business_content() != previous.business_content()
+            previous is None or candidate.business_premises() != previous.business_premises()
         )
         candidate.business_version = (
             previous.business_version + int(material_change) if previous else 1
         )
         if previous and not material_change:
+            if candidate.business_content() != previous.business_content():
+                candidate.business_basis = previous.business_content()
             candidate.ingredients = previous.ingredients
             candidate.requirements = previous.requirements
         previously_invalid = set(state.invalidated_acceptance_ids)
@@ -930,6 +1092,12 @@ class SQLiteWorkspaceRepository:
                 raise BusinessRuleError("IDEMPOTENCY_CONFLICT", "Operação já utilizada.")
             return _replay_result(replay, loaded[0])
         revision, state, snapshot = loaded
+        if (
+            isinstance(request, ConversionRequest)
+            and request.source is not None
+            and not locally_approved
+        ):
+            raise BusinessRuleError("AUTHORIZATION_REQUIRED", "Use proposta e aprovação local.")
         if db.execute("SELECT 1 FROM schema_migrations WHERE version=2").fetchone():
             if not locally_approved and type(request) is not CalculatePricingRequest:
                 raise BusinessRuleError("AUTHORIZATION_REQUIRED", "Use proposta e aprovação local.")
@@ -975,6 +1143,25 @@ class SQLiteWorkspaceRepository:
             data = resolve_ingredient(state, request, snapshot, now)
         elif isinstance(request, ConversionRequest):
             data = record_conversion(state, request, snapshot, now)
+            conversion = state.ingredient_conversions[-1]
+            if conversion.source is not None:
+                from dona_maria.provenance import context_labels, transitive_inputs
+
+                conversion.input_origins = transitive_inputs(
+                    getattr(conversion.source, "inputs", []),
+                    lambda ref: self.resolve_information(db, workspace_id, ref),
+                )
+                conversion.depends_on_simulation = context_labels(
+                    None,
+                    [
+                        conversion.source.model_dump(mode="json"),
+                        *[
+                            self.resolve_information(db, workspace_id, ref)
+                            for ref in conversion.input_origins
+                        ],
+                    ],
+                )["depends_on_simulation"]
+                data["conversion"] = conversion.model_dump(mode="json")
         elif isinstance(request, SaveMenuDecisionRequest):
             data = _save_menu_decision(state, request, snapshot, revision, now)
         elif isinstance(request, CalculatePricingRequest):
@@ -1019,6 +1206,18 @@ class SQLiteWorkspaceRepository:
             )
             data["next_action"] = correction_next_action(state, data["summary"])
         data.update(_invalidation_summary(state, previously_invalid))
+        labels = plan_context(state)
+        if "summary" in data:
+            data["summary"].update(labels)
+        if labels["hypothetical"]:
+            data.update(labels)
+            for key in ("acceptance", "calculation", "decision"):
+                if key in data:
+                    data[key].update(labels)
+                    identifier = UUID(data[key]["id"])
+                    state.decision_simulation_dependencies.setdefault(
+                        identifier, labels["depends_on_simulation"]
+                    )
         result = {
             "schema_version": "1.0",
             "ok": True,
@@ -1120,5 +1319,5 @@ class SQLiteWorkspaceRepository:
                 operation_id=None,
                 warnings=[],
                 error=None,
-                data=evaluation,
+                data=evaluation | plan_context(state),
             )

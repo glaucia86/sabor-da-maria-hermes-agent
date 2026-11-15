@@ -27,7 +27,7 @@ from dona_maria.persistence import (
     SQLiteWorkspaceRepository,
     requires_local_review,
 )
-from dona_maria.planning import WorkspaceState, evaluate_plan, pricing_view
+from dona_maria.planning import WorkspaceState, evaluate_plan, plan_context, pricing_view
 from dona_maria.pricing import (
     FINANCIAL_CONTEXT,
     CalculatePricingRequest,
@@ -42,7 +42,7 @@ from dona_maria.production import (
     PlanRequest,
     PreferencesRequest,
 )
-from dona_maria.provenance import source_fields
+from dona_maria.provenance import context_labels, source_fields
 from dona_maria.quotes import ConfirmQuoteRequest, RegisterQuoteRequest, current_confirmation
 
 
@@ -256,6 +256,7 @@ class AttendanceService:
                 return {
                     "ok": True,
                     "data": {
+                        **context_labels(state.context_mode, state.model_dump(mode="json")),
                         "recipe": request.recipe,
                         "ingredient_cost_per_serving": calculation["cmv_per_serving"],
                         "minimum_price": calculation["minimum"]["price"],
@@ -378,6 +379,20 @@ class AttendanceService:
                     "recipes": [
                         {
                             "recipe": index,
+                            "version": recipe["version"],
+                            "adapted_from": _attendance_origin(recipe, recipes),
+                            "information_origins": [
+                                {
+                                    "field": path,
+                                    "kind": source["kind"],
+                                    **{
+                                        key: source[key]
+                                        for key in ("method", "context", "scenario", "rule")
+                                        if key in source
+                                    },
+                                }
+                                for path, source in source_fields(recipe)
+                            ],
                             "title": recipe["title"],
                             "status": recipe["status"],
                             "interest": recipe["interest"],
@@ -522,12 +537,20 @@ class AttendanceService:
                     ]
             return {
                 "ok": True,
-                "data": projected,
+                "data": projected
+                | context_labels(state.context_mode, state.model_dump(mode="json")),
                 "message": "Consulta realizada. Nenhuma alteração foi feita.",
             }
         except Exception:
             # Exceções de persistência/domínio nunca atravessam a fronteira de atendimento.
             return _attendance_failure()
+
+
+def _attendance_origin(recipe, references):
+    reference = (recipe.get("origin") or {}).get("derived_from")
+    if not reference:
+        return None
+    return {"recipe": references.get(reference["recipe_id"]), "version": reference["version"]}
 
 
 def _attendance_kitchen_facts(data):
@@ -1072,7 +1095,25 @@ def _project_business_state(state: WorkspaceState, evaluation: dict, now: dateti
             candidate["status"] = "MENU_SELECTED"
         if candidate["interest"] == "REJECTED":
             candidate["status"] = "REJECTED"
+    labels = plan_context(state)
+    evaluation = evaluation | labels
+    for entry in [
+        *acceptances,
+        *prices["pricing_calculations"],
+        *prices["menu_decisions"],
+        *prices["menu"],
+    ]:
+        if labels["hypothetical"]:
+            entry.update(
+                labels
+                | {
+                    "depends_on_simulation": state.decision_simulation_dependencies.get(
+                        UUID(entry["id"]), labels["depends_on_simulation"]
+                    )
+                }
+            )
     return {
+        **context_labels(state.context_mode, state.model_dump(mode="json")),
         "inventory_snapshot_id": str(state.inventory_snapshot_id),
         "budget_initial": state.budget_initial,
         "budget_remaining": evaluation["remaining_budget"]

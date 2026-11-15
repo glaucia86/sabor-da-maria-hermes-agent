@@ -111,8 +111,18 @@ XLSX mínimo, com um ingrediente fictício de teste:
 uv run --locked --no-sync python -c "from pathlib import Path; from openpyxl import Workbook; p=Path('artifacts/private/input/synthetic.xlsx'); p.parent.mkdir(parents=True, exist_ok=True); w=Workbook(); s=w.active; s.title='Despensa'; s.append(['Ingrediente','Quantidade em estoque','Unidade']); s.append(['Arroz',5,'kg']); s=w.create_sheet('Precos'); s.append(['Ingrediente','Quantidade comprada','Unidade','Preço total pago (R$)']); s.append(['Arroz',5,'kg','24.90']); w.save(p); w.close(); print(p.resolve())"
 ```
 
-Use o mesmo comando de bootstrap acima, alterando somente `--inventory`
-para `artifacts/private/input/synthetic.xlsx`.
+Crie um banco separado para o contexto fictício:
+
+```sh
+uv run --locked --no-sync python -X utf8 -B -m dona_maria.bootstrap --database artifacts/private/simulation/workspace.sqlite3 --inventory artifacts/private/input/synthetic.xlsx --allowed-directory artifacts/private/input --context-mode SIMULATION
+```
+
+Crie previamente o diretório `artifacts/private/simulation` se necessário.
+Configure o binding privado com o banco e o workspace retornado. O modo é
+imutável: o bootstrap recusa reutilizar banco REAL como SIMULATION e vice-versa,
+inclusive após renomear/copiar o arquivo. Não recrie nem apague um banco por
+incompatibilidade. Um banco legado sem modo permanece REAL; use outro banco
+novo para a demonstração fictícia. Nenhuma ferramenta MCP troca esse modo.
 
 Identifique esses dados como sintéticos durante a demonstração. Uma
 despensa importada não confirma equipamentos, habilidades, rendimento,

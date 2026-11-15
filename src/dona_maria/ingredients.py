@@ -29,7 +29,7 @@ _STANDARD_UNITS = {
 }
 
 
-def materialize_recipe_quantities(recipe):
+def materialize_recipe_quantities(recipe, resolve=None):
     """Confere equivalência métrica e atribui origem apenas à saída calculada."""
     for index, line in enumerate(recipe.ingredients):
         if line.quantity is None:
@@ -42,21 +42,36 @@ def materialize_recipe_quantities(recipe):
         with localcontext(_CONVERSION_CONTEXT):
             if Decimal(measure.value) * original[1] != Decimal(line.quantity.value) * target[1]:
                 raise ValueError("Quantidade diverge da medida original atestada.")
+        inputs = []
+        source = measure.source
+        if resolve:
+            from dona_maria.provenance import transitive_inputs
+
+            inputs = transitive_inputs(getattr(source, "inputs", []), resolve)
         line.quantity_source = DerivedProvenance(
+            depends_on_simulation=source.kind == "USER_SIMULATION"
+            or any(
+                (resolved := resolve(reference)).get("kind") == "USER_SIMULATION"
+                or resolved.get("depends_on_simulation", False)
+                for reference in inputs
+            ),
             rule="STANDARD_UNIT",
             rule_version="1.0",
             inputs=[
-                InformationRef(
+                getattr(source, "information_ref", None)
+                or InformationRef(
                     entity="RECIPE",
                     entity_id=str(recipe.id),
                     version=recipe.version,
                     field=f"ingredients/{index}/original_measure/source",
                 )
-            ],
+            ]
+            + inputs,
         )
 
 
 class ConversionRequest(CommandMeta):
+    source: PrimaryProvenance | None = Field(default=None, exclude_if=lambda value: value is None)
     ingredient_id: UUIDText
     from_unit: ShortText
     to_unit: Literal["g", "ml", "un"]
@@ -101,7 +116,10 @@ class ConversionRequest(CommandMeta):
 
 
 class IngredientConversion(ConversionRequest):
-    source: PrimaryProvenance | None = Field(default=None, exclude_if=lambda value: value is None)
+    depends_on_simulation: bool = Field(default=False, exclude_if=lambda value: not value)
+    input_origins: Annotated[list[InformationRef], Field(max_length=200)] = Field(
+        default_factory=list, exclude_if=lambda value: not value
+    )
     id: UUIDText
     version: Annotated[StrictInt, Field(gt=0)]
     recorded_at: AwareDatetime
@@ -341,6 +359,8 @@ def apply_overlays(candidates, snapshot, conversions):
                 )
                 if recipe.provenance_version == "2.0":
                     line.quantity_source = DerivedProvenance(
+                        depends_on_simulation=conversion.depends_on_simulation
+                        or getattr(recipe, "depends_on_simulation", False),
                         rule="CONTEXTUAL_CONVERSION",
                         rule_version="1.0",
                         inputs=[
@@ -356,7 +376,8 @@ def apply_overlays(candidates, snapshot, conversions):
                                 version=conversion.version,
                                 field="conversion",
                             ),
-                        ],
+                        ]
+                        + conversion.input_origins,
                     )
                 line.quantity_gap = None
                 line.preparation_basis = "RAW"

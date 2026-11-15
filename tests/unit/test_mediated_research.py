@@ -16,6 +16,7 @@ from dona_maria.bootstrap import bootstrap_workspace
 from dona_maria.business_state import AttendanceService, BusinessStateReader
 from dona_maria.persistence import SQLiteWorkspaceRepository
 from dona_maria.planning import BusinessRuleError
+from dona_maria.provenance import source_fields
 from dona_maria.research import ResearchService, migrate_research
 
 
@@ -582,6 +583,186 @@ async def test_incomplete_persisted_metadata_is_refused_even_with_matching_docum
         service.materialize_source(identifier, "segment-1", purpose="RECIPE")
     with sqlite3.connect(research_workspace.database) as db:
         assert db.execute("SELECT payload_json FROM research_observations").fetchone()[0] == encoded
+
+
+@pytest.mark.parametrize("revise_existing", [False, True])
+def test_research_migration_preserves_adaptation_of_historical_legacy_web_recipe(
+    pricing_workspace, recipe_candidate, tmp_path, revise_existing
+):
+    recipe_candidate["method_source"] = recipe_candidate["method_source"] | {
+        "title": "Método histórico distinto",
+    }
+    reader, workspace, original, _, _, database = pricing_workspace()
+    migrate_proposals(reader.repository, tmp_path / "adaptation-v1.sqlite3")
+    local = ApprovalService(reader.repository)
+    changed = local.propose(
+        {
+            "workspace_id": workspace,
+            "operation_id": str(uuid4()),
+            "expected_revision": reader.repository.load(workspace)[0],
+            "command": {
+                "kind": "register_recipe_candidate",
+                "payload": {
+                    "recipe_id": original["id"],
+                    "expected_recipe_version": 1,
+                    "candidate": {
+                        "origin": {
+                            "source": {"kind": "USER_PROVIDED"},
+                            "derived_from": {"recipe_id": original["id"], "version": 1},
+                        },
+                        "changes": {
+                            "method": "Método substituído pela cozinheira na versão dois.",
+                            "method_source": {"kind": "USER_PROVIDED"},
+                        },
+                    },
+                },
+            },
+        }
+    )
+    assert local.approve(workspace, changed["id"], changed["hash"], attest=True)["ok"]
+    migrate_research(reader.repository, tmp_path / "adaptation-v2.sqlite3")
+    binding = AttendanceService(database, workspace, "ATTENDANCE")
+    before = reader.repository.load(workspace)
+    proposed = binding.call(
+        "propose_user_change",
+        {
+            "operation_id": str(uuid4()),
+            "command": {
+                "kind": "register_recipe_candidate",
+                "payload": {
+                    **({"recipe_id": 1} if revise_existing else {}),
+                    "candidate": {
+                        "origin": {
+                            "source": {"kind": "USER_PROVIDED"},
+                            "derived_from": {"recipe_id": 1, "version": 1},
+                        },
+                        "changes": {"title": "Outra candidata da mesma receita histórica"},
+                    },
+                },
+            },
+        },
+    )
+    assert proposed["ok"], proposed
+    assert reader.repository.load(workspace) == before
+    proposal = local.list(workspace)[-1]
+    applied = local.approve(workspace, proposal["id"], proposal["hash"], attest=True)
+    assert applied["ok"], applied
+    adapted = applied["data"]["candidate"]
+    assert (adapted["id"] == original["id"]) is revise_existing
+    assert adapted["sources"] == original["sources"]
+    assert adapted["method_source"] == original["method_source"]
+    assert "research_result_id" not in adapted["method_source"]
+    assert adapted["ingredients"][0]["quantity_source"]["kind"] == "DERIVED"
+    reopened = ApprovalService(SQLiteWorkspaceRepository(database))
+    after = reopened.repository.load(workspace)
+    assert reopened.approve(workspace, proposal["id"], proposal["hash"], attest=True) == applied
+    assert reopened.repository.load(workspace) == after
+    if not revise_existing:
+        assert after[1].candidates[0] == before[1].candidates[0]
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("mode", ["REAL", "SIMULATION"])
+async def test_registered_web_adaptation_keeps_reported_measurement_and_context(
+    tmp_path, inventory_file, recipe_candidate, mode
+):
+    database = tmp_path / "mixed-context.sqlite3"
+    workspace = bootstrap_workspace(
+        database, inventory_file, allowed_directory=tmp_path, context_mode=mode
+    )["workspace_id"]
+    repository = SQLiteWorkspaceRepository(database)
+    migrate_proposals(repository, tmp_path / "mixed-v1.sqlite3")
+    migrate_research(repository, tmp_path / "mixed-v2.sqlite3")
+    binding = AttendanceService(database, workspace, "ATTENDANCE")
+
+    async def search(query):
+        return [{"url": "https://example.org/arroz", "title": "Arroz", "description": "Receita"}]
+
+    class Extractor:
+        async def extract(self, url):
+            return synthetic_web_extraction(url, "100 g de arroz; cozinhe em água.")
+
+    research = ResearchService(binding, {"arroz": "arroz"}, search=search, extractor=Extractor())
+    found = await research.call(
+        "search_culinary_sources", {"purpose": "RECIPE", "public_term_ids": ["arroz"]}
+    )
+    identifier = found["data"]["results"][0]["research_result_id"]
+    assert (await research.call("extract_culinary_source", {"research_result_id": identifier}))[
+        "ok"
+    ]
+    for _, source in source_fields(recipe_candidate):
+        source.clear()
+        source.update(kind="WEB", research_result_id=identifier, segment="segment-1")
+    local = ApprovalService(repository)
+
+    def apply(candidate):
+        result = binding.call(
+            "propose_user_change",
+            {
+                "operation_id": str(uuid4()),
+                "command": {
+                    "kind": "register_recipe_candidate",
+                    "payload": {"candidate": candidate},
+                },
+            },
+        )
+        assert result["ok"], result
+        proposal = local.list(workspace)[-1]
+        applied = local.approve(workspace, proposal["id"], proposal["hash"], attest=True)
+        assert applied["ok"], applied
+        return proposal, applied
+
+    _, registered = apply(recipe_candidate)
+    source = registered["data"]["candidate"]["method_source"]
+    origin = (
+        {"kind": "USER_SIMULATION", "scenario": "Demonstração fictícia isolada"}
+        if mode == "SIMULATION"
+        else {"kind": "USER_PROVIDED"}
+    )
+    measurement = {
+        "kind": "USER_REPORTED_MEASUREMENT",
+        "method": "Relato de contagem de porções pela cozinheira.",
+        "context": "Um lote da ficha, sem certificação independente.",
+    }
+    proposal, adapted = apply(
+        {
+            "origin": {"source": origin, "derived_from": {"recipe_id": 1, "version": 1}},
+            "changes": {
+                "title": "Ficha adaptada com rendimento reportado",
+                "yield_per_batch": {
+                    "servings_per_batch": 2,
+                    "sale_unit_label": "porção",
+                    "source": measurement,
+                },
+                "yield_gap": None,
+            },
+        }
+    )
+    candidate = adapted["data"]["candidate"]
+    assert candidate["method_source"] == source
+    assert source == research.materialize_source(identifier, "segment-1", purpose="RECIPE")
+    measured = candidate["yield_per_batch"]["source"]
+    assert all(measured[key] == value for key, value in measurement.items())
+    assert measured["local_event_id"]
+    reopened = ApprovalService(SQLiteWorkspaceRepository(database))
+    after = reopened.repository.load(workspace)
+    assert reopened.approve(workspace, proposal["id"], proposal["hash"], attest=True) == adapted
+    assert reopened.repository.load(workspace) == after
+    projected = AttendanceService(database, workspace, "ATTENDANCE").call("get_business_state", {})
+    assert projected["ok"], projected
+    assert projected["data"]["context_mode"] == mode
+    assert projected["data"]["hypothetical"] is (mode == "SIMULATION")
+    assert after[1].candidates[1].depends_on_simulation is (mode == "SIMULATION")
+    assert projected["data"]["recipes"][1]["sources"][0]["url"] == source["url"]
+    before_promotion = database.read_bytes()
+    with pytest.raises(ValueError, match="Modo imutável"):
+        bootstrap_workspace(
+            database,
+            inventory_file,
+            allowed_directory=tmp_path,
+            context_mode="REAL" if mode == "SIMULATION" else "SIMULATION",
+        )
+    assert database.read_bytes() == before_promotion
 
 
 def test_migration_keeps_legacy_sources_decisions_hashes_and_pricing_replay(
