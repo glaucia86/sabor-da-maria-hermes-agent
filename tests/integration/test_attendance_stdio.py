@@ -46,8 +46,11 @@ async def test_attendance_catalog_dispatch_refresh_and_restart_are_read_only(
                             "get_inventory_snapshot",
                             "evaluate_recipe_feasibility",
                             "evaluate_purchase_plan",
+                            "propose_user_change",
+                            "calculate_pricing_scenarios",
                         ]
-                        assert all(tool.annotations.read_only_hint for tool in tools)
+                        assert all(tool.annotations.read_only_hint for tool in tools[:4])
+                        assert all(not tool.annotations.read_only_hint for tool in tools[4:])
                         assert all(
                             "workspace_id" not in json.dumps(tool.input_schema) for tool in tools
                         )

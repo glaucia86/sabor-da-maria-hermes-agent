@@ -11,7 +11,10 @@ from dona_maria.business_state import BusinessStateReader
 from dona_maria.persistence import SQLiteWorkspaceRepository
 
 OPERATOR_STDIO_ARGS = [
-    "-X", "utf8", "-B", str(Path(__file__).resolve().parents[1] / "evals/operator_stdio.py")
+    "-X",
+    "utf8",
+    "-B",
+    str(Path(__file__).resolve().parents[1] / "evals/operator_stdio.py"),
 ]
 
 
@@ -70,6 +73,99 @@ def pricing_evidence(statement):
         statement=statement,
         captured_at="2026-11-11T00:00:00Z",
     )
+
+
+@pytest.fixture
+def reconfirm_attendance():
+    """Manifestação/atestação sintéticas explícitas para fixtures anteriores ao S14."""
+    from dona_maria.approvals import ApprovalService, migrate_proposals
+    from dona_maria.production import KitchenFactInput, PlanItemInput, PreferenceInput
+
+    def prepare(reader, workspace, database):
+        migrate_proposals(reader.repository, database.with_name(f"s14-backup-{uuid4()}.sqlite3"))
+        local = ApprovalService(reader.repository, clock=reader.clock)
+
+        def decide(kind, **payload):
+            proposal = local.propose(
+                dict(
+                    workspace_id=workspace,
+                    operation_id=str(uuid4()),
+                    expected_revision=reader.get_business_state({"workspace_id": workspace})[
+                        "revision"
+                    ],
+                    command={"kind": kind, "payload": payload},
+                )
+            )
+            return local.approve(workspace, proposal["id"], proposal["hash"], attest=True)
+
+        previous = reader.get_business_state({"workspace_id": workspace})["data"]
+        for preference in previous["preferences"]:
+            if preference["validity"] == "VALID":
+                fields = {
+                    k: v
+                    for k, v in preference.items()
+                    if k in PreferenceInput.model_fields and k != "evidence"
+                }
+                fields["replaces_preference_id"] = preference["id"]
+                decide("record_user_preferences", preferences=[fields])
+        if previous["plan"]:
+            for item in previous["plan"]["items"]:
+                decide("record_recipe_feedback", recipe_id=item["recipe_id"], feedback="INTERESTED")
+            plan = decide(
+                "set_production_plan",
+                items=[
+                    {k: v for k, v in item.items() if k in PlanItemInput.model_fields}
+                    for item in previous["plan"]["items"]
+                ],
+                quote_selections=previous["plan"]["quote_selections"],
+            )["data"]["plan"]
+        else:
+            plan = None
+        for fact in previous["kitchen_facts"]:
+            fields = {
+                k: v
+                for k, v in fact.items()
+                if k in KitchenFactInput.model_fields and k != "evidence"
+            }
+            fields["replaces_fact_id"] = fact["id"]
+            if plan and fact["key"] == "production_arrangement":
+                fields["context"] = f"{plan['id']}:{plan['version']}"
+            decide("record_kitchen_facts", facts=[fields])
+        if plan:
+            for item in plan["items"]:
+                evaluation = reader.evaluate_purchase_plan({"workspace_id": workspace})["data"]
+                accepted = decide(
+                    "accept_recipe",
+                    recipe_id=item["recipe_id"],
+                    plan_item_id=item["plan_item_id"],
+                    evaluation_id=evaluation["evaluation_id"],
+                )
+                choice = next(
+                    (d for d in previous["menu"] if d["recipe_id"] == item["recipe_id"]), None
+                )
+                if choice:
+                    acceptance = accepted["data"]["acceptance"]
+                    revision = reader.get_business_state({"workspace_id": workspace})["revision"]
+                    calculation = reader.calculate_pricing_scenarios(
+                        dict(
+                            workspace_id=workspace,
+                            operation_id=str(uuid4()),
+                            expected_revision=revision,
+                            recipe_id=item["recipe_id"],
+                            acceptance_id=acceptance["id"],
+                        )
+                    )["data"]["calculation"]
+                    decide(
+                        "save_menu_decision",
+                        recipe_id=item["recipe_id"],
+                        acceptance_id=acceptance["id"],
+                        calculation_id=calculation["id"],
+                        scenario_id=choice["scenario_id"],
+                        custom_price=choice["custom_price"],
+                    )
+        return decide
+
+    return prepare
 
 
 @pytest.fixture
@@ -170,8 +266,9 @@ def pricing_workspace(tmp_path, inventory_file, recipe_candidate):
 
 
 def s04_evidence(statement):
-    return dict(turn_ref="synthetic-s04-user", statement=statement,
-                captured_at="2026-11-12T12:00:00Z")
+    return dict(
+        turn_ref="synthetic-s04-user", statement=statement, captured_at="2026-11-12T12:00:00Z"
+    )
 
 
 @pytest.fixture
@@ -198,18 +295,29 @@ def clarification(tmp_path, inventory_file, recipe_candidate):
     recipe_candidate.pop("context_gap")
     recipe_candidate.update(
         yield_per_batch=dict(servings_per_batch=2, sale_unit_label="porção", source=source),
-        operational_context="Fixture de preparo manual em um recipiente.", context_source=source,
-        category_reviews=[dict(category=c, requirement_keys=[], method_version=1, source=source,
-                               not_applicable_reason="Fixture sem requisito nesta categoria.")
-                          for c in ("EQUIPMENT", "SKILL", "OPERATION")],
+        operational_context="Fixture de preparo manual em um recipiente.",
+        context_source=source,
+        category_reviews=[
+            dict(
+                category=c,
+                requirement_keys=[],
+                method_version=1,
+                source=source,
+                not_applicable_reason="Fixture sem requisito nesta categoria.",
+            )
+            for c in ("EQUIPMENT", "SKILL", "OPERATION")
+        ],
     )
 
     def command(tool, **payload):
         revision = service.get_business_state({"workspace_id": workspace})["revision"]
-        return getattr(service, tool)(dict(workspace_id=workspace, operation_id=str(uuid4()),
-                                         expected_revision=revision) | payload)
+        return getattr(service, tool)(
+            dict(workspace_id=workspace, operation_id=str(uuid4()), expected_revision=revision)
+            | payload
+        )
 
     return service, workspace, command, recipe_candidate, chocolate, stock, inventory_file, database
+
 
 @pytest.fixture
 def shared_plan(clarification):

@@ -10,6 +10,8 @@ ALLOWED = frozenset(
         "get_inventory_snapshot",
         "evaluate_recipe_feasibility",
         "evaluate_purchase_plan",
+        "propose_user_change",
+        "calculate_pricing_scenarios",
     )
 )
 REFUSAL = {"action": "block", "message": "Esta ação não está disponível neste atendimento."}

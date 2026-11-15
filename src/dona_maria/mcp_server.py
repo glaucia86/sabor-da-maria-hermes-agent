@@ -26,7 +26,6 @@ from mcp.types import (
 
 from dona_maria.business_state import (
     ATTENDANCE_TOOLS,
-    MAX_CALL_BYTES,
     AttendanceService,
     BusinessStateReader,
     GetBusinessStateRequest,
@@ -35,6 +34,7 @@ from dona_maria.business_state import (
 )
 from dona_maria.candidates import RegisterCandidateRequest
 from dona_maria.ingredients import ConversionRequest, ResolveIngredientRequest
+from dona_maria.limits import MAX_CALL_BYTES, collections_fit
 from dona_maria.persistence import SQLiteWorkspaceRepository
 from dona_maria.pricing import CalculatePricingRequest, SaveMenuDecisionRequest
 from dona_maria.production import (
@@ -246,7 +246,8 @@ def create_attendance_server(service: AttendanceService) -> Server:
                     description=description,
                     input_schema=schema.model_json_schema(),
                     annotations=ToolAnnotations(
-                        read_only_hint=True,
+                        read_only_hint=name
+                        not in ("propose_user_change", "calculate_pricing_scenarios"),
                         destructive_hint=False,
                         idempotent_hint=True,
                         open_world_hint=False,
@@ -321,17 +322,6 @@ def _raw_parameter_size(text: str) -> int:
             offset += 1
 
 
-def _collections_fit(parameters) -> bool:
-    pending = [parameters]
-    while pending:
-        value = pending.pop()
-        if isinstance(value, (dict, list)):
-            if len(value) > 200:
-                return False
-            pending.extend(value.values() if isinstance(value, dict) else value)
-    return True
-
-
 class _BoundedStdin:
     """O SDK 2.3.0 não limita readline; recusa o frame antes de materializá-lo inteiro."""
 
@@ -354,7 +344,7 @@ class _BoundedStdin:
                 text = frame.decode("utf-8")
                 message = jsonrpc_message_adapter.validate_json(text, by_name=False)
                 if getattr(message, "method", None) == "tools/call":
-                    if _raw_parameter_size(text) > MAX_CALL_BYTES or not _collections_fit(
+                    if _raw_parameter_size(text) > MAX_CALL_BYTES or not collections_fit(
                         message.params
                     ):
                         self._refuse("O pedido excede o limite. Envie um pedido menor.", message.id)

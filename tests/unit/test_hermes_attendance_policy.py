@@ -49,6 +49,8 @@ def test_original_forbidden_name_cannot_become_an_authorized_read_after_host_rep
         "get_inventory_snapshot",
         "evaluate_recipe_feasibility",
         "evaluate_purchase_plan",
+        "propose_user_change",
+        "calculate_pricing_scenarios",
     ],
 )
 def test_exact_read_observed_in_the_same_request_can_execute(name):
