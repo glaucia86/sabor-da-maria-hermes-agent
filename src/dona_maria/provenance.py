@@ -100,7 +100,7 @@ class WebSource(CandidateModel):
 
 
 class InformationRef(CandidateModel):
-    entity: Literal["RECIPE", "CONVERSION"]
+    entity: Literal["RECIPE", "CONVERSION", "INVENTORY_ACQUISITION", "OPERATIONAL_RESOURCE"]
     entity_id: UUIDText
     version: Annotated[StrictInt, Field(gt=0)]
     field: ShortText

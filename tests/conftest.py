@@ -20,6 +20,12 @@ OPERATOR_STDIO_ARGS = [
 ]
 
 
+@pytest.fixture(autouse=True)
+def local_checkout_for_subprocesses(monkeypatch):
+    # O pythonpath do pytest não se propaga aos processos filhos.
+    monkeypatch.setenv("PYTHONPATH", str(Path(__file__).resolve().parents[1] / "src"))
+
+
 def synthetic_web_extraction(url, text):
     """Resposta text/plain sintética do seam de transporte, nunca evidência web real."""
     body = text.encode("utf-8")
@@ -193,10 +199,20 @@ def reconfirm_attendance():
 
 @pytest.fixture
 def pricing_workspace(tmp_path, inventory_file, recipe_candidate):
-    def create(*, total="20.00", purchased="100", consumed="100", servings=2, batches=1, parts=1):
+    def create(
+        *,
+        total="20.00",
+        purchased="100",
+        consumed="100",
+        servings=2,
+        batches=1,
+        parts=1,
+        accept=True,
+        unit="g",
+    ):
         book = load_workbook(inventory_file)
         book["Precos"]["B2"] = purchased
-        book["Precos"]["C2"] = "g"
+        book["Precos"]["C2"] = unit
         book["Precos"]["D2"] = total
         book.save(inventory_file)
         book.close()
@@ -239,7 +255,7 @@ def pricing_workspace(tmp_path, inventory_file, recipe_candidate):
         )
         stock = service.get_inventory_snapshot({"workspace_id": workspace})["data"]["items"][0]
         recipe_candidate["ingredients"][0].update(
-            ingredient_id=stock["id"], quantity=dict(value=consumed, unit="g")
+            ingredient_id=stock["id"], quantity=dict(value=consumed, unit=unit)
         )
         recipe_candidate["ingredients"] = [
             deepcopy(recipe_candidate["ingredients"][0]) for _ in range(parts)
@@ -275,6 +291,8 @@ def pricing_workspace(tmp_path, inventory_file, recipe_candidate):
                 ],
             )
         evaluation = service.evaluate_purchase_plan({"workspace_id": workspace})["data"]
+        if not accept:
+            return service, workspace, recipe, None, command, database
         acceptance = command(
             "accept_recipe",
             recipe_id=recipe["id"],

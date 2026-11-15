@@ -169,4 +169,3 @@ AC-023/030: quatro critérios tecnicamente verificados — (1) consulta/URL/rece
 Integração posterior exige conciliar mudanças de S16/S18 em `provenance.py`, `approvals.py`, `persistence.py`, projeções e fixtures. S17 reserva schema SQL3 para observações: qualquer migração concorrente com esse número precisa de ordenação explícita e testes de backup/replay pelo integrador. Campos antigos e regras financeiras foram preservados; S16/S18 não foram implementados aqui.
 
 Readiness: **S17 concluído e pronto para integração posterior controlada**, com conciliação dos contratos/migrações acima quando solicitada. Não iniciar S19 automaticamente. A instalação da tarefa agendada foi autorizada nos prompts do Windows, mas sua conclusão não foi comprovada; não é usada como evidência de aceite do slice.
-

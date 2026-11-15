@@ -712,6 +712,7 @@ async def test_registered_web_adaptation_keeps_reported_measurement_and_context(
         assert applied["ok"], applied
         return proposal, applied
 
+    recipe_candidate["ingredients"][0]["ingredient_id"] = 1
     _, registered = apply(recipe_candidate)
     source = registered["data"]["candidate"]["method_source"]
     origin = (
@@ -744,6 +745,50 @@ async def test_registered_web_adaptation_keeps_reported_measurement_and_context(
     measured = candidate["yield_per_batch"]["source"]
     assert all(measured[key] == value for key, value in measurement.items())
     assert measured["local_event_id"]
+
+    def decide(kind, **payload):
+        proposal = local.propose(
+            dict(
+                workspace_id=workspace,
+                operation_id=str(uuid4()),
+                expected_revision=repository.load(workspace)[0],
+                command=dict(kind=kind, payload=payload),
+            )
+        )
+        return local.approve(workspace, proposal["id"], proposal["hash"], attest=True)
+
+    reader = BusinessStateReader(repository)
+    snapshot = reader.get_inventory_snapshot({"workspace_id": workspace})["data"]
+    decide("record_recipe_feedback", recipe_id=candidate["id"], feedback="INTERESTED")
+    decide(
+        "set_production_plan",
+        items=[dict(recipe_id=candidate["id"], recipe_version=1, position=0, batches=1)],
+    )
+    acquisition = dict(
+        ingredient_id=candidate["ingredients"][0]["ingredient_id"],
+        available_quantity=dict(value="500", unit="g"),
+        acquired_quantity=dict(value="1000", unit="g"),
+        basis="HISTORICAL_ACQUISITION",
+        context="Aquisição sintética reportada e atestada no contexto vinculado.",
+    )
+    missing = decide(
+        "record_inventory_acquisition", **acquisition, acquisition_gap="Valor pago desconhecido."
+    )["data"]["acquisition"]
+    evaluation = reader.evaluate_purchase_plan({"workspace_id": workspace})["data"]
+    assert evaluation["financial_readiness"]["status"] == "PENDING"
+    assert evaluation["demand"][0]["historical_consumed_cost"] is None
+    assert evaluation["data_complete"] is False
+    reported = decide(
+        "record_inventory_acquisition",
+        **acquisition,
+        acquisition_total="20.00",
+        replaces_acquisition_id=missing["id"],
+    )["data"]["acquisition"]
+    evaluation = reader.evaluate_purchase_plan({"workspace_id": workspace})["data"]
+    assert evaluation["financial_readiness"]["status"] == "READY"
+    assert evaluation["demand"][0]["historical_consumed_cost"] == "2.00"
+    assert reported["sources"]["acquisition_total"]["kind"] == "USER_PROVIDED"
+    assert reader.get_inventory_snapshot({"workspace_id": workspace})["data"] == snapshot
     reopened = ApprovalService(SQLiteWorkspaceRepository(database))
     after = reopened.repository.load(workspace)
     assert reopened.approve(workspace, proposal["id"], proposal["hash"], attest=True) == adapted

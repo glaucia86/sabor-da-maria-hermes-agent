@@ -103,6 +103,10 @@ def test_invalid_purchase_data_is_diagnosed_without_an_invented_cost(tmp_path, c
     book.save(path)
     book.close()
 
+    if isinstance(value, str) and value.startswith("="):
+        with pytest.raises(ValueError, match="Fórmula"):
+            import_inventory(path, allowed_directory=tmp_path)
+        return
     result = import_inventory(path, allowed_directory=tmp_path)
 
     item = result.items[0]
@@ -189,6 +193,10 @@ def test_unresolved_identity_or_unit_stays_pending_instead_of_producing_a_cost(
     book.save(path)
     book.close()
 
+    if isinstance(value, str) and value.startswith("="):
+        with pytest.raises(ValueError, match="Fórmula"):
+            import_inventory(path, allowed_directory=tmp_path)
+        return
     result = import_inventory(path, allowed_directory=tmp_path)
 
     assert all(item.unit_cost is None for item in result.items)
@@ -274,3 +282,19 @@ def test_quantity_precision_is_checked_without_rounding_or_underflow(tmp_path, q
     assert item.unit_cost is None
     assert any(issue.code == "INVALID_VALUE" and issue.cells == ["B2"] for issue in item.issues)
     assert item.purchase_source.loaded_values[1] == quantity
+
+
+def test_stock_without_any_purchase_row_retains_physical_availability(tmp_path):
+    path = make_inventory(tmp_path)
+    book = load_workbook(path)
+    book["Precos"].delete_rows(2)
+    book.save(path)
+    book.close()
+    snapshot = import_inventory(path, allowed_directory=tmp_path)
+    item = snapshot.items[0]
+    assert item.stock_quantity_base == Decimal("5000")
+    assert item.dimension == "g"
+    assert item.purchase_source is None
+    assert item.acquisition_total is None
+    assert item.unit_cost is None
+    assert snapshot.historical_total is None

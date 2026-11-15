@@ -82,6 +82,15 @@ hipotéticos e dependências fictícias permanecem identificados após reinício
 Modo, dependência fictícia e completude são dimensões independentes. As provas
 determinísticas dessas capacidades não substituem sua homologação no Hermes.
 
+Disponibilidade e custo são avaliados separadamente. Ingrediente em estoque
+sem base de aquisição permanece disponível, mas bloqueia aceite e preço
+definitivos. Aquisições humanas e recursos operacionais externos usam propostas
+e atestação local, conservando o XLSX e o histórico. Água incorporada entra no
+CMV; água de limpeza explicitamente externa permanece separada. O resultado
+após taxa e ingredientes não demonstra lucro líquido completo. O importador
+local recusa XLSX acima de 5 MiB, expansão ZIP acima de 50 MiB, mais de 20.000
+linhas ou caminhos fora da raiz autorizada, sem aceitar snapshot parcial.
+
 <a id="arquitetura"></a>
 ## 🏗️ Explore a arquitetura
 
@@ -214,8 +223,8 @@ Após instalar as dependências, execute na raiz:
 
 ```sh
 uv run --locked --no-sync python -X utf8 -B -m pytest tests/unit tests/integration -q
-uv run --locked --no-sync ruff check src tests/unit tests/integration evals
-uv run --locked --no-sync ruff format --check src tests/unit tests/integration evals
+uv run --locked --no-sync ruff check src tests/conftest.py tests/unit tests/integration evals
+uv run --locked --no-sync ruff format --check src tests/conftest.py tests/unit tests/integration evals
 ```
 
 A suíte usa dados sintéticos e bancos temporários. O teste adicional do anexo
