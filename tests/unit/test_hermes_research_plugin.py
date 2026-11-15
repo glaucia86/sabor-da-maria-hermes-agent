@@ -3,6 +3,7 @@
 import json
 import subprocess
 import sys
+import sysconfig
 from hashlib import sha256
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
@@ -217,7 +218,7 @@ def test_cold_plugin_loads_from_explicit_source_without_pythonpath_or_excel_depe
     source = Path(__file__).resolve().parents[2] / "src"
     settings["application_source"] = str(source)
     settings["plugin_file"] = str(source / "dona_maria/hermes_research/__init__.py")
-    settings["site_packages"] = str(Path(sys.executable).parent.parent / "Lib/site-packages")
+    settings["site_packages"] = sysconfig.get_path("purelib")
     script = r"""
 import asyncio, importlib.abc, importlib.util, json, sys
 from types import ModuleType, SimpleNamespace
