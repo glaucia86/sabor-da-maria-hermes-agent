@@ -1,5 +1,6 @@
 """Contratos de candidatas pesquisadas, sem aceite ou decisões financeiras."""
 
+from copy import deepcopy
 from decimal import Decimal
 from typing import Annotated, Literal
 from uuid import UUID, uuid4
@@ -181,6 +182,8 @@ class CandidateInput(CandidateModel):
 
 class RecipeCandidate(CandidateInput):
     depends_on_simulation: bool = Field(default=False, exclude_if=lambda value: not value)
+    # Projeção financeira anterior, produzida pelo servidor em revisões neutras.
+    business_basis: dict | None = Field(default=None, exclude_if=lambda value: value is None)
     ingredients: list[RecipeIngredient]
     requirements: list[CriticalRequirement] = []
     id: UUID
@@ -241,6 +244,8 @@ class RecipeCandidate(CandidateInput):
         }
 
     def business_content(self) -> dict:
+        if self.business_basis is not None:
+            return deepcopy(self.business_basis)
         payload = self.model_dump(mode="json")
         data = {name: payload[name] for name in CandidateInput.model_fields if name in payload}
         data.pop("title")
@@ -262,6 +267,14 @@ class RecipeCandidate(CandidateInput):
             review["method_version"] = (
                 "CURRENT" if review["method_version"] == self.version else "STALE"
             )
+        return data
+
+    def business_premises(self) -> dict:
+        data = self.business_content()
+        data.pop("origin", None)
+        data.pop("provenance_version", None)
+        for ingredient in data["ingredients"]:
+            ingredient.pop("quantity_source", None)
         return data
 
 
