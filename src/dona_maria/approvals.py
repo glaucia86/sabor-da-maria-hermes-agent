@@ -6,7 +6,7 @@ import os
 import sqlite3
 from collections.abc import Callable
 from contextlib import closing
-from copy import copy
+from copy import copy, deepcopy
 from datetime import UTC, datetime, timedelta
 from functools import lru_cache, reduce
 from operator import or_
@@ -38,6 +38,7 @@ from dona_maria.production import (
     PreferenceInput,
     PreferencesRequest,
 )
+from dona_maria.provenance import source_fields
 from dona_maria.quotes import (
     ConfirmQuoteRequest,
     RegisterQuoteRequest,
@@ -170,6 +171,10 @@ _INJECTED_FIELDS = {
     "plan_item_id",
     "acceptance_id",
     "calculation_id",
+    "local_event_id",
+    "information_ref",
+    "provenance_version",
+    "quantity_source",
 }
 
 
@@ -181,7 +186,7 @@ def _bound_type(annotation):
     if origin is Annotated:
         return _bound_type(UUID) if args[0] is UUID else Annotated[_bound_type(args[0]), *args[1:]]
     if origin is list:
-        return list[_bound_type(args[0])]
+        return Annotated[list[_bound_type(args[0])], Field(max_length=200)]
     if origin in (UnionType, Union):
         return reduce(or_, (_bound_type(arg) for arg in args))
     if isinstance(annotation, type) and issubclass(annotation, BaseModel):
@@ -256,10 +261,11 @@ def _expand_bound_command(command, state, snapshot, revision, now):
     quote = next((q for q in quotes if str(q.id) == payload.get("quote_id")), None)
     if kind in ("record_ingredient_conversion", "resolve_recipe_ingredient"):
         payload["recipe_version"] = recipe.version if recipe else None
-    if kind == "register_recipe_candidate" and recipe:
-        payload["expected_recipe_version"] = recipe.version
+    if kind == "register_recipe_candidate":
+        if recipe:
+            payload["expected_recipe_version"] = recipe.version
         for review in payload["candidate"]["category_reviews"]:
-            review["method_version"] = recipe.version + 1
+            review["method_version"] = recipe.version + 1 if recipe else 1
     if kind in ("confirm_complement_quote", "register_complement_quote") and quote:
         payload[
             "quote_version" if kind == "confirm_complement_quote" else "expected_quote_version"
@@ -432,7 +438,7 @@ COMMAND_SCHEMAS = {
 
 def _materialize(document, event_id, now, state):
     kind = document["command"]["kind"]
-    payload = document["command"]["payload"].copy()
+    payload = deepcopy(document["command"]["payload"])
     statement = "Atestação local da manifestação da cozinheira; proposta " + document["id"] + "."
     if kind == "set_production_plan":
         parts = []
@@ -458,6 +464,10 @@ def _materialize(document, event_id, now, state):
         "statement": statement,
         "captured_at": now.isoformat(),
     }
+    if kind == "register_recipe_candidate":
+        for _, source in source_fields(payload["candidate"]):
+            if source["kind"] == "USER_PROVIDED":
+                source.update(evidence=evidence, local_event_id=event_id)
     if kind in ("record_kitchen_facts", "record_user_preferences"):
         key = "facts" if kind == "record_kitchen_facts" else "preferences"
         payload[key] = [item | {"evidence": evidence} for item in payload[key]]
@@ -477,18 +487,14 @@ def _without_evidence(value):
     if isinstance(value, list):
         return [_without_evidence(item) for item in value]
     if isinstance(value, dict):
+        if value.get("kind") == "USER_PROVIDED":
+            return {"kind": "USER_PROVIDED"}
         return {key: _without_evidence(item) for key, item in value.items() if key != "evidence"}
     return value
 
 
 def _web_sources(value):
-    if isinstance(value, list):
-        return set().union(*(_web_sources(item) for item in value))
-    if isinstance(value, dict):
-        if value.get("kind") == "WEB":
-            return {canonical_json(value)}
-        return set().union(*(_web_sources(item) for item in value.values()))
-    return set()
+    return {canonical_json(source) for _, source in source_fields(value) if source["kind"] == "WEB"}
 
 
 def _operator_identity():
@@ -565,6 +571,28 @@ class ApprovalService:
         if client_hash is None and not call_fits(arguments):
             raise BusinessRuleError("INPUT_LIMIT", "Pedido excede o limite permitido.")
         request = ProposalRequest.model_validate(arguments)
+        # Autoridade e derivações nunca entram pela proposta, nem como evento reaproveitado.
+        candidate = arguments.get("command", {}).get("payload", {}).get("candidate")
+        if isinstance(candidate, dict):
+            for _, source in source_fields(candidate):
+                if source["kind"] == "DERIVED" or (
+                    source["kind"] == "USER_PROVIDED" and set(source) != {"kind"}
+                ):
+                    raise BusinessRuleError(
+                        "AUTHORIZATION_REQUIRED", "A origem exige aprovação local exata."
+                    )
+                if source["kind"] in {"USER_SIMULATION", "USER_REPORTED_MEASUREMENT"}:
+                    raise BusinessRuleError(
+                        "SOURCE_NOT_LINKED", "Esse fluxo ainda não está habilitado."
+                    )
+            if candidate.get("provenance_version") is not None or any(
+                i.get("quantity_source") is not None for i in candidate.get("ingredients", [])
+            ):
+                raise BusinessRuleError(
+                    "AUTHORIZATION_REQUIRED", "Metadados são produzidos pelo servidor."
+                )
+            if (candidate.get("origin") or {}).get("derived_from"):
+                raise BusinessRuleError("SOURCE_NOT_LINKED", "Adaptação ainda não está habilitada.")
         request_json = request.model_dump(mode="json")
         workspace, operation = str(request.workspace_id), str(request.operation_id)
         with self.repository.transaction() as db:
@@ -608,16 +636,33 @@ class ApprovalService:
                 previous = next(
                     (r for r in state.candidates if str(r.id) == payload.get("recipe_id")), None
                 )
-                if previous is None:
+                original = previous.model_dump(mode="json") if previous else {}
+                human = any(
+                    s["kind"] == "USER_PROVIDED" for _, s in source_fields(payload["candidate"])
+                )
+                if human and (
+                    _web_sources(payload["candidate"])
+                    or previous is not None
+                    and previous.provenance_version != "2.0"
+                ):
                     raise BusinessRuleError(
-                        "NOT_FOUND", "S14 revisa somente candidatas existentes."
+                        "SOURCE_NOT_LINKED", "Adaptação histórica ainda não está habilitada."
                     )
-                original = previous.model_dump(mode="json")
-                if payload["candidate"]["sources"] != original["sources"] or not _web_sources(
-                    payload["candidate"]
-                ).issubset(_web_sources(original)):
+                if not _web_sources(payload["candidate"]).issubset(_web_sources(original)):
                     raise BusinessRuleError(
                         "SOURCE_NOT_LINKED", "Novas fontes não são habilitadas nesta etapa."
+                    )
+                if previous is None and not human:
+                    raise BusinessRuleError(
+                        "SOURCE_REQUIRED", "Informe a origem humana da receita."
+                    )
+                if (
+                    human
+                    and payload["candidate"].get("origin", {}).get("source", {}).get("kind")
+                    != "USER_PROVIDED"
+                ):
+                    raise BusinessRuleError(
+                        "SOURCE_REQUIRED", "Informe a origem da receita própria."
                     )
             if kind == "register_complement_quote":
                 previous = next(

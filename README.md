@@ -64,6 +64,12 @@ A pergunta central vem antes do preço: **Dona Maria consegue preparar esse prat
 
 Uma condição desconhecida gera uma pergunta. A conversa, sozinha, não autoriza registrar uma decisão de negócio.
 
+Receitas próprias também podem ser propostas sem URL, com origem por informação
+e atestação local dos campos exatos. A receita é recuperada após reinício e
+segue as mesmas verificações antes do aceite e da escolha de preço. Esse caminho
+foi exercitado com fixtures e MCP STDIO; a avaliação conversacional no Hermes
+permanece pendente. Novas fontes web continuam indisponíveis no atendimento.
+
 <a id="arquitetura"></a>
 ## 🏗️ Explore a arquitetura
 

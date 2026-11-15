@@ -305,6 +305,7 @@ class AttendanceService:
                     if c["acceptance_id"] in approved_acceptances and c["validity"] == "VALID"
                 }
                 for recipe in data["candidates"]:
+                    recipe.setdefault("status", "DISCOVERED")
                     if recipe["status"] in ("ACCEPTED", "PRICED", "MENU_SELECTED"):
                         recipe["status"] = (
                             "AWAITING_LOCAL_RECONFIRMATION"
@@ -358,6 +359,12 @@ class AttendanceService:
                             "title": recipe["title"],
                             "status": recipe["status"],
                             "interest": recipe["interest"],
+                            "origin": (
+                                "Informada pela cozinheira; campos atestados localmente, "
+                                "sem comprovação independente."
+                                if recipe.get("provenance_version") == "2.0"
+                                else "Fonte histórica preservada."
+                            ),
                             "missing_information": recipe["gaps"],
                             "ingredients": [
                                 {key: ingredient[key] for key in ("description", "quantity")}
@@ -954,6 +961,17 @@ class BusinessStateReader:
                 quotes=state.complement_quotes,
                 confirmations=state.quote_confirmations,
                 now=now,
+            )
+            from dona_maria.ingredients import apply_overlays
+
+            effective, _ = apply_overlays(state.candidates, snapshot, state.ingredient_conversions)
+            state = state.model_copy(
+                update={
+                    "candidates": [
+                        resolved if original.provenance_version == "2.0" else original
+                        for original, resolved in zip(state.candidates, effective, strict=True)
+                    ]
+                }
             )
             return ReadErrorEnvelope(
                 ok=True,

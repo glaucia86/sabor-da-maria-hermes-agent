@@ -1,7 +1,6 @@
 """Contratos de produção e decisões humanas; sem transporte, banco ou rede."""
 
 import re
-from datetime import UTC, datetime
 from typing import Annotated, Literal
 
 from pydantic import AwareDatetime, Field, StrictBool, StrictInt, field_validator, model_validator
@@ -9,36 +8,11 @@ from pydantic import AwareDatetime, Field, StrictBool, StrictInt, field_validato
 from dona_maria.candidates import (
     CandidateModel,
     Category,
-    Note,
     ShortText,
     UUIDText,
 )
 from dona_maria.inventory import normalize_name
-
-
-class UserEvidence(CandidateModel):
-    turn_ref: ShortText
-    statement: Note
-    captured_at: AwareDatetime
-
-    @field_validator("turn_ref", "statement")
-    @classmethod
-    def nonblank_text(cls, value: str) -> str:
-        if not value.strip():
-            raise ValueError("Evidência exige referência e fala com conteúdo.")
-        return value
-
-    @field_validator("captured_at", mode="before")
-    @classmethod
-    def textual_date(cls, value: object) -> str:
-        if not isinstance(value, str):
-            raise ValueError("Evidência exige data RFC 3339 textual com timezone.")
-        return value
-
-    @field_validator("captured_at")
-    @classmethod
-    def utc_date(cls, value: datetime) -> datetime:
-        return value.astimezone(UTC)
+from dona_maria.provenance import UserEvidence as UserEvidence
 
 
 class CommandMeta(CandidateModel):

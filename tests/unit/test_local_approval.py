@@ -628,6 +628,7 @@ def test_corrupted_consumed_proposal_cannot_sustain_current_authorization(approv
     local, workspace, database, _ = approval_workspace
     proposal = fact_proposal(local, workspace)
     local.approve(workspace, proposal["id"], proposal["hash"], attest=True)
+    public = AttendanceService(database, workspace, "ATTENDANCE")
     with sqlite3.connect(database) as db:
         document = json.loads(
             db.execute("SELECT document_json FROM user_change_proposals").fetchone()[0]
@@ -635,7 +636,6 @@ def test_corrupted_consumed_proposal_cannot_sustain_current_authorization(approv
         document["command"]["payload"]["facts"][0]["value"] = False
         db.execute("UPDATE user_change_proposals SET document_json=?", (json.dumps(document),))
     before = business_rows(database)
-    public = AttendanceService(database, workspace, "ATTENDANCE")
     assert not public.call("get_business_state", {})["ok"]
     with pytest.raises(BusinessRuleError):
         local.approve(workspace, proposal["id"], proposal["hash"], attest=True)

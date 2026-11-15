@@ -1,6 +1,6 @@
 # Sabor da Maria — plano de implementação por slices
 
-**Versão do plano:** 1.0 (primeira numeração explícita) · **Criação:** 11/11/2026 · **Última revisão:** 15/11/2026. Fontes vigentes: PRD v1.2 e SPEC v1.3. Plano e evolução local preservados. S13 concluído no canal CLI assistido, com provas técnicas e aceite HITL explícito. S14 concluído no recorte CLI assistida/sintético, com homologação e aceite HITL explícito em 15/11/2026. S15–S19 continuam NOT_RUN e não autorizados.
+**Versão do plano:** 1.0 (primeira numeração explícita) · **Criação:** 11/11/2026 · **Última revisão:** 15/11/2026. Fontes vigentes: PRD v1.2 e SPEC v1.3. Plano e evolução local preservados. S13 concluído no canal CLI assistido, com provas técnicas e aceite HITL explícito. S14 concluído no recorte CLI assistida/sintético, com homologação e aceite HITL explícito em 15/11/2026. S15 tem implementação local em revisão, com EV-13/HITL pendentes; S16–S19 continuam NOT_RUN e não autorizados.
 
 ## Context Retrieval Contract
 
@@ -117,8 +117,8 @@ A descoberta partiu dos identificadores efetivamente presentes nas duas fontes, 
 | S11 | Avaliador reproduz MVP e confere evidências | S04, S07, S08, S09, S10 | EM REVISÃO — evidências técnicas consolidadas; amostra humana pendente |
 | S12 | Demo/vídeo desejável mostra a versão verificada | S11 | BLOCKED BY DECISION — herança S11; P1, sem bloquear P0 |
 | S13 | Atendimento inicia no contexto privado correto | S00, S09, S10 | PLANEJADO — liberação explícita após checagem documental; execução não autorizada |
-| S14 | Decisão aprovada localmente fora do LLM | S13, S02, S03, S06 | EM REVISÃO — implementação local; Hermes real e HITL pendentes |
-| S15 | Receita própria chega a preço válido com origem | S14, S01, S04, S08 | PLANEJADO E NÃO AUTORIZADO — gate S14 |
+| S14 | Decisão aprovada localmente fora do LLM | S13, S02, S03, S06 | CONCLUÍDO — CLI assistida/sintética e HITL em 15/11 |
+| S15 | Receita própria chega a preço válido com origem | S14, S01, S04, S08 | EM REVISÃO — implementação local; EV-13/HITL pendentes |
 | S16 | Adaptar, medir e demonstrar preservando origem | S15 | PLANEJADO E NÃO AUTORIZADO — gate S15 |
 | S17 | Pesquisa real com saída controlada | S13, S15 | PLANEJADO E NÃO AUTORIZADO — compatibilidade/pesquisa real |
 | S18 | Custos incompletos explicados e bloqueados | S15, S06, S07 | PLANEJADO E NÃO AUTORIZADO — gate S15 |
@@ -1262,9 +1262,9 @@ Nenhum teste adicional de produto/Hermes, execução de host/modelo, configuraç
 
 ## S15 — Receita própria até preço válido
 
-**Status:** PLANEJADO E NÃO AUTORIZADO — P0. **Objetivo / Resultado observável:** receita humana por informação passa por registro, reinício, confirmação, aceite e preço com os guards existentes.
+**Status:** EM REVISÃO — P0. **Objetivo / Resultado observável:** receita humana por informação passa por registro, reinício, confirmação, aceite e preço com os guards existentes.
 
-**Bloqueado por:** autorização própria de S15; dependência S14 concluída com aceite HITL em 15/11/2026. Compatibilidade de serialização/fingerprint deve preservar hashes, decisões e replay antigos.
+**Bloqueado por:** encerramento ainda depende de EV-13 conduzido pela pessoa conforme RULES §5 e revisão HITL. Autorização exclusiva S15 recebida nesta sessão; dependência S14 concluída com HITL em 15/11/2026. Regressão final571PASS/337.29s; provas técnicas locais registradas, sem conclusão da fatia nem homologação Hermes inferidas.
 
 **Source IDs**
 
@@ -1281,15 +1281,38 @@ Distinguir origem alegada em proposta da materialização após aprovação; rej
 
 **Acceptance Criteria**
 
-- [ ] AC-023 / T-PROV: receita sem URL usa fonte humana válida; fonte incompleta/fabricada ou referência inválida é recusada, sem implicar comprovação independente.
-- [ ] AC-023: lacunas, unidades, categorias críticas e autorização continuam bloqueando decisões prematuras.
-- [ ] AC-029 / T-COMPAT: serialização/fingerprint versionados preservam leitura sem regravação, payloads/hashes de decisão e replay históricos.
-- [ ] AC-023/029: jornada STDIO registra, reinicia, confirma fatos exatos, aceita e precifica com todas as regras existentes.
-- [ ] AC-023/030: hipótese do agente sem evidência permanece rascunho; fonte/evento forjado e coleção acima do limite não persistem confirmação nem alteram decisão ativa.
+- [x] AC-023 / T-PROV: receita sem URL usa fonte humana válida; fonte incompleta/fabricada ou referência inválida é recusada, sem implicar comprovação independente.
+- [x] AC-023: lacunas, unidades, categorias críticas e autorização continuam bloqueando decisões prematuras.
+- [x] AC-029 / T-COMPAT: serialização/fingerprint versionados preservam leitura sem regravação, payloads/hashes de decisão e replay históricos.
+- [x] AC-023/029: jornada STDIO registra, reinicia, confirma fatos exatos, aceita e precifica com todas as regras existentes.
+- [x] AC-023/030: hipótese do agente sem evidência permanece rascunho; fonte/evento forjado e coleção acima do limite não persistem confirmação nem alteram decisão ativa.
 
 **Testes / Verification:** T-PROV/T-COMPAT RED→GREEN, fixtures legadas e SQLite temporário, regressões de overlays/correções/schemas/consumidores e jornada STDIO completa. Gate HITL: receita própria chega a preço válido sem fabricar fonte ou confiança.
 
-**Handoff — ainda não executado:** formatos/leitores e projeção versionada a entregar; NOT_RUN. Próximo passo após gate S14: autorização própria de S15; S16–S18 continuam separadas.
+Checkboxes representam comprovação técnica local no recorte S15, com fixtures;
+não substituem EV-13/HITL nem aprovam globalmente AC-030/S19.
+
+**Handoff — implementação autorizada S15, 15/11/2026:** branch `feat/s15-recipe-provenance`, HEAD inicial `9a6563ef9de4ad68b96d27c5188c50b55fc2bb55`, árvore inicialmente limpa e mesma base da integradora. Aceite final do S14 recuperado, sem reabrir notas históricas. RULES/AGENTS, Context Retrieval Contract, S15 e handoffs necessários S14/S01/S04/S08 conferidos. PRD1.2 e SPEC1.3 preservados; definições dos IDs acima e §§4.1.1/4.4.2/4.8.1/3.6.1 consultadas por busca/bounded reads. Guias locais de arquitetura/testes/desenvolvimento usados pelas fronteiras afetadas; nenhum GLOSSARY ou grafo existente localizado. Seams públicos serviço/SQLite sintético, MCP STDIO real e CLI local reutilizados conforme confirmações anteriores e autorização atual.
+
+Novo `provenance.py`: quatro origens primárias discriminadas por `kind`, `DERIVED` somente de saída, referências de entidade/versão/campo e `UserEvidence` compartilhado/reexportado pelo caminho público anterior. Generalizados os `source` de receita/revisão, ingrediente/medida, método, rendimento, contexto, requisitos e revisões críticas. Receita própria não exige URL nem lista global de fontes. Alegações da proposta só recebem evidência/evento real e referência de campo após aprovação local. Medidas métricas são conferidas no servidor; conversões contextuais conservam origem humana e quantidade DERIVED com entradas de receita/conversão. Lacunas permanecem; requisitos declarados não confirmam a cozinha. Simulação/medição têm contratos, mas fluxos recusados; adaptação histórica/mista e nova fonte WEB continuam bloqueadas.
+
+Serialização de proveniência2.0 por candidata e fingerprint2.0 somente para plano com receita expandida; campos aditivos ausentes não entram no JSON/fingerprint implícito1.0 anterior. Sem nova migração SQL, tabela ou dependência: schema SQLite2 do S14 permanece. Leitura confere materializações contra resultados/eventos locais auditados no mesmo workspace/campo, inclusive conversões; corrupção é recusada sem reescrever/recriar banco. WEB sem kind explícito conserva o default legado e replay normalizado. Formatos efetivamente emitidos pelo baseline (CellSource XLSX, WebSource, UserEvidence e snapshots calculados) permanecem legíveis, com hashes/decisões/resultados originais; não inventado formato genérico de SourceRef ausente do baseline.
+
+TTL/hash/payload/contexto/revisão/resumo, atestação fora do MCP e commit atômico reutilizam S14. Propostas não gravam receita/fato/aceite/preço. Guard compartilhado recusa autoridade/metadados de saída e fluxos não habilitados inclusive na API interna legada schema1, sem contaminar estado. Catálogo/dispatch mantêm seis capacidades; schemas vinculados escondem eventos/evidências e limitam coleções a200. Atendimento explica origem humana sem referências privadas. Motor existente de viabilidade, compras, custos, Decimal, taxa10%, mínimo/três margens, aceite/preço e invalidação preservado.
+
+Arquivos: `provenance.py`, `candidates.py`, `production.py`, `approvals.py`, `persistence.py`, `ingredients.py`, `planning.py`, `business_state.py`; novos `test_recipe_provenance.py` e `test_human_recipe_stdio.py`; orientação em `.hermes.md`, skill de atendimento e README (capacidade/limite, sem diário). Continuidade/índice mantidos em `.harness/`. Sem core Hermes, perfil, credencial, banco real, bootstrap de banco existente ou dependência alterados.
+
+TDD vertical observado para receita sem URL, fonte de outro campo, quantidade DERIVED, fonte individual sem lista global, downgrade/forja, conversão contextual, recusa de adaptação S16, API legada não habilitada e replay WEB sem discriminador. Falhas/comandos/correções em `.harness/verification.md`; falhas de ambiente e ajuste de expectativa de replay separados de RED de produto. Revisão independente pela skill code-review em dois eixos, base9a6563e/diff de trabalho e novos arquivos: admissão schema1 de fonte não habilitada e regressão WEB sem kind corrigidas, sem achados remanescentes no fechamento. Não é auditoria geral nem prova Hermes.
+
+Jornada STDIO sintética:100g arroz,24.90/5000g,duas porções; proposta/CLI em processo separado, reinício, interesse/plano/equipamento/habilidade/operação confirmados separadamente, aceite vigente, piso0.28/três cenários/M20=0.36. Retomada recupera preço; revisão material invalida dependentes, replay antigo não restaura e snapshot físico permanece igual. Não representa receita comercial nem valida segurança alimentar. Compatibilidade/S15/STDIO42PASS/54.91s; primeira regressão567PASS/3FAIL/530.11s preservada (duas diferenças de formato legado corrigidas na projeção, um timeout de initialize). Regressão final571PASS/337.29s, Ruff check/format57PASS, nove HarnessPASS/0.318s, índice/check estrutural/diffPASS. JUnits e comandos no Harness; nenhum código de produto alterado após regressão final.
+
+**EV-13: NOT_RUN(0)**. RULES §5 exige experimentação Hermes pela pessoa, um passo por vez; nenhuma exceção explícita para execução do host/modelo pelo agente. Não inspecionadas credenciais/perfis nem alegada indisponibilidade do Hermes. Testes determinísticos não substituem diálogo/traces/atestação reais. Nenhum EV-14/15 ou S16–S20 implementado.
+
+**Readiness S16: não liberada.** Contratos disponíveis; depende de fechamento S15 com provas/EV-13/HITL e nova autorização exclusiva. Parar após entrega para revisão; sem commit/push/PR/merge/publicação automático.
+
+**Handoff ? revis?o de qualidade e seguran?a S15, 15/11/2026:** autoriza??o expl?cita de clean-code e code-review-and-quality somente para o S15 existente. Context Retrieval Contract, handoffs S14/S01/S04/S08 e contratos can?nicos de proveni?ncia, compatibilidade, limites e invalida??o recuperados. Baseline de14arquivos preservado em `.harness/s15-quality-review/baseline`; altera??es concorrentes de c?pia profunda/asser??o preservadas sem atribui??o ? revis?o. Corrigidos dois P1 de downgrade: receita sem metadados e convers?o sem source n?o escapam da checagem contra resultados/eventos auditados. Corrigido P2 de renomea??o: metadados de atesta??o deixam de alterar a compara??o financeira; fontes/valores e trilha hist?rica preservados. Dois renomes STDIO mant?m aceite/pre?o, altera??o material continua invalidando. Coleta de auditoria trata quatro formas de corrup??o com recusa estruturada, sem regrava??o. `_web_sources` reutiliza `source_fields`; sem nova depend?ncia/tabela/migra??o/abstra??o.
+
+TDD: downgrade1FAIL, convers?o2FAIL, t?tulo1FAIL e corrup??o estrutural4FAIL observados antes das corre??es. Compatibilidade ampliada78PASS/18.85s; regress?o final578PASS/291.28s com hashes de fontes est?veis; Ruff check/format57PASS, nove HarnessPASS/0.257s, diffPASS. Muta??o da detec??o de proveni?ncia auditada foi detectada por1FAIL e fonte restaurada byte a byte. Regress?o intermedi?ria573PASS/1FAIL identificou checagem antecipada indevida na abertura legada, corrigida sem relaxar expectativa; rodada574PASS ? hist?rica. Comandos/JUnits/limites e falhas de ambiente em `.harness/verification.md`. Revis?o independente nos cinco eixos sem Required/Critical remanescente no recorte. Sem auditoria geral/CVEs, Hermes/modelo/host, configura??es/credenciais/banco pessoal, commit/push/PR ou outra fatia. **S15 permanece EM REVIS?O; EV-13/HITL pendentes**, sem nova homologa??o humana inferida. Pr?ximo passo: revisar o diff/evid?ncias e EV-13 assistido conforme RULES ?5; S16 n?o liberada.
 
 ## S16 — Adaptar, medir e demonstrar sem perder origem
 
