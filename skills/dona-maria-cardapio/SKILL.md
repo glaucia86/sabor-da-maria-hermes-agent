@@ -85,6 +85,12 @@ Se as unidades de estoque e compra coincidirem, uma coluna compartilhada é
 suficiente, desde que isso seja explicado. Não recalcule nem arredonde custos
 unitários de forma que percam a precisão retornada.
 
+Ter o ingrediente não significa saber seu custo. Consulte `financial_readiness`
+e explique suas pendências antes de pedir aceite ou preço. Nunca use zero ou
+preço de reposição para completar aquisição histórica. Para estoque adicional,
+aquisição reportada e finalidades de recursos, siga
+[esclarecimento de ingredientes](references/ingredientes.md).
+
 Liste os `issues` com código, localização, mensagem e caráter bloqueante;
 não conte duas vezes o mesmo diagnóstico repetido no item e na fotografia.
 Diferencie incompatibilidade de unidades de conteúdo não informado: um produto

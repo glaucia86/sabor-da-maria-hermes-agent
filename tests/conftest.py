@@ -170,10 +170,13 @@ def reconfirm_attendance():
 
 @pytest.fixture
 def pricing_workspace(tmp_path, inventory_file, recipe_candidate):
-    def create(*, total="20.00", purchased="100", consumed="100", servings=2, batches=1, parts=1):
+    def create(
+        *, total="20.00", purchased="100", consumed="100", servings=2, batches=1, parts=1,
+        accept=True, unit="g",
+    ):
         book = load_workbook(inventory_file)
         book["Precos"]["B2"] = purchased
-        book["Precos"]["C2"] = "g"
+        book["Precos"]["C2"] = unit
         book["Precos"]["D2"] = total
         book.save(inventory_file)
         book.close()
@@ -216,7 +219,7 @@ def pricing_workspace(tmp_path, inventory_file, recipe_candidate):
         )
         stock = service.get_inventory_snapshot({"workspace_id": workspace})["data"]["items"][0]
         recipe_candidate["ingredients"][0].update(
-            ingredient_id=stock["id"], quantity=dict(value=consumed, unit="g")
+            ingredient_id=stock["id"], quantity=dict(value=consumed, unit=unit)
         )
         recipe_candidate["ingredients"] = [
             deepcopy(recipe_candidate["ingredients"][0]) for _ in range(parts)
@@ -252,6 +255,8 @@ def pricing_workspace(tmp_path, inventory_file, recipe_candidate):
                 ],
             )
         evaluation = service.evaluate_purchase_plan({"workspace_id": workspace})["data"]
+        if not accept:
+            return service, workspace, recipe, None, command, database
         acceptance = command(
             "accept_recipe",
             recipe_id=recipe["id"],

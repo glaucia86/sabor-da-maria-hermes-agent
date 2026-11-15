@@ -1,5 +1,12 @@
 # CMV, cenários e escolha
 
+Antes do aceite, confira `financial_readiness`: custo essencial desconhecido
+impede aceite, cálculo definitivo e escolha de preço. Ter quantidade na despensa
+não comprova o valor pago. Água incorporada é ingrediente; água de limpeza com
+finalidade e origem explícitas é recurso operacional externo. Quando só faltam
+custos externos, o cálculo simplificado pode prosseguir com as demais condições
+confirmadas, explicando que a sobra não representa lucro líquido completo.
+
 Depois de `accept_recipe` confirmado, use `calculate_pricing_scenarios` com
 `recipe_id`, `acceptance_id`, revisão observada e um novo `operation_id`.
 É uma escrita técnica: registra o cálculo, sem escolher pela pessoa.

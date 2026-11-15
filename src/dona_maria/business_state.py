@@ -255,12 +255,15 @@ class AttendanceService:
                 }
             internal = {"workspace_id": self.workspace_id}
             if name == "get_inventory_snapshot" and request.ingredients is not None:
-                if any(index > len(snapshot.items) for index in request.ingredients):
+                all_ingredients = [*snapshot.items, *state.complement_ingredients]
+                if any(index > len(all_ingredients) for index in request.ingredients):
                     return _attendance_failure(
                         "Ingrediente indisponível. Consulte a despensa atual."
                     )
                 internal["ingredient_ids"] = [
-                    str(snapshot.items[index - 1].id) for index in request.ingredients
+                    str(all_ingredients[index - 1].id)
+                    for index in request.ingredients
+                    if index <= len(snapshot.items)
                 ]
             elif name == "evaluate_recipe_feasibility":
                 if (
@@ -428,16 +431,37 @@ class AttendanceService:
                         "proposta e atestação local da pessoa operadora."
                     ),
                 }
+                projected.update(_attendance_financials(data["evaluation"], state, snapshot))
                 projected.update(
                     _attendance_review_references(state, snapshot, references, self._reader.clock())
                 )
             elif name == "get_inventory_snapshot":
-                indices = {str(item.id): index for index, item in enumerate(snapshot.items, 1)}
+                from dona_maria.cost_readiness import apply_acquisitions
+                from dona_maria.ingredients import apply_overlays, with_complements
+
+                _, effective = apply_overlays(
+                    state.candidates, snapshot, state.ingredient_conversions
+                )
+                effective = apply_acquisitions(
+                    with_complements(effective, state.complement_ingredients),
+                    state.inventory_acquisitions,
+                )
+                indices = {str(item.id): index for index, item in enumerate(effective.items, 1)}
+                items = [
+                    item.model_dump(mode="json")
+                    for index, item in enumerate(effective.items, 1)
+                    if request.ingredients is None or index in request.ingredients
+                ]
                 projected = {
                     "items": [
                         {
                             "ingredient": indices[item["id"]],
                             "name": item["name_original"],
+                            "available_quantity": dict(
+                                value=item["stock_quantity_base"], unit=item["dimension"]
+                            )
+                            if item["stock_quantity_base"] is not None and item["dimension"]
+                            else None,
                             **{
                                 key: item[key]
                                 for key in (
@@ -452,7 +476,7 @@ class AttendanceService:
                             },
                             "needs_review": bool(item["issues"]),
                         }
-                        for item in data["items"]
+                        for item in items
                     ],
                     "historical_total": data["historical_total"],
                 }
@@ -467,6 +491,7 @@ class AttendanceService:
                 }
                 projected["needs_review"] = bool(data["gaps"])
                 projected.update(_attendance_purchase(data, state, snapshot))
+                projected.update(_attendance_financials(data, state, snapshot))
                 review = requires_local_review(
                     state, self._reader.repository.approval_refs(self.workspace_id)
                 )
@@ -600,6 +625,22 @@ def _attendance_review_references(state, snapshot, references, now):
             }
         )
     return {
+        "inventory_acquisitions": [
+            dict(
+                acquisition=index,
+                ingredient=ingredients[a.ingredient_id],
+                version=a.version,
+                available_quantity=a.available_quantity.model_dump(mode="json"),
+                acquired_quantity=a.acquired_quantity.model_dump(mode="json")
+                if a.acquired_quantity
+                else None,
+                acquisition_total=a.acquisition_total,
+                acquisition_gap=a.acquisition_gap,
+                context=a.context,
+                origin="USER_PROVIDED",
+            )
+            for index, a in enumerate(state.inventory_acquisitions, 1)
+        ],
         "conversions": conversions,
         "quotes": quotes,
         "complement_ingredients": [
@@ -643,6 +684,52 @@ def _attendance_menu(data, recipes):
             }
         )
     return menu
+
+
+def _attendance_financials(evaluation, state, snapshot):
+    ingredients = {
+        str(i.id): (index, i.name_original)
+        for index, i in enumerate([*snapshot.items, *state.complement_ingredients], 1)
+    }
+    recipes = {str(r.id): index for index, r in enumerate(state.candidates, 1)}
+    resources = {str(r.id): index for index, r in enumerate(state.operational_resources, 1)}
+    readiness = evaluation["financial_readiness"]
+    return {
+        "financial_readiness": {
+            **{k: readiness[k] for k in ("status", "net_profit_complete", "explanation")},
+            "gaps": [
+                dict(
+                    ingredient=ingredients[g["ingredient_id"]][0],
+                    name=ingredients[g["ingredient_id"]][1],
+                    **{k: g[k] for k in ("quantity", "unit", "origin", "message")},
+                )
+                for g in readiness["gaps"]
+            ],
+        },
+        "operational_resources": [
+            dict(
+                resource=resources[r["id"]],
+                recipe=recipes[r["recipe_id"]],
+                origin="USER_PROVIDED",
+                **{
+                    k: r[k]
+                    for k in (
+                        "resource_name",
+                        "purpose",
+                        "classification",
+                        "quantity",
+                        "quantity_gap",
+                        "cost",
+                        "cost_gap",
+                        "context",
+                        "applicability",
+                        "included_in_ingredient_cmv",
+                    )
+                },
+            )
+            for r in evaluation["operational_resources"]
+        ],
+    }
 
 
 def _attendance_purchase(data, state, snapshot):
@@ -716,6 +803,13 @@ class BusinessStateReader:
 
     def record_recipe_feedback(self, arguments: dict[str, object]) -> dict[str, object]:
         return self._production_command("record_recipe_feedback", FeedbackRequest, arguments)
+
+    def record_inventory_acquisition(self, arguments: dict[str, object]) -> dict[str, object]:
+        from dona_maria.cost_readiness import AcquisitionRequest
+
+        return self._production_command(
+            "record_inventory_acquisition", AcquisitionRequest, arguments
+        )
 
     def record_user_preferences(self, arguments: dict[str, object]) -> dict[str, object]:
         return self._production_command("record_user_preferences", PreferencesRequest, arguments)
@@ -960,6 +1054,8 @@ class BusinessStateReader:
                 complement_ingredients=state.complement_ingredients,
                 quotes=state.complement_quotes,
                 confirmations=state.quote_confirmations,
+                acquisitions=state.inventory_acquisitions,
+                resources=state.operational_resources,
                 now=now,
             )
             from dona_maria.ingredients import apply_overlays
@@ -1038,6 +1134,8 @@ def _project_business_state(state: WorkspaceState, evaluation: dict, now: dateti
                 )
                 else "INGREDIENT_CHECK_PENDING"
                 if evaluation["purchase_status"] != "CONFIRMED"
+                else "FINANCIAL_PENDING"
+                if evaluation["financial_readiness"]["status"] != "READY"
                 else "DISCOVERED"
                 if candidate["interest"] == "UNDECIDED"
                 else "READY_FOR_ACCEPTANCE"
@@ -1069,6 +1167,24 @@ def _project_business_state(state: WorkspaceState, evaluation: dict, now: dateti
         ],
         "ingredient_conversions": [c.model_dump(mode="json") for c in state.ingredient_conversions],
         "ingredient_resolutions": [r.model_dump(mode="json") for r in state.ingredient_resolutions],
+        **(
+            {
+                "inventory_acquisitions": [
+                    a.model_dump(mode="json") for a in state.inventory_acquisitions
+                ]
+            }
+            if state.inventory_acquisitions
+            else {}
+        ),
+        **(
+            {
+                "operational_resources": [
+                    r.model_dump(mode="json") for r in state.operational_resources
+                ]
+            }
+            if state.operational_resources
+            else {}
+        ),
         "acceptances": acceptances,
         **prices,
         "evaluation": evaluation,

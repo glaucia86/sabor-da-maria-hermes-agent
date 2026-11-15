@@ -10,6 +10,15 @@ from pathlib import Path
 from uuid import UUID, uuid4
 
 from dona_maria.candidates import RecipeCandidate, RegisterCandidateRequest
+from dona_maria.cost_readiness import (
+    AcquisitionRequest,
+    OperationalResourceRequest,
+    apply_acquisitions,
+    base_quantity,
+    record_acquisition,
+    record_operational_resource,
+    validate_acquisitions,
+)
 from dona_maria.ingredients import (
     ConversionRequest,
     ResolveIngredientRequest,
@@ -176,6 +185,10 @@ def requires_local_review(state: WorkspaceState, references: set[str]) -> bool:
         for i in state.complement_ingredients
         if i.id in ingredients and i.id not in reviewed_ingredients
     )
+    evidence.extend(
+        a.evidence for a in state.inventory_acquisitions if a.ingredient_id in ingredients
+    )
+    evidence.extend(r.evidence for r in state.operational_resources if r.recipe_id in active)
     return any(getattr(e, "turn_ref", None) not in references for e in evidence)
 
 
@@ -350,14 +363,38 @@ class SQLiteWorkspaceRepository:
         snapshot = SQLiteWorkspaceRepository.load_snapshot(db, row["snapshot_id"])
         try:
             validate_overlay_references(state, snapshot)
+            validate_acquisitions(state, snapshot)
             validate_quote_references(state, snapshot)
             for candidate in state.candidates:
                 _validate_ingredient_references(snapshot, candidate, state.complement_ingredients)
         except (BusinessRuleError, ValueError) as exc:
             raise sqlite3.DatabaseError("Referência de candidata inválida.") from exc
         SQLiteWorkspaceRepository._validate_recipe_provenance(db, workspace_id, state)
+        SQLiteWorkspaceRepository._validate_financial_provenance(db, workspace_id, state)
         SQLiteWorkspaceRepository._validate_pricing(state, snapshot, row["revision"])
         return row["revision"], state, snapshot
+
+    @staticmethod
+    def _validate_financial_provenance(db, workspace_id, state):
+        if not state.inventory_acquisitions and not state.operational_resources:
+            return
+        references = SQLiteWorkspaceRepository._approval_refs(db, workspace_id)
+        approved = {}
+        for row in db.execute(
+            "SELECT result_json FROM user_change_proposals "
+            "WHERE workspace_id=? AND status='APPROVED'",
+            (workspace_id,),
+        ):
+            result = _decode_json(row["result_json"])
+            for kind in ("acquisition", "operational_resource"):
+                record = result["data"].get(kind)
+                if record:
+                    approved[record["id"]] = record
+        for acquisition in [*state.inventory_acquisitions, *state.operational_resources]:
+            if acquisition.evidence.turn_ref not in references or approved.get(
+                str(acquisition.id)
+            ) != acquisition.model_dump(mode="json"):
+                raise sqlite3.DatabaseError("Aquisição sem atestação local exata.")
 
     @staticmethod
     def _validate_recipe_provenance(db, workspace_id, state):
@@ -467,6 +504,9 @@ class SQLiteWorkspaceRepository:
         effective_recipes, effective = apply_overlays(
             state.candidates, snapshot, state.ingredient_conversions
         )
+        effective = apply_acquisitions(
+            with_complements(effective, state.complement_ingredients), state.inventory_acquisitions
+        )
         stocks = {item.id: item for item in snapshot.items}
         recipes = {recipe.id: recipe for recipe in effective_recipes}
         acceptances = {acceptance.id: acceptance for acceptance in state.acceptances}
@@ -483,9 +523,31 @@ class SQLiteWorkspaceRepository:
             complement_ingredients=state.complement_ingredients,
             quotes=state.complement_quotes,
             confirmations=state.quote_confirmations,
+            acquisitions=state.inventory_acquisitions,
+            resources=state.operational_resources,
         )["fingerprint"]
         for calculation in state.pricing_calculations:
             for allocation in calculation.allocations:
+                if allocation.origin == "REPORTED_ACQUISITION":
+                    acquisition = next(
+                        (a for a in state.inventory_acquisitions if a.id == allocation.source_id),
+                        None,
+                    )
+                    if (
+                        acquisition is None
+                        or acquisition.acquired_quantity is None
+                        or acquisition.ingredient_id != allocation.ingredient_id
+                        or str(acquisition.version) != allocation.source_version
+                        or base_quantity(acquisition.acquired_quantity)
+                        != (allocation.unit, Decimal(allocation.purchase_quantity_base))
+                        or allocation.acquisition_total != acquisition.acquisition_total
+                        or allocation.source
+                        != acquisition.sources["acquisition_total"].model_dump(mode="json")
+                    ):
+                        raise sqlite3.DatabaseError(
+                            "Origem difere da aquisição reportada histórica."
+                        )
+                    continue
                 if allocation.origin == "QUOTE":
                     quote = next(
                         (
@@ -546,12 +608,12 @@ class SQLiteWorkspaceRepository:
                     for a in allocate_plan_costs(
                         effective_recipes,
                         state.plan,
-                        with_complements(effective, state.complement_ingredients),
+                        effective,
                         state.complement_quotes,
                     )
                     if a.recipe_id == calculation.recipe_id
                 ]
-                if state.plan.quote_selections
+                if state.plan.quote_selections or state.inventory_acquisitions
                 else None,
             )
             if calculation.model_dump(exclude={"id", "calculated_at"}) != recomputed.model_dump(
@@ -796,6 +858,8 @@ class SQLiteWorkspaceRepository:
             complement_ingredients=state.complement_ingredients,
             quotes=state.complement_quotes,
             confirmations=state.quote_confirmations,
+            acquisitions=state.inventory_acquisitions,
+            resources=state.operational_resources,
             now=now,
         )
         result = {
@@ -897,6 +961,11 @@ class SQLiteWorkspaceRepository:
                 raise BusinessRuleError("IDEMPOTENCY_CONFLICT", "Operação já utilizada.")
             return _replay_result(replay, loaded[0])
         revision, state, snapshot = loaded
+        if (
+            isinstance(request, (AcquisitionRequest, OperationalResourceRequest))
+            and not locally_approved
+        ):
+            raise BusinessRuleError("AUTHORIZATION_REQUIRED", "Use proposta e aprovação local.")
         if db.execute("SELECT 1 FROM schema_migrations WHERE version=2").fetchone():
             if not locally_approved and type(request) is not CalculatePricingRequest:
                 raise BusinessRuleError("AUTHORIZATION_REQUIRED", "Use proposta e aprovação local.")
@@ -918,7 +987,11 @@ class SQLiteWorkspaceRepository:
             raise BusinessRuleError("STALE_REVISION", "Recarregue o workspace.")
         previously_invalid = set(state.invalidated_acceptance_ids)
         invalidate_expired_acceptances(state, snapshot, revision, now)
-        if isinstance(request, ConfirmQuoteRequest):
+        if isinstance(request, AcquisitionRequest):
+            data = record_acquisition(state, request, snapshot, now)
+        elif isinstance(request, OperationalResourceRequest):
+            data = record_operational_resource(state, request, now)
+        elif isinstance(request, ConfirmQuoteRequest):
             data = confirm_quote(state, request, now)
         elif isinstance(request, RegisterQuoteRequest):
             data = register_quote(state, request, snapshot, now)
@@ -943,6 +1016,8 @@ class SQLiteWorkspaceRepository:
                 complement_ingredients=state.complement_ingredients,
                 quotes=state.complement_quotes,
                 confirmations=state.quote_confirmations,
+                acquisitions=state.inventory_acquisitions,
+                resources=state.operational_resources,
                 now=now,
             )
             data = _accept_recipe(state, request, evaluation, now)
@@ -966,6 +1041,8 @@ class SQLiteWorkspaceRepository:
                 complement_ingredients=state.complement_ingredients,
                 quotes=state.complement_quotes,
                 confirmations=state.quote_confirmations,
+                acquisitions=state.inventory_acquisitions,
+                resources=state.operational_resources,
                 now=now,
             )
             data["next_action"] = correction_next_action(state, data["summary"])
@@ -1061,6 +1138,8 @@ class SQLiteWorkspaceRepository:
                 complement_ingredients=state.complement_ingredients,
                 quotes=state.complement_quotes,
                 confirmations=state.quote_confirmations,
+                acquisitions=state.inventory_acquisitions,
+                resources=state.operational_resources,
                 now=now,
             )
             return dict(

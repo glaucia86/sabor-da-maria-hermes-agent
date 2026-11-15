@@ -5,6 +5,7 @@ import io
 import posixpath
 import unicodedata
 import zipfile
+import zlib
 from collections import defaultdict
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation, localcontext
 from pathlib import Path
@@ -13,8 +14,14 @@ from uuid import NAMESPACE_URL, UUID, uuid5
 from xml.etree import ElementTree
 
 from openpyxl import load_workbook
+from openpyxl.cell.read_only import ReadOnlyCell
+from openpyxl.packaging.manifest import Manifest
+from openpyxl.utils.cell import range_boundaries
 from openpyxl.utils.exceptions import InvalidFileException
+from openpyxl.xml.constants import XLSM, XLSX, XLTM, XLTX
 from pydantic import BaseModel, ConfigDict
+
+from dona_maria.provenance import UserProvidedSource
 
 
 class InventoryModel(BaseModel):
@@ -52,14 +59,14 @@ class InventoryItem(InventoryModel):
     acquisition_total: Decimal | None
     unit_cost: Decimal | None
     issues: list[InventoryIssue]
-    stock_source: CellSource | None
-    purchase_source: CellSource | None
+    stock_source: CellSource | UserProvidedSource | None
+    purchase_source: CellSource | UserProvidedSource | None
 
 
 class InventorySnapshot(InventoryModel):
     id: UUID
     source_sha256: str
-    import_policy_version: Literal["1.0"] = "1.0"
+    import_policy_version: Literal["1.0", "2.0"] = "1.0"
     items: list[InventoryItem]
     historical_total: Decimal | None
     issues: list[InventoryIssue]
@@ -87,13 +94,28 @@ def import_inventory(path: Path, *, allowed_directory: Path) -> InventorySnapsho
     path = path.resolve()
     if not path.is_relative_to(allowed_directory.resolve()) or path.suffix.lower() != ".xlsx":
         raise ValueError("Importação exige XLSX no diretório autorizado.")
-    content = path.read_bytes()
+    with path.open("rb") as stream:
+        content = stream.read(5 * 1024 * 1024 + 1)
+    if len(content) > 5 * 1024 * 1024:
+        raise ValueError("XLSX excede o limite de 5 MiB.")
     digest = hashlib.sha256(content).hexdigest()
-    snapshot_id = uuid5(NAMESPACE_URL, f"inventory:1.0:{digest}")
+    snapshot_id = uuid5(NAMESPACE_URL, f"inventory:2.0:{digest}")
     try:
+        _validate_archive(content)
         raw = _numeric_literals(content)
-        book = load_workbook(io.BytesIO(content), data_only=False, keep_links=False)
-    except (zipfile.BadZipFile, KeyError, ElementTree.ParseError, InvalidFileException) as exc:
+        book = load_workbook(io.BytesIO(content), data_only=False, keep_links=False, read_only=True)
+    except (
+        zipfile.BadZipFile,
+        KeyError,
+        ElementTree.ParseError,
+        InvalidFileException,
+        RuntimeError,
+        NotImplementedError,
+        TypeError,
+        AttributeError,
+        IndexError,
+        zlib.error,
+    ) as exc:
         raise ValueError("estrutura de XLSX inválida; conferir a origem.") from exc
     try:
         headers = {
@@ -107,8 +129,8 @@ def import_inventory(path: Path, *, allowed_directory: Path) -> InventorySnapsho
                 != expected
             ):
                 raise ValueError(f"estrutura inválida: conferir aba/cabeçalho {sheet}!A1.")
-        stock_rows = list(book["Despensa"].iter_rows(min_row=2, max_col=3))
-        price_rows = list(book["Precos"].iter_rows(min_row=2, max_col=4))
+        stock_rows = _inventory_rows(book["Despensa"], 3)
+        price_rows = _inventory_rows(book["Precos"], 4)
         prices = _group_rows(price_rows)
         stocks = _group_rows(stock_rows)
         items = []
@@ -135,6 +157,19 @@ def import_inventory(path: Path, *, allowed_directory: Path) -> InventorySnapsho
                     for sheet, rows in [("Despensa", stock_matches), ("Precos", price_matches)]
                     if rows
                 ]
+                stock_base, dimension = None, None
+                if len(stock_matches) == 1 and not price_matches and not invalid_names:
+                    dimension, factor = _unit(stock[2], "Despensa", issues)
+                    value = _number(
+                        stock[1],
+                        "Despensa",
+                        raw,
+                        issues,
+                        positive=False,
+                        integral=stock[2].value not in {"kg", "g", "L", "ml"},
+                    )
+                    if value is not None and factor:
+                        stock_base = value * factor
                 items.append(
                     InventoryItem(
                         id=uuid5(snapshot_id, key),
@@ -144,9 +179,9 @@ def import_inventory(path: Path, *, allowed_directory: Path) -> InventorySnapsho
                         purchase_quantity_original=_text(price[1].value) if price else None,
                         stock_unit_original=_text(stock[2].value) if stock else None,
                         purchase_unit_original=_text(price[2].value) if price else None,
-                        stock_quantity_base=None,
+                        stock_quantity_base=stock_base,
                         purchase_quantity_base=None,
-                        dimension=None,
+                        dimension=dimension,
                         acquisition_total=None,
                         unit_cost=None,
                         issues=issues,
@@ -229,6 +264,7 @@ def import_inventory(path: Path, *, allowed_directory: Path) -> InventorySnapsho
             )
         return InventorySnapshot(
             id=snapshot_id,
+            import_policy_version="2.0",
             source_sha256=digest,
             items=items,
             historical_total=(
@@ -240,6 +276,18 @@ def import_inventory(path: Path, *, allowed_directory: Path) -> InventorySnapsho
         )
     finally:
         book.close()
+
+
+def _inventory_rows(sheet, max_col):
+    # Dimensões declaradas menores não podem truncar silenciosamente os dados.
+    sheet.reset_dimensions()
+    return [
+        tuple(
+            cell if hasattr(cell, "coordinate") else ReadOnlyCell(sheet, row_index, column, None)
+            for column, cell in enumerate(row, 1)
+        )
+        for row_index, row in enumerate(sheet.iter_rows(min_row=2, max_col=max_col), 2)
+    ]
 
 
 def _source(row, sheet: str, digest: str, raw: dict) -> CellSource:
@@ -342,24 +390,101 @@ def _number(
     return value
 
 
+def _validate_archive(content: bytes) -> None:
+    expanded = 0
+    rows = 0
+    with zipfile.ZipFile(io.BytesIO(content)) as archive:
+        names = archive.namelist()
+        if len(names) != len(set(names)):
+            raise ValueError("estrutura ZIP com membros duplicados.")
+        for entry in archive.infolist():
+            name = entry.filename
+            if (
+                "vba" in name.casefold()
+                or "externallinks" in name.casefold()
+                or name.startswith("/")
+                or ".." in name.split("/")
+                or "\\" in name
+            ):
+                raise ValueError("estrutura XLSX contém macro, link externo ou caminho inválido.")
+            with archive.open(entry) as member:
+                tail = b""
+                while chunk := member.read(64 * 1024):
+                    expanded += len(chunk)
+                    if expanded > 50 * 1024 * 1024:
+                        raise ValueError("ZIP expandido excede o limite de 50 MiB.")
+                    if b"<!DOCTYPE" in (tail + chunk).replace(b"\x00", b""):
+                        raise ValueError("estrutura XML com declaração de entidades proibida.")
+                    tail = chunk[-64:]
+        worksheet_members = [member for _, member in _worksheet_members(archive)]
+        worksheets = set(worksheet_members)
+        if len(worksheets) != len(worksheet_members):
+            raise ValueError("estrutura XLSX reutiliza uma parte em mais de uma aba.")
+        for name in names:
+            worksheet = name in worksheets
+            if worksheet or name.endswith(".rels"):
+                row_count = row_position = max_row = 0
+                with archive.open(name) as member:
+                    for _, element in ElementTree.iterparse(member):
+                        if element.attrib.get("TargetMode") == "External":
+                            raise ValueError("estrutura XLSX contém link externo.")
+                        if worksheet and element.tag.endswith("}f"):
+                            raise ValueError("Fórmula em XLSX não é aceita como dado de origem.")
+                        if worksheet and element.tag.rsplit("}", 1)[-1] in {
+                            "mergeCell",
+                            "hyperlink",
+                        }:
+                            raise ValueError(
+                                "estrutura tabular não permite mesclagem ou hyperlink."
+                            )
+                        if worksheet:
+                            if element.tag.endswith("}row"):
+                                row_count += 1
+                                row_position = int(element.attrib.get("r", row_position + 1))
+                                max_row = max(max_row, row_position)
+                            elif element.tag.endswith("}dimension"):
+                                max_row = max(max_row, range_boundaries(element.attrib["ref"])[3])
+                            elif element.tag.endswith("}c"):
+                                max_row = max(max_row, range_boundaries(element.attrib["r"])[3])
+                            if rows + max(row_count, max_row) > 20_000:
+                                raise ValueError("XLSX excede o limite de 20.000 linhas.")
+                        element.clear()
+                rows += max(row_count, max_row)
+
+
+def _worksheet_members(archive):
+    manifest = Manifest.from_tree(ElementTree.fromstring(archive.read("[Content_Types].xml")))
+    workbooks = [part for part in manifest.Override if part.ContentType in {XLTM, XLTX, XLSM, XLSX}]
+    if (
+        len(workbooks) != 1
+        or workbooks[0].PartName != "/xl/workbook.xml"
+        or workbooks[0].ContentType != XLSX
+    ):
+        raise ValueError("estrutura XLSX exige parte principal única em xl/workbook.xml.")
+    main = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
+    relationship = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
+    workbook = ElementTree.fromstring(archive.read("xl/workbook.xml"))
+    relationships = ElementTree.fromstring(archive.read("xl/_rels/workbook.xml.rels"))
+    targets = {item.attrib["Id"]: item.attrib["Target"] for item in relationships}
+    return [
+        (
+            sheet.attrib["name"],
+            posixpath.normpath(
+                posixpath.join("xl", targets[sheet.attrib[f"{relationship}id"]])
+            ).lstrip("/"),
+        )
+        for sheet in workbook.find(f"{main}sheets")
+    ]
+
+
 def _numeric_literals(content: bytes) -> dict[str, dict[str, str]]:
     """Léxicos numéricos OOXML, antes da conversão do leitor para float."""
     main = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
-    relationship = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
     with zipfile.ZipFile(io.BytesIO(content)) as archive:
-        workbook = ElementTree.fromstring(archive.read("xl/workbook.xml"))
-        relationships = ElementTree.fromstring(archive.read("xl/_rels/workbook.xml.rels"))
-        targets = {item.attrib["Id"]: item.attrib["Target"] for item in relationships}
         result = {}
-        for sheet in workbook.find(f"{main}sheets"):
-            target = targets[sheet.attrib[f"{relationship}id"]]
-            member = (
-                target.lstrip("/")
-                if target.startswith("/")
-                else posixpath.normpath(posixpath.join("xl", target))
-            )
+        for sheet_name, member in _worksheet_members(archive):
             tree = ElementTree.fromstring(archive.read(member))
-            result[sheet.attrib["name"]] = {
+            result[sheet_name] = {
                 cell.attrib["r"]: cell.find(f"{main}v").text
                 for cell in tree.iter(f"{main}c")
                 if cell.attrib.get("t", "n") == "n"

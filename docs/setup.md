@@ -185,9 +185,11 @@ não variáveis expandidas automaticamente.
 
 ```sh
 hermes -p sabor-da-maria config set skills.external_dirs "['SKILLS_ABSOLUTO']"
-hermes -p sabor-da-maria mcp add dona_maria --command "PYTHON_ABSOLUTO" --connect-timeout 15 --env "DONA_MARIA_DB_PATH=SQLITE_ABSOLUTO" --env "DONA_MARIA_WORKSPACE_ID=WORKSPACE_IMPORTADO" --env "DONA_MARIA_MODE=ATTENDANCE" --args -X utf8 -B -m dona_maria.launcher
+hermes -p sabor-da-maria mcp add dona_maria --command "PYTHON_ABSOLUTO" --connect-timeout 15 --env "DONA_MARIA_DB_PATH=SQLITE_ABSOLUTO" "DONA_MARIA_WORKSPACE_ID=WORKSPACE_IMPORTADO" "DONA_MARIA_MODE=ATTENDANCE" --args -X utf8 -B -m dona_maria.launcher
 ```
 
+Use um único `--env` para a lista das três variáveis. No parser conferido,
+repetir essa opção substitui a lista anterior e perde parte do binding.
 Mantenha `--args` como a última opção: o restante pertence ao subprocesso.
 
 A descoberta MCP pode pedir seleção das ferramentas. Confira o catálogo

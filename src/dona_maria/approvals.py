@@ -24,6 +24,7 @@ from dona_maria.candidates import (
     ShortText,
     UUIDText,
 )
+from dona_maria.cost_readiness import AcquisitionRequest, OperationalResourceRequest
 from dona_maria.ingredients import ConversionRequest, ResolveIngredientRequest
 from dona_maria.limits import call_fits
 from dona_maria.persistence import SQLiteWorkspaceRepository, _decode_json, _replay_result
@@ -89,6 +90,20 @@ ResolutionPayload = _payload_model("ResolutionPayload", ResolveIngredientRequest
 ConfirmQuotePayload = _payload_model("ConfirmQuotePayload", ConfirmQuoteRequest)
 ReviseQuotePayload = _payload_model("ReviseQuotePayload", RegisterQuoteRequest)
 ReviseCandidatePayload = _payload_model("ReviseCandidatePayload", RegisterCandidateRequest)
+AcquisitionPayload = _payload_model("AcquisitionPayload", AcquisitionRequest)
+OperationalResourcePayload = _payload_model(
+    "OperationalResourcePayload", OperationalResourceRequest
+)
+
+
+class AcquisitionCommand(CandidateModel):
+    kind: Literal["record_inventory_acquisition"]
+    payload: AcquisitionPayload
+
+
+class OperationalResourceCommand(CandidateModel):
+    kind: Literal["record_operational_resource"]
+    payload: OperationalResourcePayload
 
 
 class PreferencesCommand(CandidateModel):
@@ -153,7 +168,9 @@ class ProposalRequest(CommandMeta):
         | ResolutionCommand
         | ConfirmQuoteCommand
         | ReviseQuoteCommand
-        | ReviseCandidateCommand,
+        | ReviseCandidateCommand
+        | AcquisitionCommand
+        | OperationalResourceCommand,
         Field(discriminator="kind"),
     ]
 
@@ -223,6 +240,8 @@ def _expand_bound_command(command, state, snapshot, revision, now):
         "replaces_fact_id": state.kitchen_facts,
         "replaces_preference_id": state.preferences,
         "replaces_conversion_id": state.ingredient_conversions,
+        "replaces_acquisition_id": state.inventory_acquisitions,
+        "replaces_resource_id": state.operational_resources,
     }
 
     def expand(value, recipe=None):
@@ -259,7 +278,11 @@ def _expand_bound_command(command, state, snapshot, revision, now):
     kind, payload = expanded["kind"], expanded["payload"]
     recipe = next((r for r in state.candidates if str(r.id) == payload.get("recipe_id")), None)
     quote = next((q for q in quotes if str(q.id) == payload.get("quote_id")), None)
-    if kind in ("record_ingredient_conversion", "resolve_recipe_ingredient"):
+    if kind in (
+        "record_ingredient_conversion",
+        "resolve_recipe_ingredient",
+        "record_operational_resource",
+    ):
         payload["recipe_version"] = recipe.version if recipe else None
     if kind == "register_recipe_candidate":
         if recipe:
@@ -306,6 +329,8 @@ def _expand_bound_command(command, state, snapshot, revision, now):
             complement_ingredients=state.complement_ingredients,
             quotes=state.complement_quotes,
             confirmations=state.quote_confirmations,
+            acquisitions=state.inventory_acquisitions,
+            resources=state.operational_resources,
             now=now,
         )["evaluation_id"]
     if kind == "save_menu_decision":
@@ -378,6 +403,8 @@ def _review_summary(command, state, snapshot, revision, now):
             complement_ingredients=state.complement_ingredients,
             quotes=state.complement_quotes,
             confirmations=state.quote_confirmations,
+            acquisitions=state.inventory_acquisitions,
+            resources=state.operational_resources,
             now=now,
         ),
     }
@@ -395,6 +422,8 @@ def _check_reference_scope(command, state, snapshot):
         "replaces_fact_id": {str(f.id) for f in state.kitchen_facts},
         "replaces_preference_id": {str(p.id) for p in state.preferences},
         "replaces_conversion_id": {str(c.id) for c in state.ingredient_conversions},
+        "replaces_acquisition_id": {str(a.id) for a in state.inventory_acquisitions},
+        "replaces_resource_id": {str(r.id) for r in state.operational_resources},
     }
     references["existing_ingredient_id"] = references["ingredient_id"]
 
@@ -433,6 +462,8 @@ COMMAND_SCHEMAS = {
     "confirm_complement_quote": ConfirmQuoteRequest,
     "register_complement_quote": RegisterQuoteRequest,
     "register_recipe_candidate": RegisterCandidateRequest,
+    "record_inventory_acquisition": AcquisitionRequest,
+    "record_operational_resource": OperationalResourceRequest,
 }
 
 

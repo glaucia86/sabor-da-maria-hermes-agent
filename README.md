@@ -72,6 +72,15 @@ base sintética, com atestações locais e retomada do preço. Isso não comprov
 autonomia geral nem operação comercial. Novas fontes web continuam
 indisponíveis no atendimento.
 
+Disponibilidade e custo são avaliados separadamente. Ingrediente em estoque
+sem base de aquisição permanece disponível, mas bloqueia aceite e preço
+definitivos. Aquisições humanas e recursos operacionais externos usam propostas
+e atestação local, conservando o XLSX e o histórico. Água incorporada entra no
+CMV; água de limpeza explicitamente externa permanece separada. O resultado
+após taxa e ingredientes não demonstra lucro líquido completo. O importador
+local recusa XLSX acima de 5 MiB, expansão ZIP acima de 50 MiB, mais de 20.000
+linhas ou caminhos fora da raiz autorizada, sem aceitar snapshot parcial.
+
 <a id="arquitetura"></a>
 ## 🏗️ Explore a arquitetura
 
