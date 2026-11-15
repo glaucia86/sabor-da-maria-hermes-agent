@@ -140,6 +140,195 @@ def test_partial_adaptation_of_immutable_web_version_keeps_mixed_sources(
     assert approve(local, workspace, proposal) == result
 
 
+def test_title_only_partial_adaptation_preserves_existing_financial_validity(
+    pricing_workspace, tmp_path
+):
+    reader, workspace, original, acceptance, command, database = pricing_workspace()
+    calculated = command(
+        "calculate_pricing_scenarios",
+        recipe_id=original["id"],
+        acceptance_id=acceptance["id"],
+    )
+    assert calculated["ok"], calculated
+    migrate_proposals(reader.repository, tmp_path / "title-review-backup.sqlite3")
+    local = ApprovalService(reader.repository, clock=reader.clock)
+    before = state(local, workspace)["data"]
+    proposal = propose(
+        local,
+        workspace,
+        dict(
+            origin=dict(
+                source={"kind": "USER_PROVIDED"},
+                derived_from=dict(recipe_id=original["id"], version=1),
+            ),
+            changes=dict(title="Arroz com titulo corrigido"),
+        ),
+        recipe_id=original["id"],
+        expected_recipe_version=1,
+    )
+    result = approve(local, workspace, proposal)
+    assert result["ok"], result
+    adapted = result["data"]["candidate"]
+    assert adapted["business_version"] == original["business_version"]
+    assert adapted["version"] == 2 and adapted["title"] == "Arroz com titulo corrigido"
+    assert set(adapted["category_status"].values()) == {"REVIEWED"}
+    assert result["data"]["invalidated_decisions"] == []
+    assert result["data"]["invalidated_calculation_ids"] == []
+    after = state(local, workspace)["data"]
+    assert after["evaluation"]["fingerprint"] == before["evaluation"]["fingerprint"]
+    for key in ("plan", "acceptances", "pricing_calculations", "menu_decisions"):
+        assert after[key] == before[key]
+    reopened = ApprovalService(SQLiteWorkspaceRepository(database), clock=reader.clock)
+    assert state(reopened, workspace)["data"] == after
+    assert approve(reopened, workspace, proposal) == result
+
+
+def test_title_only_bound_adaptations_keep_local_menu_valid_after_restart(
+    local_context, own_recipe
+):
+    local, workspace, database = local_context
+    reader = BusinessStateReader(local.repository)
+    source = {"kind": "USER_PROVIDED"}
+    own_recipe.update(
+        yield_gap=None,
+        context_gap=None,
+        yield_per_batch=dict(servings_per_batch=2, sale_unit_label="porcao", source=source),
+        operational_context="Um lote manual em recipiente individual.",
+        context_source=source,
+        category_reviews=[
+            dict(
+                category=category,
+                requirement_keys=[],
+                method_version=1,
+                not_applicable_reason="Sem requisito nesta fixture.",
+                source=source,
+            )
+            for category in ("EQUIPMENT", "SKILL", "OPERATION")
+        ],
+    )
+    own_recipe["ingredients"][0]["ingredient_id"] = reader.get_inventory_snapshot(
+        {"workspace_id": workspace}
+    )["data"]["items"][0]["id"]
+    registered = approve(local, workspace, propose(local, workspace, own_recipe))
+    original = registered["data"]["candidate"]
+    decide(
+        local, workspace, "record_recipe_feedback", recipe_id=original["id"], feedback="INTERESTED"
+    )
+    decide(
+        local,
+        workspace,
+        "set_production_plan",
+        items=[dict(recipe_id=original["id"], recipe_version=1, batches=1, position=0)],
+    )
+    current = state(local, workspace)["data"]
+    accepted = decide(
+        local,
+        workspace,
+        "accept_recipe",
+        recipe_id=original["id"],
+        plan_item_id=current["plan"]["items"][0]["plan_item_id"],
+        evaluation_id=current["evaluation"]["evaluation_id"],
+    )
+    calculated = reader.calculate_pricing_scenarios(
+        dict(
+            workspace_id=workspace,
+            operation_id=str(uuid4()),
+            expected_revision=state(local, workspace)["revision"],
+            recipe_id=original["id"],
+            acceptance_id=accepted["data"]["acceptance"]["id"],
+        )
+    )
+    assert calculated["ok"], calculated
+    saved = decide(
+        local,
+        workspace,
+        "save_menu_decision",
+        recipe_id=original["id"],
+        acceptance_id=accepted["data"]["acceptance"]["id"],
+        calculation_id=calculated["data"]["calculation"]["id"],
+        scenario_id="M20",
+    )
+    assert saved["ok"], saved
+    before = state(local, workspace)["data"]
+    for version in (2, 3):
+        view = local.propose_bound(
+            workspace,
+            dict(
+                operation_id=str(uuid4()),
+                command=dict(
+                    kind="register_recipe_candidate",
+                    payload=dict(
+                        recipe_id=1,
+                        candidate=dict(
+                            origin=dict(
+                                source=source, derived_from=dict(recipe_id=1, version=version - 1)
+                            ),
+                            changes=dict(title=f"Titulo corrigido {version}"),
+                        ),
+                    ),
+                ),
+            ),
+        )
+        proposal = local.list(workspace)[view["proposal"] - 1]
+        result = approve(local, workspace, proposal)
+        assert result["ok"], result
+        assert result["data"]["candidate"]["business_version"] == 1
+        assert set(result["data"]["candidate"]["category_status"].values()) == {"REVIEWED"}
+        after = state(local, workspace)["data"]
+        assert after["evaluation"]["fingerprint"] == before["evaluation"]["fingerprint"]
+        for key in ("plan", "acceptances", "pricing_calculations", "menu_decisions", "menu"):
+            assert after[key] == before[key]
+        local = ApprovalService(SQLiteWorkspaceRepository(database))
+        assert state(local, workspace)["data"] == after
+        assert approve(local, workspace, proposal) == result
+
+
+def test_neutral_financial_basis_is_server_owned_and_checked_on_reopen(local_context, own_recipe):
+    local, workspace, database = local_context
+    original = approve(local, workspace, propose(local, workspace, own_recipe))["data"]["candidate"]
+    candidate = dict(
+        origin=dict(
+            source={"kind": "USER_PROVIDED"},
+            derived_from=dict(recipe_id=original["id"], version=1),
+        ),
+        changes=dict(title="Titulo corrigido"),
+    )
+    before = state(local, workspace)
+    with pytest.raises(ValueError):
+        propose(
+            local,
+            workspace,
+            candidate | {"changes": candidate["changes"] | {"business_basis": {}}},
+            recipe_id=original["id"],
+            expected_recipe_version=1,
+        )
+    assert state(local, workspace) == before
+    result = approve(
+        local,
+        workspace,
+        propose(
+            local,
+            workspace,
+            candidate,
+            recipe_id=original["id"],
+            expected_recipe_version=1,
+        ),
+    )
+    assert result["ok"], result
+    projected = AttendanceService(database, workspace, "ATTENDANCE").call("get_business_state", {})
+    assert projected["ok"] and "business_basis" not in json.dumps(projected)
+    with sqlite3.connect(database) as db:
+        document = json.loads(db.execute("SELECT state_json FROM workspaces").fetchone()[0])
+        document["candidates"][0]["business_basis"]["method"] = "Premissa financeira adulterada"
+        db.execute("UPDATE workspaces SET state_json=?", (json.dumps(document),))
+    damaged = database.read_bytes()
+    refused = BusinessStateReader(SQLiteWorkspaceRepository(database)).get_business_state(
+        {"workspace_id": workspace}
+    )
+    assert not refused["ok"] and refused["data"] is None
+    assert database.read_bytes() == damaged
+
+
 def test_bootstrap_modes_use_separate_databases_and_cannot_be_promoted(tmp_path, inventory_file):
     real_db, simulated_db = tmp_path / "real.sqlite3", tmp_path / "simulation.sqlite3"
     real = bootstrap_workspace(

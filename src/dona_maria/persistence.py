@@ -394,6 +394,7 @@ class SQLiteWorkspaceRepository:
             str(r.id)
             for r in state.candidates
             if r.provenance_version is not None
+            or r.business_basis is not None
             or any(s["kind"] != "WEB" for _, s in source_fields(r.model_dump(mode="json")))
         }
         if not db.execute("SELECT 1 FROM schema_migrations WHERE version=2").fetchone():
@@ -878,8 +879,16 @@ class SQLiteWorkspaceRepository:
             materialize_recipe_quantities(
                 candidate, lambda ref: self.resolve_information(db, workspace_id, ref)
             )
-        if original and candidate.operational_content() != original.operational_content():
-            candidate.category_reviews = []
+        if original:
+            if candidate.operational_content() != original.operational_content():
+                candidate.category_reviews = []
+            else:
+                for review in candidate.category_reviews:
+                    if (
+                        review in original.category_reviews
+                        and review.method_version == original.version
+                    ):
+                        review.method_version = candidate.version
         from dona_maria.provenance import InformationRef, context_labels, transitive_inputs
 
         roots = []
@@ -899,12 +908,14 @@ class SQLiteWorkspaceRepository:
             ],
         )["depends_on_simulation"]
         material_change = (
-            previous is None or candidate.business_content() != previous.business_content()
+            previous is None or candidate.business_premises() != previous.business_premises()
         )
         candidate.business_version = (
             previous.business_version + int(material_change) if previous else 1
         )
         if previous and not material_change:
+            if candidate.business_content() != previous.business_content():
+                candidate.business_basis = previous.business_content()
             candidate.ingredients = previous.ingredients
             candidate.requirements = previous.requirements
         previously_invalid = set(state.invalidated_acceptance_ids)

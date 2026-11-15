@@ -192,6 +192,8 @@ def source_fields(value, path=""):
             yield path, value
         else:
             for key, item in value.items():
+                if key == "business_basis":
+                    continue  # Snapshot financeiro auditado, não uma nova fonte de informação.
                 yield from source_fields(item, f"{path}/{key}".lstrip("/"))
 
 

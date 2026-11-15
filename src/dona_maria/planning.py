@@ -621,7 +621,10 @@ def evaluate_plan(
             inputs["plan"].pop("quote_selections")
         for item in inputs["plan"]["items"]:
             item["recipe_version"] = item["business_recipe_version"]
-    if any(r.provenance_version == "2.0" and r.id in active_ids for r in candidates):
+    if any(
+        r.business_content().get("provenance_version") == "2.0" and r.id in active_ids
+        for r in candidates
+    ):
         inputs["fingerprint_version"] = "2.0"
     digest = fingerprint(inputs)
     feasibility = []
