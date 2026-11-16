@@ -40,10 +40,23 @@ fonte são versionados, então apresentar não exige Node nem internet.
 Animação fade curta respeita redução de movimento.
 Para imprimir, acrescente `?print-pdf` à URL e use a impressão do navegador.
 
+## Sistema visual e condução
+
+O tema usa Manrope variável local ([OFL](slides/assets/fonts/Manrope-OFL.txt)),
+fundo carvão, texto marfim e vermelho para destacar decisões. Cores, tipografia,
+espaçamento e componentes ficam em `slides/src/deck.css`; os rodapés distinguem
+os 14 slides principais do material de apoio. A apresentação mantém os arquivos
+locais do Reveal.js e funciona offline.
+
+Em `#/12`, a linha do tempo apresenta cinco etapas propostas, sem inventar
+prazos ou tratar trabalho futuro como concluído. As setas destacam uma etapa
+por vez, mantendo a sequência inteira visível. A impressão não duplica o slide
+para cada destaque; animações são desativadas com redução de movimento.
+
 ## Editar o deck
 
 O `index.html` é gerado. Edite `slides/src/index.template.html` (conteúdo e notas),
-`slides/src/deck.css` (tema Tailwind) ou `slides/tools/build-deck.mjs` (diagramas) e rode:
+`slides/src/deck.css` (tema Tailwind) e rode:
 
 ```sh
 cd docs/speaker/slides
@@ -55,21 +68,16 @@ npm run build
   entra numa camada própria para não sobrepor as utilidades.
 - **Ícones [Lucide](https://lucide.dev)** (ISC) entram inline no HTML com
   `{{icon nome classes}}`.
-- **Diagramas estilo Excalidraw** são desenhados com [rough.js](https://roughjs.com)
-  (MIT, seed fixa) e a fonte Excalifont ([OFL](slides/assets/fonts/Excalifont-OFL.txt)).
-  Use `{{diagram nome}}` no template; cópias avulsas ficam em `slides/assets/diagrams/`.
+- **Diagramas** são carregados por `<img>` diretamente dos SVGs em
+  `slides/assets/diagrams/`, com texto alternativo no template.
+  O build preserva esses arquivos; substitua o SVG para atualizar a imagem.
 
 ### Editar um diagrama no tldraw ou no Excalidraw
 
-Cada diagrama também é exportado como `slides/assets/diagrams/<nome>.excalidraw.json`
-(formato de clipboard do Excalidraw). Copie todo o conteúdo do arquivo e cole com
-**Ctrl+V** no [tldraw](https://www.tldraw.com) ou no [Excalidraw](https://excalidraw.com):
-as caixas, textos e setas viram formas nativas e editáveis. Edições feitas lá não
-voltam para o deck; para mudar os slides, ajuste `tools/build-deck.mjs`.
-
-Para a extensão tldraw do VS Code, abra `slides/assets/diagrams/<nome>.tldr`.
-Esses arquivos foram gerados uma vez a partir dos `.excalidraw.json` e não são
-recriados pelo `npm run build`.
+Abra `slides/assets/diagrams/<nome>.tldr` na extensão tldraw do VS Code.
+Depois de editar, exporte o SVG atualizado para a mesma pasta, preservando
+o nome usado no template. Para edições no Excalidraw, exporte também como SVG.
+O `npm run build` não recria nem sobrescreve os diagramas ou seus arquivos editáveis.
 
 ## Referência de organização
 
