@@ -520,8 +520,8 @@ Este projeto é independente e foi desenvolvido para um desafio técnico. O Herm
 <a href="https://github.com/glaucia86"><img src="https://avatars.githubusercontent.com/u/1631477?v=4" width="170" height="170" alt="Glaucia Lemos"></a>
 
 <h3>Glaucia Lemos</h3>
-<p><strong>Software Engineer · AI Engineer · Educadora · Codex Ambassador</strong></p>
-<p>Sou engenheira de software e compartilho conhecimento sobre JavaScript, TypeScript,<br>Node.js e Inteligência Artificial. Meu trabalho conecta desenvolvimento de aplicações,<br>IA generativa e aprendizado prático em comunidades e projetos open source.</p>
+<p><strong>Software Engineer · AI Engineer · Educadora · Microsoft MVP · Codex & Devin Ambassador</strong></p>
+<p>Sou Senior Software Engineer e compartilho conhecimento sobre JavaScript, TypeScript,<br>Node.js, Python e Inteligência Artificial. Meu trabalho conecta desenvolvimento de aplicações,<br>IA generativa e aprendizado prático em comunidades e projetos open source.</p>
 
 <p>
 <a href="https://www.youtube.com/user/l32759"><img alt="YouTube" src="https://img.shields.io/badge/YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white"></a>
