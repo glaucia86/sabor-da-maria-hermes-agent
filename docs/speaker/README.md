@@ -56,6 +56,10 @@ Cada diagrama também é exportado como `slides/assets/diagrams/<nome>.excalidra
 as caixas, textos e setas viram formas nativas e editáveis. Edições feitas lá não
 voltam para o deck; para mudar os slides, ajuste `tools/build-deck.mjs`.
 
+Para a extensão tldraw do VS Code, abra `slides/assets/diagrams/<nome>.tldr`.
+Esses arquivos foram gerados uma vez a partir dos `.excalidraw.json` e não são
+recriados pelo `npm run build`.
+
 ## Referência de organização
 
 Estrutura editorial inspirada no
