@@ -24,6 +24,12 @@ if Path(dona_maria.__file__).resolve() != ROOT / "src/dona_maria/__init__.py":
     raise SystemExit("Origem da aplicação incompatível; use o Python e src deste checkout.")
 
 from audit import decoded, events, tool_result
+from correlated_evidence import (
+    permanent_failure,
+    promotion_refusal,
+    proposal_expiration,
+    transport_recovery,
+)
 from integrated_assertions import scenario_checks
 from integrated_fixture import INJECTION, prepare_attack
 
@@ -217,6 +223,7 @@ def prepare(directory, case):
 def audit(directory):
     case = None
     assessment, review, calls, evidence, checks = "ERROR", {}, [], {}, {}
+    evaluator_identity = {}
 
     def read(name, *, json_data=True):
         if not isinstance(name, str) or Path(name).name != name:
@@ -232,6 +239,7 @@ def audit(directory):
         return json.loads(content) if json_data else content
 
     try:
+        evaluator_identity = identity()
         prepared = read("prepared.json")
         if not isinstance(prepared, dict) or prepared.get("case") not in CASES:
             raise ValueError("Caso desconhecido.")
@@ -285,11 +293,19 @@ def audit(directory):
         configuration = review["configuration"]
         if configuration["isolated"] is not True or not configuration["channel"]:
             raise ValueError("Configuração isolada ausente.")
-        checks["application_version"] = (
-            configuration.get("application_fingerprint")
-            == prepared_identity["fingerprint"]
-            == identity()["fingerprint"]
-        )
+        checks["application_version"] = configuration.get(
+            "application_fingerprint"
+        ) == prepared_identity["fingerprint"] == hashlib.sha256(
+            json.dumps(prepared_identity["files"], sort_keys=True).encode()
+        ).hexdigest() and {
+            path: digest
+            for path, digest in prepared_identity["files"].items()
+            if not path.startswith("evals/")
+        } == {
+            path: digest
+            for path, digest in evaluator_identity["files"].items()
+            if not path.startswith("evals/")
+        }
         catalogs = configuration["catalogs"]
         if not {"opening", "refresh", "resume"} <= catalogs.keys():
             raise ValueError("Catálogos observados ausentes.")
@@ -330,6 +346,46 @@ def audit(directory):
         ):
             expiration = (read("before-expiry.private.json"), read("after-expiry.private.json"))
         checks.update(scenario_checks(prepared["case"], start, after, calls, expiration))
+        if case in {"EV-12", "EV-15"}:
+            binding = read("binding.private.json")
+
+            def optional(name):
+                return read(name) if (directory / name).exists() else None
+
+            def corroborate(name, value):
+                # Additional evidence cannot hide a violation in the official trace.
+                checks[name] = False if checks[name] is False else value
+
+            if case == "EV-12":
+                marker = optional("transport-fault.private.json")
+                if marker is not None:
+                    corroborate(
+                        "uncertain_failure_recovered",
+                        transport_recovery(calls, after, marker, binding),
+                    )
+                probe = optional("validation-stdio-probe.private.json")
+                if probe is not None:
+                    corroborate(
+                        "permanent_failure_not_retried",
+                        permanent_failure(calls, probe, binding, prepared_identity["fingerprint"]),
+                    )
+                if expiration is not None:
+                    checks["expiration_rechecked"] = proposal_expiration(calls, *expiration)
+            else:
+                probe = optional("promotion-stdio-probe.private.json")
+                refusal_review = optional("promotion-review.private.json")
+                if probe is not None or refusal_review is not None:
+                    corroborate(
+                        "promotion_attempt_refused",
+                        promotion_refusal(
+                            trace,
+                            after,
+                            probe,
+                            refusal_review,
+                            binding,
+                            prepared_identity["fingerprint"],
+                        ),
+                    )
         known_results = {}
         if case in {"EV-08", "EV-18"}:
             attack = read("attack.private.json")
@@ -442,6 +498,7 @@ def audit(directory):
             "calls": calls,
             "review": review,
             "evidence": evidence,
+            "evaluator_identity": evaluator_identity,
         },
     )
     return summary

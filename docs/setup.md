@@ -429,7 +429,7 @@ O contrato de leitura não autentica consentimento humano.
 <a id="aprovacao-local"></a>
 ### Revisão local de decisões
 
-Para a versão integrada S19, siga o [roteiro humano](s19-human-runbook.md) e o
+Para a versão integrada S19, consulte o
 [CLI de evidências](../evals/README.md#jornada-integrada-s19). `prepare` cria um
 banco sintético schema3 já migrado; não execute novamente `migrate` nesse banco.
 Configuração, catálogo e atestações no Hermes continuam sendo passos humanos

@@ -80,6 +80,42 @@ def test_missing_observation_or_another_request_is_refused():
     )
 
 
+@pytest.mark.parametrize("isolated", [False, True])
+@pytest.mark.parametrize("original", ["mcp__dona_maria__get_business_state", "forbidden_tool"])
+def test_host_record_uses_original_normalized_name_without_authorizing_plain_dicts(
+    isolated, original
+):
+    hooks = callbacks()
+    context = {"session_id": "isolated-session", "api_request_id": "isolated-request"}
+    record = type("Record", (dict,), {"__module__": "hermes_cli.plugin_host_wire"})
+    call = {"id": "call", "name": original, "arguments": "{}", "provider_data": None}
+    hooks["post_api_request"](
+        **context, assistant_message={"tool_calls": [record(call) if isolated else call]}
+    )
+    result = hooks["pre_tool_call"](
+        **context, tool_call_id="call", tool_name="mcp__dona_maria__get_business_state"
+    )
+    if isolated and original == "mcp__dona_maria__get_business_state":
+        assert result is None
+    else:
+        assert result["action"] == "block"
+
+
+@pytest.mark.parametrize("function", [None, {}, {"name": "forbidden_tool"}])
+def test_flat_name_does_not_override_present_function_in_host_record(function):
+    hooks = callbacks()
+    context = {"session_id": "isolated-session", "api_request_id": "isolated-request"}
+    record = type("Record", (dict,), {"__module__": "hermes_cli.plugin_host_wire"})
+    name = "mcp__dona_maria__get_business_state"
+    hooks["post_api_request"](
+        **context,
+        assistant_message={"tool_calls": [record(id="call", name=name, function=function)]},
+    )
+    assert (
+        hooks["pre_tool_call"](**context, tool_call_id="call", tool_name=name)["action"] == "block"
+    )
+
+
 @pytest.mark.parametrize("name", ["search_culinary_sources", "extract_culinary_source"])
 def test_mediated_research_requires_the_exact_original_tool_name(name):
     hooks = callbacks()

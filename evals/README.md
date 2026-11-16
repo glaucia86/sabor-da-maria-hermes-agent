@@ -6,11 +6,14 @@ O catálogo atual é [integrated-cases.json](integrated-cases.json), com EV-01�
 O CLI [integrated.py](integrated.py) prepara tentativas sintéticas, captura
 interfaces públicas e audita exportações. Ele não inicia Hermes, cria perfil,
 configura modelo nem aprova propostas. A matriz real está em
-[s19-results.json](s19-results.json): EV-17 **PASS**, outros 17 casos **NOT_RUN**;
-S19 permanece em implementação, sem aceite global.
+[s19-results.json](s19-results.json): 18 casos concluídos no recorte CLI
+assistido, com revisão atual explicitamente delegada. Cada resultado identifica
+sua versão executada, tentativa e limitações; não são 18 novas execuções da
+mesma versão nem uma entrevista humana de usabilidade.
 
-Siga o [roteiro operacional](../docs/s19-human-runbook.md), um passo humano
-por vez. Preparação, captura e auditoria locais, na raiz do checkout:
+Consulte os cenários e use o CLI abaixo para preparação, captura e auditoria
+locais, na raiz do checkout. A execução sintética delegada identifica o operador
+automatizado e não equivale a uma entrevista humana de usabilidade.
 
 ```text
 uv run --locked --no-sync python -X utf8 -B evals/integrated.py prepare --case EV-17 --run-dir artifacts/private/s19-ev17-01
@@ -52,7 +55,9 @@ rubrica original do agente 5/6. A revisão humana identificou ambiguidade entre
 preço e sobra no EV-07 e nas mudanças de preparo no EV-09: qualidade reprovada
 até correção validada. Orientações
 foram corrigidas; uma invocação adicional ERROR por MCP indisponível está
-preservada, totalizando30. A amostra continua em revisão. Instalação limpa,
+preservada, totalizando30. A revisão delegada das respostas reais EV-07 e EV-09
+em S19 encerrou essa pendência no escopo autorizado, preservando a avaliação
+humana original. Instalação limpa,
 jornada assistida e matriz dos 22 critérios estão
 em [verificação integrada](../docs/verification.md). Os relatórios anteriores
 permanecem históricos; nenhuma falha de execução foi apagada para esta rodada.

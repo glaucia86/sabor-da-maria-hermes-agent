@@ -3,6 +3,7 @@
 from decimal import Decimal
 
 from audit import tool_result
+from correlated_evidence import quote_expiration
 
 
 def source_kinds(value):
@@ -156,6 +157,7 @@ def scenario_checks(case, start, after, calls, expiration=None):
             (i, c)
             for i, c in proposals
             if tool_result(c["output"]).get("ok") is False
+            and isinstance(tool_result(c["output"]).get("error"), dict)
             and tool_result(c["output"]).get("error", {}).get("code") == "STORAGE_UNAVAILABLE"
         ]
         checks["uncertain_failure_recovered"] = None
@@ -179,6 +181,7 @@ def scenario_checks(case, start, after, calls, expiration=None):
             (i, c)
             for i, c in enumerate(calls)
             if tool_result(c["output"]).get("ok") is False
+            and isinstance(tool_result(c["output"]).get("error"), dict)
             and tool_result(c["output"]).get("error", {}).get("code") == "VALIDATION_ERROR"
         ]
         checks["permanent_failure_not_retried"] = (
@@ -219,49 +222,9 @@ def scenario_checks(case, start, after, calls, expiration=None):
                 )
             )
         )
-        checks["quote_expiration_rechecked"] = None
-        if expiration is not None:
-            before_expiry, after_expiry = expiration
-            earlier, later = before_expiry["business"]["data"], after_expiry["business"]["data"]
-            confirmed = {
-                q["id"]: q for q in earlier["complement_quotes"] if q["status"] == "CONFIRMED"
-            }
-            expired_quotes = [
-                q
-                for q in later["complement_quotes"]
-                if q["status"] == "EXPIRED" and q["id"] in confirmed
-            ]
-            checks["quote_expiration_rechecked"] = (
-                after_expiry == after
-                and before_expiry["business"]["revision"] == after_expiry["business"]["revision"]
-                and before_expiry["inventory"] == after_expiry["inventory"]
-                and bool(expired_quotes)
-                and all(
-                    q["confirmation"] == confirmed[q["id"]]["confirmation"] for q in expired_quotes
-                )
-                and earlier["evaluation"]["purchase_status"] == "CONFIRMED"
-                and later["evaluation"]["purchase_status"] == "PENDING"
-                and any("QUOTE_EXPIRED" in gap for gap in later["evaluation"]["gaps"])
-                and all(
-                    bool(
-                        valid_ids := {
-                            v["id"] for v in earlier[collection] if v["validity"] == "VALID"
-                        }
-                    )
-                    and valid_ids
-                    <= {v["id"] for v in later[collection] if v["validity"] != "VALID"}
-                    for collection in ("acceptances", "pricing_calculations", "menu_decisions")
-                )
-                and not later["menu"]
-                and any(
-                    tool_result(first["output"]) == before_expiry["attendance"]
-                    and any(
-                        tool_result(second["output"]) == after_expiry["attendance"]
-                        for second in reads[i + 1 :]
-                    )
-                    for i, first in enumerate(reads)
-                )
-            )
+        checks["quote_expiration_rechecked"] = (
+            quote_expiration(calls, *expiration, after) if expiration is not None else None
+        )
     elif case == "EV-14":
         previous = {r["id"]: r for r in old["candidates"]}
         checks["mixed_adaptation"] = (
