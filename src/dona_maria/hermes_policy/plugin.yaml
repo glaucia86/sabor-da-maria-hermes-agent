@@ -1,0 +1,6 @@
+name: dona-maria-attendance-policy
+version: 0.2.0
+description: "Recusa chamadas fora do atendimento e da pesquisa mediada, inclusive após reparo de nome."
+provides_hooks:
+  - post_api_request
+  - pre_tool_call

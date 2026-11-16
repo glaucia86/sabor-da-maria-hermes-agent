@@ -91,7 +91,7 @@ class CostAllocation(CandidateModel):
     ingredient_id: UUIDText
     plan_item_id: UUIDText
     recipe_id: UUIDText
-    origin: Literal["INVENTORY", "QUOTE"] = "INVENTORY"
+    origin: Literal["INVENTORY", "QUOTE", "REPORTED_ACQUISITION"] = "INVENTORY"
     source_id: UUIDText
     source_version: str
     quantity: str
@@ -352,6 +352,10 @@ def allocate_plan_costs(candidates, plan, snapshot, quotes):
                             if stock.purchase_source
                             else None
                         )
+                        if source and source.get("kind") == "USER_PROVIDED":
+                            origin = "REPORTED_ACQUISITION"
+                            source_id = source["information_ref"]["entity_id"]
+                            version = str(source["information_ref"]["version"])
                     else:
                         quote = offers[selected[stock.id]]
                         total, base = (

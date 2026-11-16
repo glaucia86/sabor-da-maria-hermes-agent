@@ -1,368 +1,243 @@
-# Instalação e conexão com o Hermes
+# Instalação, compatibilidade e recuperação
 
-Execute os comandos da aplicação na raiz do checkout. Este guia separa
-testes locais, conversa com Hermes, smoke negativo e origem dos dados.
+Para a primeira execução, siga as [dez etapas do README](../README.md#executar).
+Elas usam sua planilha real, seu modelo e o Hermes Desktop. Este guia reúne
+compatibilidade, recuperação e operação manual; não é um segundo tutorial concorrente.
+
+- [Versão e instalação do Hermes](#dependencias)
+- [Comandos e arquivos locais](#comandos)
+- [Pesquisa real e termos públicos](#pesquisa)
+- [Aprovação local](#aprovacao-local)
+- [Retomada e recuperação](#recuperacao)
+- [Importação manual](#despensa)
+- [Simulação opcional](#demo-portatil)
+- [Conferência do anexo original](#teste-do-original)
 
 <a id="dependencias"></a>
-## 1. Instale as ferramentas
+## Versão e instalação do Hermes
 
-Instale o [Git](https://git-scm.com/downloads) se ainda não estiver disponível.
+O plugin de pesquisa verifica **Hermes 0.23.1** e o commit completo
+`3b421578588243f920886e6fe79a6faa87ea026e` na inicialização. A conexão MCP sozinha
+não comprova que esse plugin carregou. Não retire a verificação para aceitar outra versão.
+
+Consulte a [instalação oficial](https://hermes-agent.nousresearch.com/docs/getting-started/installation)
+e o [Desktop oficial](https://hermes-agent.nousresearch.com/docs/user-guide/desktop).
+Instaladores sem versão explícita podem entregar outra versão. Os exemplos abaixo
+usam a opção de commit do instalador por código-fonte; são destinados a uma
+**instalação nova**. Se já tem Hermes pessoal incompatível, não reinstale por cima:
+use uma instalação isolada/conta de teste ou valide a compatibilidade separadamente.
+O perfil isola dados e configuração, mas não isola a versão nem dependências do host.
 
 ### Windows — PowerShell
 
-Instale uv pelo [instalador oficial](https://docs.astral.sh/uv/getting-started/installation/):
+Instale [Git](https://git-scm.com/downloads) e
+[uv](https://docs.astral.sh/uv/getting-started/installation/). Em uma pasta de
+trabalho local, baixe o instalador oficial e execute-o com o commit compatível:
 
 ```powershell
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+Invoke-WebRequest https://hermes-agent.nousresearch.com/install.ps1 -OutFile install-hermes.ps1
+& ./install-hermes.ps1 -Commit 3b421578588243f920886e6fe79a6faa87ea026e
 ```
 
-Para o percurso conversacional, instale também Hermes:
+### Linux/macOS — bash ou zsh
 
-```powershell
-iex (irm https://hermes-agent.nousresearch.com/install.ps1)
-```
-
-### Linux/macOS — shell
-
-Instale uv pelo [instalador oficial](https://docs.astral.sh/uv/getting-started/installation/):
+Instale Git e uv conforme seu sistema. Para uma instalação nova do Hermes:
 
 ```sh
-curl -LsSf https://astral.sh/uv/install.sh | sh
+curl -fsSL https://hermes-agent.nousresearch.com/install.sh -o install-hermes.sh
+bash install-hermes.sh --commit 3b421578588243f920886e6fe79a6faa87ea026e
 ```
 
-Para o percurso conversacional, instale também Hermes:
+Reabra o terminal e confira `hermes --version`. A instalação Desktop por pacote
+pode usar outro backend: confira também a identidade do backend efetivo da sessão.
+Não atualize automaticamente uma instalação homologada antes da demonstração.
+Windows, Linux, macOS e WSL possuem caminhos e requisitos próprios; a matriz
+oficial do Hermes determina o suporte de arquitetura. WSL não comprova Windows nativo.
+
+No checkout da aplicação, `uv sync --locked --python 3.13` cria `.venv`.
+O Python gerenciado pelo Hermes é independente. O primeiro `desktop` pode construir
+a interface e instalar componentes do host; reserve tempo para esse preparo.
+
+<a id="comandos"></a>
+## Comandos e arquivos locais
+
+Todos os comandos são executados na raiz do repositório, pelo prefixo:
 
 ```sh
-curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
+uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding
 ```
 
-Confira os pré-requisitos e a arquitetura suportada na
-[instalação oficial do Hermes](https://hermes-agent.nousresearch.com/docs/getting-started/installation).
-WSL2 é uma alternativa no Windows; não misture Python, checkout e caminhos
-de sistemas diferentes na mesma configuração MCP.
+Acrescente a ação abaixo e `--directory "artifacts/private/local"`.
 
-Reabra o terminal após a instalação e confira:
-
-```sh
-git --version
-uv --version
-```
-
-Para conversar com Hermes, confira também:
-
-```sh
-hermes --version
-```
-
-Agora execute o clone, a instalação Python 3.13 e o sync descritos no
-[Quick Start do README](../README.md#executar). Os comandos de testes
-também ficam centralizados no [README](../README.md#validar).
-
-O Python 3.13 é da aplicação. Não instale as dependências deste projeto
-dentro do runtime gerenciado do Hermes.
-
-<a id="despensa"></a>
-## 2. Prepare uma despensa e importe
-
-Use um diretório novo para esta primeira execução, sem reaproveitar banco pessoal.
-
-```sh
-uv run --locked --no-sync python -c "from pathlib import Path; Path('artifacts/private/input').mkdir(parents=True, exist_ok=True); Path('artifacts/private/quickstart').mkdir(parents=True, exist_ok=True)"
-```
-
-### Com o anexo original
-
-Obtenha `despensa_dona_maria.xlsx` pelo canal autorizado do desafio e coloque
-uma cópia em:
-
-```text
-artifacts/private/input/despensa_dona_maria.xlsx
-```
-
-O arquivo não acompanha o repositório. Preserve o original e não publique
-a planilha, o banco importado ou credenciais.
-
-Confira a proteção dos caminhos:
-
-```sh
-git check-ignore artifacts/private/input/despensa_dona_maria.xlsx artifacts/private/quickstart/workspace.sqlite3
-```
-
-Importe a cópia:
-
-```sh
-uv run --locked --no-sync python -X utf8 -B -m dona_maria.bootstrap --database artifacts/private/quickstart/workspace.sqlite3 --inventory artifacts/private/input/despensa_dona_maria.xlsx --allowed-directory artifacts/private/input
-```
-
-O comando imprime JSON com `workspace_id`, `snapshot_id`, `revision` e
-`budget_initial`. Guarde o `workspace_id` real: ele será usado na conversa.
-
-Não substitua esse valor por um UUID de exemplo. Não repita o bootstrap
-para iniciar cada conversa: sem `--workspace-id`, ele cria outro workspace.
-O estado permanece no SQLite e independe da sessão Hermes.
-
-<a id="dados-sinteticos"></a>
-### Sem o anexo: demonstração sintética
-
-A demonstração não representa a despensa original. Este comando cria um
-XLSX mínimo, com um ingrediente fictício de teste:
-
-```sh
-uv run --locked --no-sync python -c "from pathlib import Path; from openpyxl import Workbook; p=Path('artifacts/private/input/synthetic.xlsx'); p.parent.mkdir(parents=True, exist_ok=True); w=Workbook(); s=w.active; s.title='Despensa'; s.append(['Ingrediente','Quantidade em estoque','Unidade']); s.append(['Arroz',5,'kg']); s=w.create_sheet('Precos'); s.append(['Ingrediente','Quantidade comprada','Unidade','Preço total pago (R$)']); s.append(['Arroz',5,'kg','24.90']); w.save(p); w.close(); print(p.resolve())"
-```
-
-Use o mesmo comando de bootstrap acima, alterando somente `--inventory`
-para `artifacts/private/input/synthetic.xlsx`.
-
-Identifique esses dados como sintéticos durante a demonstração. Uma
-despensa importada não confirma equipamentos, habilidades, rendimento,
-condições comerciais ou aceite: essas informações ainda serão elicitadas.
-
-<a id="perfil-hermes"></a>
-## 3. Configure o perfil, modelo e pesquisa
-
-Os comandos de perfil e MCP deste guia têm como referência a instalação
-Hermes v0.23.1 e a [CLI oficial](https://hermes-agent.nousresearch.com/docs/reference/cli-commands).
-Os instaladores podem entregar outra versão; confira o `--help` correspondente.
-O lock da aplicação não fixa a versão do Hermes.
-
-Para um perfil novo:
-
-```sh
-hermes profile create sabor-da-maria --no-skills --no-alias
-hermes -p sabor-da-maria model
-hermes -p sabor-da-maria tools
-```
-
-No seletor de modelo, configure um provedor acessível e um modelo com
-suporte a chamadas de ferramentas. No configurador de ferramentas,
-configure pesquisa e extração web, incluindo o acesso exigido pelo backend.
-
-As opções, autenticação e custos dependem do provedor escolhido.
-O modelo do Hermes é configurado aqui; não depende do modelo usado por
-um editor ou agente de desenvolvimento.
-
-Se o perfil já existir, confira sua configuração antes de reutilizá-lo.
-Não recrie, clone ou substitua outro perfil para seguir este guia.
-
-## 4. Conecte a aplicação e a skill
-
-Obtenha os três caminhos absolutos desta máquina:
-
-```sh
-uv run --locked --no-sync python -c "import sys; from pathlib import Path; print('PYTHON=' + sys.executable); print('DB=' + str(Path('artifacts/private/quickstart/workspace.sqlite3').resolve())); print('SKILLS=' + Path('skills').resolve().as_posix())"
-```
-
-Nos comandos seguintes, substitua `PYTHON_ABSOLUTO`, `SQLITE_ABSOLUTO` e
-`SKILLS_ABSOLUTO` pelos respectivos valores impressos. São placeholders,
-não variáveis expandidas automaticamente.
-
-```sh
-hermes -p sabor-da-maria config set skills.external_dirs "['SKILLS_ABSOLUTO']"
-hermes -p sabor-da-maria mcp add dona_maria --command "PYTHON_ABSOLUTO" --connect-timeout 15 --env "DONA_MARIA_DB_PATH=SQLITE_ABSOLUTO" --args -X utf8 -B -m dona_maria.mcp_server
-```
-
-Mantenha `--args` como a última opção: o restante pertence ao subprocesso.
-
-A descoberta MCP pode pedir seleção das ferramentas. Confira o catálogo
-de negócio apresentado e habilite as ferramentas necessárias da aplicação.
-Se `dona_maria` já estiver configurado, confira seu alvo antes de alterá-lo.
-
-O Python impresso usa `.venv/Scripts/python.exe` no Windows e `.venv/bin/python`
-no Linux/macOS. Mantenha caminhos com espaços entre aspas. Para o caminho
-da skill, use barras `/` e preserve a lista YAML no argumento de `config set`.
-
-Passe somente `DONA_MARIA_DB_PATH` ao servidor de negócio. Credenciais de
-modelo e pesquisa pertencem à configuração privada do Hermes.
-A orientação `.hermes.md` é lida do projeto; `skills.external_dirs` aponta
-apenas para `skills/` deste checkout.
-
-A [configuração YAML de exemplo](../config/hermes.config.example.yaml) é uma
-referência dos mesmos campos; não é necessário aplicar os dois procedimentos
-nem substituir o arquivo inteiro de configuração.
-
-Confira conexão e descoberta:
-
-```sh
-hermes -p sabor-da-maria mcp test dona_maria
-hermes -p sabor-da-maria skills list --enabled-only
-```
-
-A listagem deve incluir `dona-maria-cardapio`; o MCP deve descobrir as
-ferramentas implementadas, incluindo consulta de estado e inventário.
-Descoberta não prova, por si só, uso das ferramentas pelo modelo.
-
-## 5. Inicie uma conversa natural
-
-Na raiz do checkout:
-
-```sh
-hermes -p sabor-da-maria chat --toolsets file,web,mcp-dona_maria --skills dona-maria-cardapio
-```
-
-A skill é carregada explicitamente. O grupo `file` permite ler suas
-referências, mas também inclui ferramentas de escrita e busca de arquivos.
-Esta seleção não representa um sandbox de arquivos; confira o catálogo
-efetivo e não habilite shell ou execução de código para este atendimento.
-
-Substitua o marcador pelo workspace retornado no bootstrap e envie:
-
-```text
-Meu workspace é [WORKSPACE_ID_REAL].
-
-Quero montar o cardápio de lançamento do Sabor da Maria com a minha
-despensa e até R$ 80 para complementos. Pode começar consultando o que
-tenho e pesquisando receitas reais? Pergunte sobre minha cozinha e
-habilidades antes de propor um prato para eu aceitar.
-```
-
-Responda às perguntas com as condições reais da cozinha. Interesse,
-confirmação de fatos, aceite do prato e escolha de preço são decisões distintas.
-
-Confira durante a conversa:
-
-- Consulta MCP ao workspace e ao inventário importados.
-- Pesquisa e extração web efetivas, com URL e conteúdo recuperado.
-- Perguntas sobre os requisitos da receita, sem condições presumidas.
-- Cálculos retornados pelo MCP e escolha de preço solicitada à pessoa.
-- Registro anunciado somente depois de retorno de sucesso.
-
-Depois, abra uma nova conversa com o mesmo perfil, checkout e banco:
-
-```text
-Retome o workspace [WORKSPACE_ID_REAL]. Mostre o cardápio e as pendências
-usando o estado salvo, sem registrar novas decisões.
-```
-
-Compare com o estado observado anteriormente. Memória da conversa não
-substitui a consulta ao SQLite.
-
-<a id="smoke-negativo"></a>
-## 6. Smoke negativo — diagnóstico opcional
-
-Em um banco recém-importado que contenha somente o workspace retornado,
-consulte um UUID diferente dele e que não tenha sido cadastrado:
-
-```text
-Use o MCP dona_maria para chamar get_business_state com workspace_id
-[UUID_NAO_CADASTRADO]. Informe o resultado observado, sem criar workspace
-ou simular dados.
-```
-
-O resultado esperado é `NOT_FOUND`, `ok=false`, `data=null` e `revision=null`.
-O MCP marca esse resultado com `isError=true`; o cliente pode apresentá-lo
-como erro de ferramenta. Isso verifica uma recusa de leitura; não demonstra
-importação, pesquisa, viabilidade, aceite ou preço.
-
-Depois retome a conversa usando o workspace real. O percurso principal
-não depende de obter um erro primeiro.
-
-## Se algo falhar
-
-| Sintoma | Verifique |
+| Ação | Efeito |
 | --- | --- |
-| Clone recusado ou repositório não encontrado | URL, conta autenticada e autorização de acesso ao repositório privado. |
-| `uv` ou `hermes` não encontrado | Instalação e PATH; reabra o terminal. |
-| Módulo `dona_maria` ausente | Sync concluído e MCP usando o Python da aplicação. |
-| Importação recusada | Arquivo XLSX, abas/colunas, diretório autorizado e diretório pai do SQLite existente. |
-| Banco indisponível | Caminho, permissões e versão do schema; banco corrompido ou mais novo é recusado e preservado. Registros exigem escrita no SQLite e no diretório pai. |
-| `NOT_FOUND` na conversa principal | Workspace copiado do bootstrap e MCP apontando para o mesmo banco. |
-| Busca indisponível | Backend web, autenticação, conectividade e limites do provedor. Habilitar o toolset não configura acesso por si só. |
-| Skill ausente | Perfil correto, lista `skills.external_dirs` e caminho somente da skill de domínio. |
-| Referência da skill não lida | Catálogo efetivo e disponibilidade das ferramentas de arquivo previstas neste guia. |
-| Catálogo ou banco antigo | Confira a conexão ativa antes de repetir escritas. Use o procedimento de reconexão abaixo; não apague banco nem reinicie gateways alheios. |
-| Resultado de escrita incerto | Consulte o estado antes de repetir. Não anuncie gravação sem confirmação. |
-| Sessão sem resposta | Modelo, provedor e conectividade; não substitua uma chamada pendente por resultado simulado. |
-| Ferramentas inesperadas | Catálogo efetivo e filtros do perfil; web pertence ao host. |
+| `setup-real --inventory "CAMINHO.xlsx"` | Valida/copia sua planilha; cria banco REAL e migrações com backup. Mesmo arquivo e diretório reaproveitam o atendimento. |
+| `check` | Confere MCP stdio, catálogo de seis e recusa de ferramenta não exposta; consulta estado, sem LLM. |
+| `configure` | Solicita termos públicos, cria perfil exclusivo, copia plugins e prepara contexto/skill. Não escolhe modelo. |
+| `model` | Abre o seletor nativo do Hermes no perfil correspondente; você escolhe e autentica. |
+| `verify-profile` | Confere configurações, arquivos copiados, skill e conexão MCP. Não prova autenticação nem conversa. |
+| `desktop` | Repete a verificação e abre o perfil/contexto preparados. Modelo ausente impede lançamento. |
+| `review list/inspect/approve/reject` | Acessa a revisão local com banco/workspace já vinculados. |
+| `doctor` | Diagnostica executáveis e dependências; não configura nem autentica o modelo. |
 
-## CLI/TUI e Desktop
+O diretório privado contém `inventory.xlsx`, `workspace.sqlite3`, backups de
+migração, `demo.json` (manifesto compartilhado pelo onboarding), `research.json`
+(termos liberados) e `profile-ready.json`. O nome histórico `demo.json` não indica
+simulação: `context_mode` e o banco precisam corresponder a `REAL`.
+Não edite IDs, modo ou hashes para reutilizar outra base.
 
-A CLI/TUI é o percurso principal deste projeto. Desktop é uma interface
-opcional do Hermes, não uma dependência da aplicação.
+O perfil se chama `sabor-real-<identificador local>`. `configure` exibe seu nome;
+os comandos do projeto o resolvem automaticamente. Caminhos e IDs ficam na
+configuração local, nunca precisam ser informados pela cozinheira no chat.
+As orientações e a skill são incorporadas ao `.hermes.md` de `conversation`,
+fora do checkout. Assim o Desktop não depende da opção CLI `--skills` nem
+carrega instruções de engenharia do repositório.
 
-Não suponha que o Desktop usa o mesmo perfil, diretório, banco ou catálogo
-da sessão CLI. A validação dessa interface é separada e não integra este
-Quick Start.
+`platform_toolsets.cli` é a chave usada pelo backend consultado pelo Desktop
+na versão examinada; não substitua por uma chave `desktop` presumida.
+Conferir a configuração não substitui verificar o catálogo efetivo da sessão.
 
-## Detalhes da importação e dos registros
+<a id="pesquisa"></a>
+## Pesquisa real e termos públicos
 
-O orçamento inicial é R$ 80,00. Preços históricos não são saldo disponível;
-custos usam quantidade comprada, preservando o estoque e a origem de cada célula.
-Consulte diagnósticos por `get_inventory_snapshot`. Fórmulas e dados ausentes
-ou ambíguos geram pendências, sem virar zero. A correção cria nova fotografia.
+O percurso guiado usa o provedor DDGS, plugin `web-ddgs`. Se o componente não
+estiver instalado, execute `hermes tools post-setup ddgs` e reinicie normalmente
+os processos do Hermes. Essa instalação afeta o runtime compartilhado do host.
+Não instale pacotes Hermes na `.venv` da aplicação.
 
-Sem `--workspace-id`, cada importação cria outro workspace e reutiliza a mesma
-fotografia quando hash/política coincidem. Com `--workspace-id ID_EXISTENTE`,
-somente o mesmo snapshot é reutilizado, preservando estado e revisão. Outra
-planilha não substitui silenciosamente o workspace existente.
+`configure` pede termos separados por vírgula: apenas letras, espaços e hífens,
+de 1 a 100 caracteres por termo, até 200 termos. Você vê a lista exata e precisa
+digitar `LIBERAR PESQUISA`. O texto não é obtido automaticamente da planilha.
+O plugin constrói consultas de receita/oferta a partir desses termos; não aceita
+URL ou consulta livre produzida pelo modelo. DDGS pode estar indisponível ou
+retornar resultados inadequados: registre a falha, sem inventar uma fonte.
 
-O catálogo inclui `get_business_state`, `get_inventory_snapshot`,
-`register_recipe_candidate`, `record_user_preferences`, `record_recipe_feedback`,
-`record_kitchen_facts`, `set_production_plan`, `evaluate_recipe_feasibility`,
-`evaluate_purchase_plan`, `accept_recipe`, `calculate_pricing_scenarios`,
-`save_menu_decision`, `resolve_recipe_ingredient`, `record_ingredient_conversion`,
-`register_complement_quote` e `confirm_complement_quote`.
+Para **revisar os termos de um atendimento existente**, encerre a sessão e edite
+somente os valores/entradas de `research.json` no seu diretório privado. O arquivo
+é um objeto JSON com chaves como `termo-1` e valores como `arroz`; não altere outros
+arquivos. A edição local representa sua autorização explícita dos novos termos.
+Use o perfil exibido por `configure` neste comando (PowerShell ou shell):
 
-Para registrar a candidata, o agente usa o workspace importado, fontes
-efetivamente extraídas e os schemas descobertos no MCP. Rendimento, medidas
-ou contexto ausentes precisam de lacunas explícitas. `complete` e outros
-campos derivados não são entradas.
+```sh
+hermes -p NOME_DO_PERFIL config set plugins.entries.dona-maria-mediated-research.settings.public_terms '{"termo-1":"arroz","termo-2":"feijão"}'
+```
 
-O horário de recuperação da fonte também precisa de evidência observável em
-UTC. Se ele não estiver disponível, aguarde esse dado; um marcador de meia-noite
-não representa o instante observado da extração. Correções de proveniência
-usam nova revisão, mantendo histórico e identidade da candidata.
+O objeto precisa ser **idêntico ao de `research.json`**. Depois execute
+`verify-profile` e abra uma nova sessão via `desktop`. Divergência é recusada;
+nenhum ajuste é feito pelo LLM. Para mudar de provedor, o exemplo
+[hermes.s17.example.yaml](../config/hermes.s17.example.yaml) é referência técnica
+de configuração manual, não uma opção homologada pelo onboarding DDGS.
 
-`register_recipe_candidate` exige `workspace_id`, `operation_id`,
-`expected_revision` e `candidate`; revisão da receita também exige `recipe_id`
-e `expected_recipe_version`. A resposta confirma a gravação somente após commit.
-Em resultado incerto, consulte o estado e repita o mesmo comando/ID. Payload
-diferente com o mesmo ID é recusado. `get_business_state` permite reencontrar
-a candidata. Esse registro não valida viabilidade, aceite, compras ou preço.
+O estado `CONFIGURED_NOT_EXERCISED` significa configuração preparada. Somente
+uma busca/extração reais na sessão comprovam pesquisa. O catálogo completo
+esperado é seis ferramentas MCP mais `search_culinary_sources` e
+`extract_culinary_source`, do plugin. Não habilite busca livre como fallback.
 
-### Retomada após falha e novo workspace
+<a id="aprovacao-local"></a>
+## Aprovação local
 
-Para continuar, mantenha o mesmo banco e `workspace_id` e peça
-`get_business_state` em uma nova conversa. Não execute bootstrap novamente:
-o plano, as preferências e as decisões vigentes vêm do banco.
+Siga a [etapa 9 do README](../README.md#desktop-local): liste, inspecione e aprove
+somente após conferir o resumo. O ID da proposta e seu hash são referências
+do terminal do operador, não dados que a cozinheira precisa memorizar.
+`approve` exige a digitação de `ATESTO <hash>`. Não automatize essa entrada.
+`reject` registra a recusa local sem habilitar nenhuma capacidade ao modelo.
 
-Se uma escrita perder a resposta, o resultado é incerto. Consulte o estado e
-repita exatamente a ferramenta, `operation_id`, `expected_revision` e payload
-originais. O replay retorna a resposta comprometida, sem nova revisão ou
-decisão. Conteúdo ou ferramenta diferentes com o mesmo ID geram
-`IDEMPOTENCY_CONFLICT`. Não crie outro ID para contornar o erro.
+`review` impede sobrescrever o binding por argumentos e não executa migrações.
+A revisão chama `ApprovalService` diretamente; o SQLite coordena a persistência
+com o processo MCP. Não há uma chamada MCP de aprovação nem autenticação forte
+da identidade da cozinheira. O operador atesta sua manifestação sobre conteúdo
+exato; no teste, a mesma pessoa pode exercer ambos os papéis.
 
-`STORAGE_BUSY` permite no máximo uma repetição automática com o mesmo comando.
-Persistindo a falha, informe e aguarde. Em `STORAGE_UNAVAILABLE`, confira
-caminho, permissões e integridade; em `CALCULATION_ERROR`, confira as entradas.
-Nenhum desses erros confirma gravação ou autoriza cálculo textual substituto.
-Revisão desatualizada exige reler/reavaliar e obter novas confirmações afetadas.
+Proposta vencida, hash divergente ou premissa alterada exigem consulta do estado
+e nova proposta/revisão. Aprovação repetida não duplica o efeito. Uma decisão
+histórica não recupera validade perdida por alteração posterior.
 
-Para reset de demonstração ou nova planilha, a pessoa operadora executa o
-bootstrap da seção 2 **sem `--workspace-id`** e configura o novo ID explicitamente.
-O workspace anterior permanece consultável; o mesmo hash/política reutiliza
-o snapshot. Não há ferramenta MCP de apagar ou sobrescrever workspaces.
-Banco corrompido ou com schema mais novo é recusado: preserve o arquivo e
-verifique a versão ou uma cópia de segurança antes de continuar.
+<a id="recuperacao"></a>
+## Retomada e recuperação
+
+| Situação | Ação |
+| --- | --- |
+| Reinício normal | Use `desktop` com o mesmo `--directory` e perfil. Peça o estado atual. |
+| Deseja outro modelo | Execute `model`, `verify-profile` e abra nova conversa no mesmo perfil/banco. |
+| Deseja outra planilha | Execute `setup-real` em pasta nova; não substitua a cópia nem o manifesto. |
+| Preparação interrompida antes do manifesto | Preserve a pasta para diagnóstico e use outra pasta nova. Não há limpeza destrutiva automática. |
+| Perfil existe sem marcador de conclusão | Não é sobrescrito. Preserve-o e prepare outro diretório/perfil. |
+| Configuração divergente | O diagnóstico nomeia a chave; revise-a localmente conforme a configuração esperada. Não substitua o YAML inteiro. |
+| Código/skill mudou | Prepare outro atendimento para a avaliação; não alegue que hashes antigos homologam arquivos novos. |
+| Dependência de pesquisa ausente | Instale o componente pelo Hermes e abra um processo novo. |
+| Plugin incompatível | Confira versão e commit efetivos. Não desative o bloqueio nem alegue pesquisa a partir do MCP isolado. |
+| Interface expõe detalhes privados na conversa normal | Não considere o canal aprovado; registre o comportamento observado. |
+
+Não remova diretórios de perfil, banco ou dados do Hermes para tentar corrigir
+uma falha. A limpeza é manual e posterior à identificação do atendimento que
+você realmente deseja descartar. Bancos e credenciais permanecem fora do Git.
 
 ### Reconexão do perfil dedicado
 
 No gateway, `/reload-mcp` pode preservar conexões já registradas. No perfil
 dedicado, desabilite somente `mcp_servers.dona_maria.enabled`, recarregue,
-reabilite e recarregue novamente. Confira nomes e workspace antes de pesquisar.
+reabilite e recarregue novamente. Confira catálogo e vínculo antes de atender.
+Na instalação v0.23.1 observada em S19, a recarga compara nomes habilitados:
+alterar somente `env` manteve o banco anterior. Confirme ausência de ferramentas
+após desabilitar e o estado esperado após reconectar; “no server changes” ou
+seis ferramentas, isoladamente, não comprovam troca de banco.
 
 A ausência de ferramentas perigosas deve ser conferida no catálogo efetivo.
 Uma skill builtin essencial pode permanecer no contexto conforme a versão;
 isso não justifica habilitar shell, execução de código ou gestão de memória.
 O contrato de leitura não autentica consentimento humano.
 
+<a id="despensa"></a>
+## Importação manual para diagnóstico
+
+O percurso recomendado é `setup-real`, que inclui as migrações necessárias.
+Para operadores que precisam somente importar um XLSX em uma pasta nova:
+
+```sh
+uv run --locked --no-sync python -X utf8 -m dona_maria.bootstrap --database artifacts/private/manual/workspace.sqlite3 --inventory artifacts/private/input/despensa_dona_maria.xlsx --allowed-directory artifacts/private/input --context-mode REAL
+```
+
+Crie `artifacts/private/manual` antes de executar. Esse comando isolado não cria
+perfil, plugins ou manifesto do onboarding; não misture os dois percursos.
+Migrações explícitas são oferecidas pela CLI `dona_maria.approval_cli` com backup
+novo (`migrate` e depois `migrate-research`). Os contratos são os mesmos usados
+por `setup-real`; não há migração automática no startup MCP.
+
+<a id="dados-sinteticos"></a>
+<a id="demo-portatil"></a>
+## Simulação opcional para testar o núcleo
+
+```sh
+python scripts/demo.py setup
+uv run --locked --no-sync python -X utf8 scripts/demo.py check
+```
+
+Esse fluxo histórico cria somente arroz em `artifacts/private/demo-s20`, modo
+`SIMULATION`, sem pesquisa. Não usa sua planilha e não é o percurso completo
+do avaliador. Os comandos `configure`, `model`, `chat` e `review` desse modo
+continuam disponíveis para diagnóstico assistido; não promovem a base a REAL.
+Em sistemas sem `python`, use `python3` no primeiro comando.
+
+### Agent Evals integrados S19
+
+Para a versão integrada S19, consulte o
+[CLI de evidências](../evals/README.md#jornada-integrada-s19). `prepare` cria um
+banco sintético schema3 já migrado; não execute novamente `migrate` nesse banco.
+Configuração, catálogo e atestações no Hermes continuam sendo passos humanos
+separados. Resultados históricos não aprovam a versão integrada.
+
+Os 18 casos foram concluídos no recorte CLI assistido registrado na
+[matriz S19](../evals/s19-results.json), com tentativas e limitações preservadas.
+Isso não homologa o novo perfil S20 nem o canal Desktop. Após integrar as
+orientações e os plugins, prepare outro atendimento e repita o preflight;
+configuração e bytes conferidos antes da integração são evidências históricas.
+
 <a id="teste-do-original"></a>
-### Teste opcional do anexo original
+## Conferência do anexo original
 
-O teste adicional procura `doc-specs/despensa_dona_maria.xlsx`. Seu skip é
-esperado em um clone limpo. Colocar o anexo em `artifacts/private/input/`
-para importação não ativa esse teste automaticamente. O diretório local
-`doc-specs/` não é requisito para instalar, importar ou conversar com a aplicação.
-
-Referências: [CLI do Hermes](https://hermes-agent.nousresearch.com/docs/reference/cli-commands),
-[MCP no Hermes](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp).
+A suíte pública usa fixtures temporárias para permanecer reproduzível e não
+distribuir o anexo. O teste opcional em `tests/unit/test_inventory_import.py`
+procura `doc-specs/despensa_dona_maria.xlsx`; se ausente, fica ignorado. Essa
+localização histórica é exclusiva do teste opcional, não do atendimento REAL.
+O funcionamento de `setup-real` não depende dessa fixture ou de `doc-specs/`.
+Conferir uma planilha transcrita não equivale a conferir o binário original.

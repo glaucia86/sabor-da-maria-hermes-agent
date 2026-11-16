@@ -331,7 +331,7 @@ def test_specific_human_confirmation_makes_purchase_definitive_without_buying(pu
     assert confirmation["confirmation_valid_until"] == "2026-11-13T12:00:00Z"
     evaluation = evaluate(p)
     assert evaluation["purchase_status"] == "CONFIRMED"
-    assert evaluation["is_simulation"] is False
+    assert evaluation["data_complete"] is True
     assert evaluation["disbursement"] == "20.00"
     assert evaluation["remaining_budget"] == "60.00"
     assert evaluation["demand"][0]["purchase"]["planned_surplus"] == "800"

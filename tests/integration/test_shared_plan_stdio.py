@@ -6,6 +6,7 @@ from uuid import uuid4
 
 import anyio
 import pytest
+from conftest import OPERATOR_STDIO_ARGS
 from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 
@@ -22,7 +23,7 @@ async def test_shared_plan_order_reacceptance_and_removal_survive_stdio_restart(
     p = shared_plan()
     server = StdioServerParameters(
         command=sys.executable,
-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
+        args=OPERATOR_STDIO_ARGS,
         env={"DONA_MARIA_DB_PATH": str(p["database"])},
         cwd=tmp_path,
     )

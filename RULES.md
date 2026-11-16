@@ -104,6 +104,30 @@ em [.gitignore](.gitignore); arquivo ignorado continua sendo conteúdo a protege
 
 ## 5. Testes, comandos e evidências
 
+### Experimentação do Hermes conduzida pela pessoa
+
+Por preferência explícita da usuária, a experimentação do que foi implementado
+no Hermes é executada por ela, com orientação do agente, **um passo por vez**.
+Isso inclui configuração/autenticação do modelo, abertura e retomada de sessões,
+catálogo efetivo, refresh, gateway e provas adversariais no host real.
+
+- Forneça somente o próximo comando ou ação, seu objetivo e resultado esperado.
+  Aguarde a saída enviada pela pessoa e analise-a antes de avançar.
+- Não execute automaticamente o Hermes, chamadas ao modelo, novos perfis ou
+  configurações/probes alternativos. Uma exceção exige pedido explícito para
+  aquela execução; autorização de implementar o slice não revoga este fluxo.
+- Diante de erro ou demora, diagnostique a saída e proponha um próximo passo
+  pequeno; não acumule tentativas automáticas ou ambientes alternativos.
+- Solicite apenas recortes necessários e sanitizados. Não peça chaves, tokens,
+  bancos ou transcrições integrais. Evidências privadas permanecem locais.
+- Registre comando, saída observada, autoria da execução humana e limitações.
+  Confira ferramentas acessíveis, chamadas e efeitos no estado, além do texto
+  da resposta. Não marque sucesso sem a evidência pertinente.
+
+O agente continua autorizado a executar pytest, Ruff e testes determinísticos
+de serviço/MCP stdio com fixtures temporárias no escopo da fatia autorizada.
+Esses resultados não substituem a experimentação humana no Hermes.
+
 Aplique TDD nos comportamentos e guards acordados: observar falha relevante,
 implementar o mínimo e refatorar. Use pytest para exemplos, Hypothesis para
 propriedades e SQLite temporário/MCP stdio real nas integrações pertinentes.

@@ -7,6 +7,7 @@ from uuid import uuid4
 
 import anyio
 import pytest
+from conftest import OPERATOR_STDIO_ARGS
 from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 
@@ -24,7 +25,7 @@ async def test_locally_imported_workspace_can_be_resumed_over_mcp(tmp_path, inve
     created = bootstrap_workspace(database, inventory_file, allowed_directory=tmp_path)
     server = StdioServerParameters(
         command=sys.executable,
-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
+        args=OPERATOR_STDIO_ARGS,
         env={"DONA_MARIA_DB_PATH": str(database)},
         cwd=tmp_path,
     )
@@ -55,7 +56,7 @@ async def test_inventory_can_be_filtered_without_changing_the_snapshot(tmp_path,
     created = bootstrap_workspace(database, inventory_file, allowed_directory=tmp_path)
     server = StdioServerParameters(
         command=sys.executable,
-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
+        args=OPERATOR_STDIO_ARGS,
         env={"DONA_MARIA_DB_PATH": str(database)},
         cwd=tmp_path,
     )
@@ -89,7 +90,7 @@ async def test_incomplete_candidate_is_registered_and_recovered_after_server_res
     created = bootstrap_workspace(database, inventory_file, allowed_directory=tmp_path)
     server = StdioServerParameters(
         command=sys.executable,
-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
+        args=OPERATOR_STDIO_ARGS,
         env={"DONA_MARIA_DB_PATH": str(database)},
         cwd=tmp_path,
     )
@@ -151,7 +152,7 @@ async def test_replay_does_not_duplicate_and_recipe_revision_requires_current_ve
     )
     server = StdioServerParameters(
         command=sys.executable,
-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
+        args=OPERATOR_STDIO_ARGS,
         env={"DONA_MARIA_DB_PATH": str(tmp_path / "state.sqlite3")},
         cwd=tmp_path,
     )
@@ -220,7 +221,7 @@ async def test_candidate_identity_is_validated_against_its_workspace(
     )
     server = StdioServerParameters(
         command=sys.executable,
-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
+        args=OPERATOR_STDIO_ARGS,
         env={"DONA_MARIA_DB_PATH": str(tmp_path / "state.sqlite3")},
         cwd=tmp_path,
     )
@@ -266,7 +267,7 @@ async def test_untrusted_candidate_fields_and_missing_sources_cannot_mutate_stat
     )
     server = StdioServerParameters(
         command=sys.executable,
-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
+        args=OPERATOR_STDIO_ARGS,
         env={"DONA_MARIA_DB_PATH": str(tmp_path / "state.sqlite3")},
         cwd=tmp_path,
     )
@@ -360,7 +361,7 @@ async def test_failed_transaction_never_confirms_and_can_be_retried_without_part
             )
     server = StdioServerParameters(
         command=sys.executable,
-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
+        args=OPERATOR_STDIO_ARGS,
         env={"DONA_MARIA_DB_PATH": str(database)},
         cwd=tmp_path,
     )
@@ -410,7 +411,7 @@ async def test_tool_logs_are_correlated_json_without_recipe_payload(
     operation_id = str(uuid4())
     server = StdioServerParameters(
         command=sys.executable,
-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
+        args=OPERATOR_STDIO_ARGS,
         env={"DONA_MARIA_DB_PATH": str(database)},
         cwd=tmp_path,
     )
@@ -450,7 +451,7 @@ async def test_locked_storage_returns_retryable_error_with_the_same_operation_id
     operation_id = str(uuid4())
     server = StdioServerParameters(
         command=sys.executable,
-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
+        args=OPERATOR_STDIO_ARGS,
         env={"DONA_MARIA_DB_PATH": str(database)},
         cwd=tmp_path,
     )
@@ -486,7 +487,7 @@ async def test_two_clients_cannot_commit_the_same_workspace_revision(
     created = bootstrap_workspace(database, inventory_file, allowed_directory=tmp_path)
     server = StdioServerParameters(
         command=sys.executable,
-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
+        args=OPERATOR_STDIO_ARGS,
         env={"DONA_MARIA_DB_PATH": str(database)},
         cwd=tmp_path,
     )
@@ -539,7 +540,7 @@ async def test_missing_measure_and_unknown_requirement_remain_explicit(
     ]
     server = StdioServerParameters(
         command=sys.executable,
-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
+        args=OPERATOR_STDIO_ARGS,
         env={"DONA_MARIA_DB_PATH": str(database)},
         cwd=tmp_path,
     )
@@ -580,7 +581,7 @@ async def test_source_retrieval_time_is_persisted_in_utc(
     recipe_candidate["sources"][0]["retrieved_at"] = retrieved_at
     server = StdioServerParameters(
         command=sys.executable,
-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
+        args=OPERATOR_STDIO_ARGS,
         env={"DONA_MARIA_DB_PATH": str(database)},
         cwd=tmp_path,
     )
