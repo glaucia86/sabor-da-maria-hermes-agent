@@ -231,6 +231,11 @@ reinício. `LIKE` não confirma aptidão. A correspondência automática de pref
 
 O [workflow de CI](.github/workflows/ci.yml) configura Windows, Ubuntu e macOS
 para esses checks automatizados; não instala nem testa uma conversa Hermes.
+Roda em pull requests, pushes na `main` e disparos manuais, evitando duas
+execuções por atualização de um PR. Lint e formatação precedem os testes,
+que usam dois processos por sistema e exibem as dez maiores durações.
+Para reproduzir a execução paralela localmente, acrescente
+`-n 2 --dist worksteal --durations=10` ao comando pytest acima.
 A execução local em um sistema não comprova sucesso nos demais; consulte os
 resultados da execução correspondente no GitHub Actions.
 

@@ -2,6 +2,7 @@ name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -38,11 +39,11 @@ jobs:
       - name: Install locked dependencies
         run: uv sync --locked --python 3.13
 
-      - name: Run application tests
-        run: uv run --locked --no-sync python -X utf8 -B -m pytest tests/unit tests/integration -q
-
       - name: Lint
         run: uv run --locked --no-sync ruff check src tests/unit tests/integration evals
 
       - name: Check formatting
         run: uv run --locked --no-sync ruff format --check src tests/unit tests/integration evals
+
+      - name: Run application tests
+        run: uv run --locked --no-sync python -X utf8 -B -m pytest tests/unit tests/integration -q -n 2 --dist worksteal --durations=10

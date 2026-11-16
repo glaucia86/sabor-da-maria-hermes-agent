@@ -17,6 +17,7 @@ dependencies = [
 dev = [
     "hypothesis>=6,<7",
     "pytest==9.2.0",
+    "pytest-xdist>=3.8,<4",
     "ruff==0.17.4",
 ]
 
