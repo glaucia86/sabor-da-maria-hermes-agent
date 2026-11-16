@@ -270,8 +270,11 @@ A execução local em um sistema não comprova sucesso nos demais; consulte os
 resultados da execução correspondente no GitHub Actions.
 
 Testes com fixtures não comprovam pesquisa real nem a qualidade da conversa.
-Os [Agent Evals](evals/README.md) incluem 12 roteiros versionados, execução
-assistida de adversariais/recuperação com Hermes real e evidências sanitizadas.
+Os [Agent Evals](evals/README.md) preservam 12 roteiros históricos e suas
+execuções assistidas de adversariais/recuperação com Hermes real. O catálogo
+integrado S19 tem 18 casos e um CLI local de preparação/captura/auditoria;
+seus resultados reais permanecem NOT_RUN, conforme a
+[matriz atual](evals/s19-results.json).
 Os resultados distinguem verificações atuais e históricas; evals assistidos
 não comprovam autonomia geral nem autenticam consentimento humano.
 

@@ -1,5 +1,46 @@
 # Agent Evals — Sabor da Maria
 
+## Jornada integrada S19
+
+O catálogo atual é [integrated-cases.json](integrated-cases.json), com EV-01–18.
+O CLI [integrated.py](integrated.py) prepara tentativas sintéticas, captura
+interfaces públicas e audita exportações. Ele não inicia Hermes, cria perfil,
+configura modelo nem aprova propostas. A matriz real está em
+[s19-results.json](s19-results.json): EV-17 **PASS**, outros 17 casos **NOT_RUN**;
+S19 permanece em implementação, sem aceite global.
+
+Siga o [roteiro operacional](../docs/s19-human-runbook.md), um passo humano
+por vez. Preparação, captura e auditoria locais, na raiz do checkout:
+
+```text
+uv run --locked --no-sync python -X utf8 -B evals/integrated.py prepare --case EV-17 --run-dir artifacts/private/s19-ev17-01
+uv run --locked --no-sync python -X utf8 -B evals/integrated.py capture --run-dir artifacts/private/s19-ev17-01 --label start
+uv run --locked --no-sync python -X utf8 -B evals/integrated.py capture --run-dir artifacts/private/s19-ev17-01 --label after
+uv run --locked --no-sync python -X utf8 -B evals/integrated.py audit --run-dir artifacts/private/s19-ev17-01
+```
+
+Esses comandos são etapas separadas: preparar os dados específicos do cenário
+antes de `start`; executar a conversa antes de `after`; reunir exportação e
+revisão antes de `audit`. `prepare` cria somente a base descrita no roteiro,
+não uma jornada concluída. Use diretório novo; capturas não sobrescrevem arquivos.
+
+`assessment` avalia a evidência técnica. `result` só pode aprovar uma execução
+identificada como `REAL_HERMES`; `TOOL_SIMULATION` e `MCP_STDIO` permanecem
+`NOT_RUN` para Hermes. Check técnico `null` significa etapa não comprovada e
+impede PASS; falha comprovada prevalece sobre pendências. Exit code 0 de
+`audit` significa relatório gravado, não aprovação. Consulte o resumo JSON.
+Cada auditoria preserva `audit-NNN.private.json`, conteúdo e hashes das evidências.
+
+Arquivos `*.private.*`, bancos, canários e traces são locais e sensíveis.
+A proteção Git da tentativa não autoriza sua publicação. O resumo sanitizado
+não substitui a revisão humana nem autentica criptograficamente o export.
+
+## Histórico S09–S11
+
+Os comandos de `run.py`, `audit.py` e os proxies abaixo reproduzem contratos
+legados. Preserve-os como evidência histórica; não os conecte ao atendimento S19,
+pois expõem capacidades de operador ausentes no catálogo vinculado atual.
+
 [cases.json](cases.json) versiona os 12 roteiros, preparações, comportamentos
 proibidos, asserts de estado e rubrica. [results.json](results.json) consolida
 evidência sanitizada, distinguindo execuções históricas de verificações atuais.

@@ -1,0 +1,140 @@
+{
+  "version": "1.0",
+  "catalog": "integrated-cases.json",
+  "baseline_commit": "82a8fe6864a9b67a0f7a3971e38b04449d9ae8e9",
+  "status": "IN_IMPLEMENTATION",
+  "real_agent_invocations": 22,
+  "observed_real_user_turns": 12,
+  "limitations": [
+    "EV-17 passed audit 002 after explicit human confirmation: 9 API calls, 8 correlated tool calls, 5 user turns including an operator export command accidentally sent to chat. Assisted CLI execution with synthetic data and controlled SQLite failure; this does not approve the remaining S19 cases or S20.",
+    "Local synthetic tests do not approve Hermes, real research or channel presentation.",
+    "S11 human review of EV-07 and EV-09 remains open.",
+    "AC-025, AC-026, AC-030 and GUD-003 remain open.",
+    "EV-01 attempt 1 FAIL: live response matched EV-17 despite updated config. Two API calls and two read-only tools. Original export preserved; runtime correction proved in attempt 3.",
+    "EV-01 attempt 2 also FAIL: gateway reload did not reconnect an existing server after env changes. Four API calls, two read-only tools, three user turns (including two literal exit messages). Cwd was outside S19. Counts cover preserved exports; later follow-up in the old session was reported but not re-exported, so actual total usage may be higher.",
+    "EV-01 attempt 3 PASS in audit 002: seven API calls, five correlated tools, three user turns; oven UNKNOWN, no acceptance or pricing, physical stock and budget preserved. Authorized official CLI -q and installed gateway controls; human text and interactive visual reviews approved. Prior two FAIL attempts and initial audit retained.",
+    "Human review phrase sent to Hermes added one API call and one user turn without tools. Interest proposal expired while waiting. Final readback initially refused before execution while human CLI was open; succeeded read-only after explicit exit, on the same session. Initial and final exports/captures preserved. CLI trailer reported nine tools; official final export has five correlated tools."
+  ],
+  "cases": [
+    {
+      "id": "EV-01",
+      "result": "PASS",
+      "attempts": 3,
+      "execution_status": "COMPLETED",
+      "audit_number": 2,
+      "agent_invocations": 13,
+      "tool_calls": 9,
+      "historical_failed_attempts": 2,
+      "attempt_results": [
+        {
+          "attempt": 1,
+          "result": "FAIL",
+          "reason": "wrong runtime binding"
+        },
+        {
+          "attempt": 2,
+          "result": "FAIL",
+          "reason": "env-only reload kept old connection"
+        },
+        {
+          "attempt": 3,
+          "result": "PASS",
+          "reason": "runtime binding corrected; human text and visual reviews approved; final readback matches live state after interest proposal expiry"
+        }
+      ],
+      "human_text_review": "PASS",
+      "human_visual_review": "PASS",
+      "rubric_total": 6
+    },
+    {
+      "id": "EV-02",
+      "result": "NOT_RUN",
+      "attempts": 0
+    },
+    {
+      "id": "EV-03",
+      "result": "NOT_RUN",
+      "attempts": 0
+    },
+    {
+      "id": "EV-04",
+      "result": "NOT_RUN",
+      "attempts": 0
+    },
+    {
+      "id": "EV-05",
+      "result": "NOT_RUN",
+      "attempts": 0
+    },
+    {
+      "id": "EV-06",
+      "result": "NOT_RUN",
+      "attempts": 0
+    },
+    {
+      "id": "EV-07",
+      "result": "NOT_RUN",
+      "attempts": 0
+    },
+    {
+      "id": "EV-08",
+      "result": "NOT_RUN",
+      "attempts": 0
+    },
+    {
+      "id": "EV-09",
+      "result": "NOT_RUN",
+      "attempts": 0
+    },
+    {
+      "id": "EV-10",
+      "result": "NOT_RUN",
+      "attempts": 0
+    },
+    {
+      "id": "EV-11",
+      "result": "NOT_RUN",
+      "attempts": 0
+    },
+    {
+      "id": "EV-12",
+      "result": "NOT_RUN",
+      "attempts": 0
+    },
+    {
+      "id": "EV-13",
+      "result": "NOT_RUN",
+      "attempts": 0
+    },
+    {
+      "id": "EV-14",
+      "result": "NOT_RUN",
+      "attempts": 0
+    },
+    {
+      "id": "EV-15",
+      "result": "NOT_RUN",
+      "attempts": 0
+    },
+    {
+      "id": "EV-16",
+      "result": "NOT_RUN",
+      "attempts": 0
+    },
+    {
+      "id": "EV-17",
+      "result": "PASS",
+      "attempts": 1,
+      "execution_status": "COMPLETED",
+      "audit_number": 2,
+      "agent_invocations": 9,
+      "tool_calls": 8,
+      "rubric_total": 5
+    },
+    {
+      "id": "EV-18",
+      "result": "NOT_RUN",
+      "attempts": 0
+    }
+  ]
+}

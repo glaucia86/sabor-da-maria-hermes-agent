@@ -4,6 +4,8 @@
 
 ## Context Retrieval Contract
 
+**Atualização S19 — 15/11/2026:** execução e implementação exclusivamente de S19 autorizadas pela pessoa no worktree `C:/Labs/sabor-da-maria-s19`, branch `feat/s19-integrated-agent-evals`, baseline integrado `82a8fe6`. As referências anteriores a S19 não autorizado e merge aberto são históricas. Gates de execução real do Hermes, revisão humana e ausência de commit/push/PR/merge permanecem vigentes. Análise, lacunas, plano, matriz inicial e evidências em [verificação S19](../docs/s19-integrated-verification.md). Aceites S13–S18 preservados; S11 continua EM REVISÃO.
+
 **Integração S16/S17/S18 — 15/11/2026:** resolução e verificação autorizadas em `C:/Labs/sabor-da-maria-s18`, sem finalizar o merge. Os aceites individuais e as evidências históricas permanecem preservados; referências anteriores a slices não autorizados descrevem o escopo da execução original. Nenhuma nova homologação Hermes/rede real ou liberação S19 está implícita. Plano de execução e evidências desta integração em `.harness/s16-s17-s18-merge/`.
 
 **Atualização de execução S17 — 15/11/2026:** autorização específica recebida somente para S17 neste worktree; os handoffs abaixo preservam o gate inicial e o encerramento HITL posterior. As referências anteriores a S17 não autorizado ou pendente de aceite são históricas. A integração atual com S16 não reabre os aceites dos slices nem autoriza finalizar o merge sem revisão HITL.
@@ -126,7 +128,7 @@ A descoberta partiu dos identificadores efetivamente presentes nas duas fontes, 
 | S16 | Adaptar, medir e demonstrar preservando origem | S15 | CONCLUÍDO — EV-14/15 PASS assistidos e aceite HITL explícito em 15/11/2026 |
 | S17 | Pesquisa real com saída controlada | S13, S15 | CONCLUÍDO — quatro critérios verificados e HITL executado pela pessoa |
 | S18 | Custos incompletos explicados e bloqueados | S15, S06, S07 | CONCLUÍDO — 5/5; 636PASS/2SKIPPED; EV-16 PASS; HITL final aprovado; Harness PASS/9 testes PASS |
-| S19 | Jornada acessível/adversarial atual revalidada | S13, S14, S15, S16, S17, S18, S11 | PLANEJADO E NÃO AUTORIZADO — gates anteriores e revisão S11 |
+| S19 | Jornada acessível/adversarial atual revalidada | S13, S14, S15, S16, S17, S18, S11 | EM IMPLEMENTAÇÃO — handoff solicitado; três Required e gates humanos pendentes |
 
 **Primeiro tracer bullet: S01**, Hermes → leitura MCP da despensa → busca/extração → registro MCP → SQLite → retomada da candidata. S00 é preparação, sem valor de negócio declarado. **Primeira jornada completa: S01 → S02 → S03**, após gates, com estoque suficiente e nenhuma compra necessária. A evidência definitiva de EV-07 requer complemento real ou evidência real correspondente em S06.
 
@@ -1530,9 +1532,159 @@ Conferidos56 hashes atuais iguais aos da regressão vigente636PASS/2SKIPPED; Ruf
 
 ## S19 — Revalidar a jornada acessível e adversarial
 
-**Status:** PLANEJADO E NÃO AUTORIZADO — P0. **Objetivo / Resultado observável:** jornada completa atual, acessível e adversarial, com retomada e limites demonstrados por chamadas e estado.
+**EV-01 — concluído, auditoria002 PASS, 16/11/2026:** após saída humana com
+`/exit`, consulta final somente de leitura na mesma sessão confirmou forno
+UNKNOWN e proposta de interesse expirada, sem aceite/preço/decisão de cardápio.
+Export final e captura coincidem; estoque e orçamento preservados. Revisões
+humanas de texto/apresentação aprovadas; auditor integrado exit0/PASS, rubrica6/6.
+Tentativa03:7APIs/5tools/3users; contagem oficial prevalece sobre CLI9tools.
+Originais/capturas/revisões/audit001 e tentativas01/02 FAIL preservados.
+Matriz2PASS/16NOT_RUN, totais exportados22APIs/12users. EV-17 não reaberto.
+Procedimento EV-01 encerrado, sem nova ação humana; próximos casos da matriz
+continuam pendentes. S11 depende EV-07/09; S19 sem aceite global. Sem alteração
+de código de produto, regressão não repetida; diff-check PASS. Sem commit/push/PR.
 
-**Bloqueado por:** gates S13–S18, evidências/revisão humana pendente de S11 e autorização própria; apresentação no canal escolhido e catálogo efetivo não podem ser presumidos.
+**EV-01 — visual aprovado, leitura final impedida por sessão aberta:** pessoa
+forneceu “legível, sem detalhes técnicos” na transcrição; aprovação visual
+registrada. Frase enviada ao Hermes somou1API/1user/0tools; export adicional
+preservado, totais S19 exportados20APIs/11users. Proposta de interesse expirou;
+capture after-visual-review confirma zero aceite/preço. Tentativa de leitura
+final recusada antes do modelo por outro CLI aberto, sem retry/bypass. Revisão
+visual PASS, resultado aindaNOT_RUN/FINAL_READBACK_PENDING. Próxima ação: pessoa
+sai com /exit; agente completa readback/export/auditoria na mesma sessão.
+
+**EV-01 — clareza/pergunta aprovadas pela pessoa:** resposta explícita “sim!”
+registrada em human-text-review.private.json da tentativa03; revisão anterior,
+export e auditoria001 preservados. Matriz distingue controles técnicos e texto
+aprovados da apresentação visual interativa ainda não verificada. Sem nova
+invocação, atestação de negócio, aceite S11/S19 ou reauditoria após passagem do
+tempo. Não repetir pedido de clareza já respondido.
+
+**EV-01 — execução automatizada autorizada e correção viva comprovada:** usuário
+autorizou agente a executar roteiro/registrar/verificar/autocorrigir. Env03/disabled
+aplicados; gateway real confirmou0tools/sem servidor, reabilitação trouxe6tools.
+PTY/console interativo indisponíveis; usado cliente de gateway instalado para
+controles e CLI oficial -q para modelo, sem GUI ou atestação automática. Export03:
+4APIs/4tools/1user, cwd S19/skill presente; catálogos opening/refresh/resume iguais,
+readbacks=start/after, forno UNKNOWN, revisão1/orçamento/estoque preservados,
+zero aceite/preço, proposta de interesse apenas PENDING. Resposta pergunta pelo
+forno e distingue interesse de cardápio. Capture after/audit00103 exit0; todos
+controles técnicos PASS e rubrica técnica6/6, resultadoNOT_RUN por apresentação
+pendente. Pergunta assíncrona de revisão humana do texto enviada; visual interativo
+não comprovado. Matriz preserva2FAIL históricos EV01,3tentativas, totais S19
+19APIs/10users dos exports; EV17 PASS. Sem mudança de produto/dependências ou
+nova regressão. Próximo passo é resposta humana/limite do canal, sem encerrar S11/S19.
+
+**EV-01 — causa do reload comprovada e lote corrigido preparado:** tentativa02
+real continua lendo estadoEV17 após reload;4APIs/2tools/3users no export, inclusive
+dois `exit` sem barra. Cwd fora do S19; sem alteração desse outro worktree.
+Capture after02 exit0/start=after e audit00102 FAIL/readback=false. Matriz:
+EV01 duas tentativas; totais exportados15APIs/9users,1PASS/1FAIL/16NOT_RUN; uso
+posterior não exportado na sessão antiga não foi inventado. Fonte instalada
+gateway.reload_mcp usa reconcile apenas por nome/enabled, ignorando mudanças
+de env em conexão viva. Repro AST isolado PASS: disable+reconcile remove;
+enable+reconcile conecta com novos inputs, sem executar Hermes. Tentativa03
+preparada com bytes/estado idênticos e atestação herdada, start salvo, zero
+chamadas. Roteiro humano em lote inclui diretório correto e reconexão explícita
+do servidor dona_maria, sem restart global. Correção viva/aceite pendentes.
+
+**EV-01 — execução humana em lote solicitada:** pessoa revogou a espera entre
+comandos, pedindo sequência completa. Tentativa02 preparada em diretório novo
+com cópia byte a byte do banco sintético atestado, sem sidecars, hashes origem/
+destino e estado público iguais; revisão1/APPROVED, start capturado, zero chamadas.
+Não houve novas decisões/aprovações; tentativa01 FAIL preservada. Roteiro reúne
+binding02/reload/nova sessão/catálogos/mensagem/retomada/export, com único retorno
+final e parada em erro. Execução humana pendente; S11 EV07/09 e demais S19 abertos.
+
+**EV-01 — falha de binding comprovada pelo export:** duas APIs/duas ferramentas
+de leitura/um turno humano. Retorno get_business_state igual ao after EV-17 e
+diferente do start EV-01; estado EV-01 inalterado. Auditoria001 exit0/FAIL,
+readback=false, evidências/template original preservados. Matriz atualizada:
+1PASS/1FAIL/16NOT_RUN,11APIs/6turnos humanos. Não atribuir falha de raciocínio ao
+modelo: recebeu dados anteriores. Próxima ação humana `/reload-mcp` na sessão,
+aprovação única se solicitada; código do host confirma recarga via gateway.
+Depois verificar vínculo efetivo, preservando tentativa falha. Sem código novo,
+regressão, restart global ou repetição de atestação.
+
+**EV-01 — export específico encaminhado:** pessoa pediu fluxo mais direto e
+enviou /status com ID exato, modelo nous/openai/gpt-6.1-sol e agente parado.
+Metadados privados preservados; capture/after exit0, export ainda ausente.
+Próxima ação humana única: export oficial da sessão em outra aba PowerShell;
+agente fará diagnóstico local de chamadas/binding, sem nova conversa prévia.
+Menos iterações operacionais não altera critérios ou autoriza Hermes automático.
+
+**EV-01 — divergência na primeira resposta:** pessoa relatou que Hermes disse
+não haver receita registrada e pediu nome. Banco e leitura pública locais
+confirmam candidata na revisão1, oven UNKNOWN e nenhum aceite/decisão. Relato
+e diagnóstico preservados separadamente na tentativa; causa não identificada,
+sem atribuir consulta local ao host. Próximo passo humano `/status` para ID
+exato e posterior export oficial; não refrescar/repetir conversa antes de
+preservar evidências. Resposta real observada, auditoria/contagens pendentes;
+EV-01 ainda sem resultado auditado, EV-17 PASS preservado.
+
+**EV-01 — catálogo de abertura conferido:** saída humana de `/tools` contém
+exatamente as seis ferramentas de atendimento esperadas; evidência privada
+registrada. Próxima mensagem humana: “Gostei da receita que precisa de forno.”,
+aguardando resposta antes de continuar. Dispatch/binding e execução ainda não
+comprovados; EV-01 NOT_RUN, EV-17 PASS preservado.
+
+**EV-01 — abertura confirmada pela pessoa:** resposta “ok”, sem banner enviado.
+Próxima ação humana `/tools` na nova CLI, aguardando catálogo antes do cenário.
+Binding efetivo/ferramentas ainda não comprovados; EV-01 NOT_RUN.
+
+**EV-01 — binding gravado e start capturado, 16/11/2026:** pessoa confirmou
+mapping banco/workspace/ATTENDANCE conforme tentativa privada. Agente executou
+capture/start via Python da .venv, exit0. Assertivas PASS: revisão1, forno UNKNOWN,
+categorias REVIEWED, nenhum fato/aceite/preço/decisão, estoque preservado e
+orçamento inicial80.00. Próximo comando humano abre nova CLI com perfil S19 e
+skill dona-maria-cardapio; aguardar abertura antes de catálogo/mensagem.
+Binding efetivo ainda não comprovado no host, after/export ausentes; EV-01
+NOT_RUN e EV-17 PASS. Detalhes no início do handoff S19.
+
+**EV-01 — atestação humana concluída, 16/11/2026:** pessoa forneceu saída
+ok=true/revisão1 após entrada completa ATESTO+hash. Leitura local confirmou
+APPROVED, forno UNKNOWN, três categorias REVIEWED e ausência de fatos de cozinha,
+aceites, preços ou decisões de cardápio. Próxima ação humana: configurar somente
+`mcp_servers.dona_maria.env` para o binding EV-01 (banco/workspace/ATTENDANCE),
+aguardando saída antes de captura start e nova sessão. Não repetir atestação.
+Comando Hermes ainda não executado; EV-01 NOT_RUN e EV-17 PASS preservados.
+
+**EV-01 — entrada humana incompleta na atestação:** CLI recusou
+AUTHORIZATION_REQUIRED após entrada apenas `ATESTO`. Leitura local às00:02:15
+de16/11 confirmou proposta PENDING, hash correto, prazo vigente e revisão0.
+Repetir o mesmo comando com a entrada completa após revisão; nenhuma aplicação
+ou execução Hermes observada, EV-01 permanece NOT_RUN.
+
+**Handoff — proposta EV-01 preparada, 16/11/2026:** base existente preservada;
+branch/HEAD conferidos. Interface pública AttendanceService/propose_user_change
+criou somente proposta PENDING da candidata sintética com 100g de arroz, duas
+porções fictícias, requisito forno e demais categorias justificadas. Assertivas
+PASS de revisão0 e estado/estoque inalterados; execução via uv/Python exit0 após
+repetição com permissão de cache (primeira tentativa impedida pelo sandbox).
+Recibo privado com payload/resumo/ID/hash/prazo em
+`artifacts/private/s19-ev01-01/recipe-proposal.private.json`. Atestação humana
+pendente, prazo original até03:10:38 UTC de16/11. Próximo passo exclusivo:
+revisão/atestação local pela pessoa; conferir prazo antes de usar o comando.
+Binding Hermes ainda não alterado; start/after/export ausentes, EV-01 NOT_RUN,
+EV-17 PASS preservado. Código/testes/regressão não alterados ou repetidos;
+detalhes vigentes em [handoff S19](../docs/s19-handoff.md).
+
+**Handoff de retomada — pausa após base EV-01:** pessoa solicitou troca de
+sessão. EV-17 permanece PASS (audit002 e aceite humano preservados); outros17
+casos NOT_RUN, S11 aberto, S20 não iniciado. Executado com exit0 somente
+`evals/integrated.py prepare --case EV-01 --run-dir artifacts/private/s19-ev01-01`
+via `uv run --locked --no-sync python -X utf8 -B`; zero invocações Hermes.
+Ainda não foram criadas a receita/proposta nem as capturas start/after EV-01;
+nenhuma atestação ou alteração de perfil foi realizada nesta retomada.
+Próximo passo: completar precondições pela interface pública e revisão humana,
+sem recriar o diretório ou repetir EV-17. Detalhes atuais no início de
+[docs/s19-handoff.md](../docs/s19-handoff.md); entradas anteriores são históricas.
+Somente documentação e base sintética mudaram; não reexecutada a regressão
+838 PASS/2 SKIP já registrada, nem comandos reais do Hermes nesta pausa.
+
+**Status:** EM IMPLEMENTAÇÃO — P0; autorizado e retomado em 15/11/2026, sem aceite. **Objetivo / Resultado observável:** jornada completa atual, acessível e adversarial, com retomada e limites demonstrados por chamadas e estado.
+
+**Gate de conclusão:** aceites S13–S18 registrados; autorização própria recebida e três interfaces TDD confirmadas explicitamente. Correções do auditor aprovadas na nova revisão independente; revisão humana S11 e provas reais da versão integrada continuam pendentes. Apresentação no canal escolhido e catálogo efetivo não podem ser presumidos; aprovação técnica do diff não é aceite S19.
 
 **Source IDs**
 
@@ -1555,6 +1707,94 @@ Conferidos56 hashes atuais iguais aos da regressão vigente636PASS/2SKIPPED; Ruf
 **Testes / Verification:** T-CX/T-AUTH/T-SEC e regressões T-PROV/T-ADAPT/T-SIM/T-COST/T-COMPAT, SQLite temporário, STDIO e host real. Gate HITL: revisão humana da qualidade e todos os controles críticos aprovados. CLI não prova Desktop; casos não executados permanecem NOT_RUN.
 
 **Handoff — ainda não executado:** jornada integrada, evidências e limites a entregar; NOT_RUN. Próximo passo após gates e autorização própria é revalidar a versão atual; S12 só pode demonstrar a evolução se ela estiver revalidada.
+
+**Handoff — análise e preparação S19, 15/11/2026:** autorização exclusiva recebida; branch/HEAD `feat/s19-integrated-agent-evals`/`82a8fe6864a9b67a0f7a3971e38b04449d9ae8e9` conferidos, árvore inicialmente limpa. Context Retrieval Contract, bloco S19, handoffs S11/S13–S18, definições SPEC v1.3/PRD v1.2 e contratos de segurança pertinentes recuperados; `.hermes.md`, skill de atendimento, harness de evals, setup e guia de testes inspecionados. Sem GLOSSARY localizado. Harness S09/S10 usa contratos legados; evolução deve preservar histórico e avaliar catálogo vinculado/propostas/aprovação local, sem expor ferramentas de operador ao LLM. Propostas de interfaces: CLI/relatórios do harness, MCP STDIO vinculado e serviços públicos/CLI local com SQLite sintético; confirmação solicitada conforme skill TDD antes de testes novos. Criado `docs/s19-integrated-verification.md` com plano, lacunas, matriz EV-01–18 NOT_RUN/zero tentativas, gates AC-025/026/030/GUD-003 e pendências editoriais S11. Sync pelo lock/Python3.13.15 concluído; Ruff check/format `src tests evals` PASS/72arquivos. Rodadas pytest inicialmente impedidas por ambiente sem pytest, acesso ao temporário/cache e diretório pai local ausente; não são RED de produto. Regressão com temporário novo em `artifacts/private/` em execução. Bundle `.harness/` ausente, verificação estrutural NOT_RUN, sem copiar fontes/evidências de outros worktrees. Nenhum código/teste novo, Hermes/modelo/rede real, perfil pessoal, atestação humana, commit/push/PR/merge. Próximo passo: concluir baseline, obter confirmação das interfaces e iniciar ciclos verticais do harness; revisão independente e jornada humana permanecem pendentes.
+
+**Complemento do handoff S19 — baseline concluído, 15/11/2026:** suíte pública completa **789PASS/2SKIP/398.65s**, exit0, com temporário exclusivo neste worktree; comando exato e evidência JUnit `artifacts/private/s19-baseline-03.xml` registrados em `docs/s19-integrated-verification.md`. SKIPs: XLSX original privado ausente e symlink Windows1314. Ruff check/format `src tests evals` PASS/72arquivos; `git diff --check` PASS. Corrigidas somente duas inconsistências editoriais demonstradas frente a AC-025/§4.4.1: skill deixa de mandar apresentar códigos/localizações técnicas da despensa; `.hermes.md` explicita que diagnóstico é contexto local separado, não habilitado por conversa. Sem código/testes novos nem conclusão sobre qualidade real do Hermes. Confirmação das três interfaces TDD solicitadas continua pendente; próximo passo é obtê-la e implementar o primeiro ciclo RED/GREEN do harness integrado. Revisão independente, EV-01–18 reais e revisão humana S11/S19 continuam pendentes; nenhum critério de aceite marcado concluído.
+
+**Handoff — implementação S19 interrompida para nova sessão, 15/11/2026:** pessoa confirmou as interfaces TDD e depois solicitou handoff para evitar Lost in the Middle. Continuidade detalhada em [docs/s19-handoff.md](../docs/s19-handoff.md), que prevalece sobre as pendências iniciais de confirmação. Criados `evals/integrated.py`, `integrated_assertions.py`, `integrated_fixture.py`, `integrated-cases.json` e `tests/integration/test_integrated_evals.py`; históricos preservados, nenhum `src/`/manifesto/lock alterado. CLI prepara banco sintético/binding/capturas e audita evidências com histórico, sem Hermes/perfil/aprovação automática. Cycles RED/GREEN registrados nos temporários locais; revisão independente em dois passes encontrou e conferiu correções de origem de imports, metadados, vínculo de estado e proteção de artefatos. Último passe independente31PASS/80.19s, porém **Request changes** por três Required: exposição hostil pode passar sem resposta/readback posterior; replay usa `calls.index` e confunde ocorrências iguais; etapas críticas EV05/12/15 ainda carecem de provas específicas. Regressão completa nova interrompida durante integração para corrigir esses achados; não é PASS. Baseline789PASS/2SKIP/398.65s permanece histórico. Ruff final `src tests evals` check/format PASS/76arquivos; cache uv exigiu repetição com permissão ampliada. EV01–18 reais permanecem NOT_RUN/zero invocações; revisão humana S11 e gates AC025/026/030/GUD003 abertos. README dos evals, setup, matriz de resultados atual e roteiro humano final ainda precisam ser concluídos após correções. Próximo passo exato: RED da exposição adversarial sem processamento posterior, depois replay por índices e provas das etapas ausentes; nova revisão independente e regressão final antes do gate humano Hermes. Sem commit/push/PR/merge, outro worktree, perfil pessoal, credencial ou dado real alterado. Preservar todas as mudanças sem commit na retomada.
+
+**Handoff — retomada S19, 15/11/2026:** branch/HEAD do handoff conferidos, alterações sem commit preservadas. Ciclos TDD corrigiram continuação/readback após último ataque, replay por posições, etapas EV05/12/15, expiração de proposta e cotação e registro ERROR para evidência inválida. Nova revisão independente pelo padrão Model B: **Approve do diff técnico, nenhum Required aberto**; 12PASS/48,13s e passe final4PASS/38,48s, repro Decimal1PASS/3,69s. Mutação inicialmente mascarada por outro NOT_RUN; assert específico do relatório fortalecido, nova mutação detectada com1FAIL/5,56s, bytes restaurados. Ruff final check/format PASS/76arquivos. Regressão completa pós-revisão: **838PASS/2SKIP/591,66s**, exit0; JUnit artifacts/private/s19-resume-regression-01.xml (840casos, zero failures/errors), incluindo49testes do harness. SKIPs: anexo original privado ausente e symlink Windows1314. git diff --check final PASS; matriz JSON/catálogo coerentes. Documentados CLI atual, setup, roteiro humano e matriz `evals/s19-results.json` (18NOT_RUN/zero tentativas reais); histórico preservado. Comandos e evidências em [verificação S19](../docs/s19-integrated-verification.md). Sem src/manifesto/lock, Hermes, perfil, dado real, dependência, commit/push/PR/merge ou aceite automático. Bundle `.harness/` ausente, sem reconstrução. Próximo passo: somente `hermes --version` executado pela pessoa, aguardando saída sanitizada antes de outro comando ou configuração. Diagnóstico/export real EV12 não comprovado; sem código original ou capturas de expiração, manter NOT_RUN. AC025/026/030/GUD003 e revisão S11 continuam abertos.
+
+**Gate humano S19 — identificação do host, 15/11/2026:** saída de `hermes --version` enviada pela pessoa: v0.23.1 (2026.9.24), stable, revisão local3b4215785882, instalação Git, Python3.14.9, OpenAI SDK2.54.0. Nenhuma conversa/modelo, alteração de perfil ou aceite; EV01–18 continuam NOT_RUN. Próximo comando humano `hermes profile create --help`, aguardando saída antes de criação/configuração. Fonte de orientação: skill local hermes-agent/referência CLI e leitura do código instalado, sem leitura de configurações pessoais. Registro completo sanitizado em docs/s19-integrated-verification.md; sem necessidade de repetir pytest/Ruff por esta atualização documental.
+
+**Gate humano S19 — perfil dedicado:** ajuda de criação conferida pela pessoa; retorno ao worktree autorizado confirmado; `hermes profile create sabor-da-maria-s19 --no-skills --no-alias` executado por ela, criação sem skills confirmada. Saída informa perfil servido pelo gateway multiplexado existente e ausência de chaves próprias; nenhuma credencial foi lida. Próximo comando humano `hermes -p sabor-da-maria-s19 gateway stop` para estacionar somente esse perfil, conforme código/documentação instalados; aguardar saída antes de modelo/configuração. Nenhuma conversa, Agent Eval, alteração de outros perfis/gateway global ou aceite S19. Registro em docs/s19-integrated-verification.md; atualização documental apenas.
+
+**Gate humano S19 — perfil estacionado:** saída humana de `hermes -p sabor-da-maria-s19 gateway stop` confirma `parked`, bots e cron parados. Nenhum comando global executado. Próximo passo: abrir `hermes -p sabor-da-maria-s19 model` e analisar opções iniciais; credenciais não devem ser compartilhadas. Modelo, binding, catálogo e isolamento efetivo ainda não comprovados; EV01–18 reais NOT_RUN. Atualização documental, sem nova execução de código/testes/modelo pelo agente.
+
+**Gate humano S19 — modelo informado:** pessoa declarou provedor Nous e modelo “gpt-6.1 sol”. Identificador configurado ainda sem saída observada; próximo comando humano `hermes -p sabor-da-maria-s19 config get model.default`, restrito a esse campo. Perfil permanece parked; autenticação, binding e catálogo não comprovados, zero invocações de avaliação. Atualização documental somente.
+
+**Gate humano S19 — identificadores conferidos:** saídas específicas de configuração no perfil S19 confirmam `openai/gpt-6.1-sol` via `nous`. Autenticação/chamada real não testadas. Próximo comando humano `hermes -p sabor-da-maria-s19 tools list --platform cli` para observar habilitação inicial, sem equivaler configuração a catálogo/dispatch da sessão. Perfil parked, zero invocações de avaliação, gates S19 abertos. Atualização documental somente.
+
+**Gate humano S19 — configuração ampla detectada:** listagem CLI enviada pela pessoa contém toolsets gerais habilitados, incluindo shell, arquivos, browser, web e delegação; não atende à allowlist. Nenhuma conversa iniciada. Próximo comando humano `hermes -p sabor-da-maria-s19 config set platform_toolsets.cli "[]"`, sem execução automática; conferir saída/listagem antes de habilitar capacidades da aplicação. Semântica de lista explícita vazia conferida no código instalado; memória de contexto e catálogo/dispatch ainda exigem verificações próprias. Estado real EV01–18 NOT_RUN, sem aceite. Atualização documental somente.
+
+**Gate humano S19 — toolsets desabilitados conferidos:** gravação de `platform_toolsets.cli=[]` confirmada pela pessoa; nova listagem mostra todos os toolsets exibidos desabilitados, inclusive plugin a2a. Próximo comando humano `hermes -p sabor-da-maria-s19 config set memory.memory_enabled false`; memória/perfil de usuário no contexto têm flags próprias ainda não conferidas. Não equivale a dispatch real ou homologação; nenhuma conversa ou avaliação iniciada. Atualização documental somente.
+
+**Gate humano S19 — memória de contexto conferida:** gravações de `memory.memory_enabled=false` e `memory.user_profile_enabled=false` confirmadas e seguidas de leitura `config get memory --json`, com ambas falsas, prefetch falso e provider vazio. Próximo comando humano `hermes -p sabor-da-maria-s19 config set tools.tool_search.enabled off`, conforme exemplo do projeto/código instalado. Perfil parked, ferramentas gerais desabilitadas, zero conversas/avaliações; binding, catálogo/dispatch reais e autenticação pendentes. Atualização documental somente.
+
+**Gate humano S19 — aviso de configuração de display:** descoberta adiada gravada off. `config set display.tool_progress off` retornou aviso de chave não reconhecida, salva mesmo assim. Código instalado da CLI lê a chave global e normaliza False para off; sugestão `tool_progress_command` apenas habilita /verbose em mensageiros. Próximo comando humano `hermes -p sabor-da-maria-s19 config get display.tool_progress`, sem substituir chave ou usar --force. Valor salvo e efeito visual pendentes; AC025 e demais gates continuam abertos. Atualização documental somente, sem alteração automática do host.
+
+**Gate humano S19 — progresso conferido:** leitura JSON restrita retornou `display.tool_progress=false`, interpretado como off pelo runtime CLI inspecionado; aviso do validador preservado. Próximo comando humano `hermes -p sabor-da-maria-s19 config set display.platforms.cli.show_reasoning false`, usando o caminho específico lido pela CLI. Apresentação real ainda não testada; nenhuma avaliação iniciada. Atualização documental somente.
+
+**Gate humano S19 — preparação EV17 e política:** gravação humana `display.platforms.cli.show_reasoning=false` confirmada. Agente executou CLI integrado `prepare --case EV-17 --run-dir artifacts/private/s19-ev17-01`, após conferir diretório inexistente: exit0, NOT_RUN/zero invocações, só fixture/binding/captura/template, nenhuma aprovação ou Hermes. Próxima ação humana: criar pasta `plugins/dona-maria-attendance-policy` somente no perfil S19; copiar/habilitar serão passos posteriores após saídas. Pré-condições EV17, binding MCP e apresentação real ainda pendentes. Nenhuma alteração em src/ ou dependências; histórico e gates preservados.
+
+**Gate humano S19 — pasta da política criada:** pessoa confirmou diretório `plugins/dona-maria-attendance-policy` no perfil dedicado, saída de 15/11/2026 às 22:50. Próximo comando humano copia somente os dois arquivos existentes `__init__.py` e `plugin.yaml` do checkout autorizado, com listagem da saída. Cópia/habilitação ainda pendentes, sem conversa ou invocação real; matriz permanece NOT_RUN.
+
+**Gate humano S19 — política copiada:** pessoa confirmou os dois arquivos no perfil dedicado, `__init__.py` (2700 bytes) e `plugin.yaml` (217 bytes). Próxima ação humana: habilitar `dona-maria-attendance-policy` com `--no-allow-tool-override`, opção conferida no parser instalado. Habilitação/carregamento ainda pendentes; zero invocações reais e matriz NOT_RUN preservados.
+
+**Gate humano S19 — política habilitada:** pessoa confirmou plugin enabled sem override de ferramentas nativas. Aviso genérico de restart não autoriza reiniciar gateway; perfil permanece parked. Próximo comando humano `hermes -p sabor-da-maria-s19 plugins list --enabled --plain` confere todos os plugins habilitados, sem ocultar bundled. Atuação dos hooks e catálogo efetivo ainda pendentes; nenhuma invocação real.
+
+**Gate humano S19 — plugins conferidos:** lista humana mostrou a política 0.2.0 como único plugin de usuário e provedores/adaptadores bundled default-on, conforme `_plugin_status` instalado. Isso não comprova catálogo de tools nem canais em execução. Manter perfil parked e toolsets restritos; não desabilitar provedores em massa. Próximo comando humano configura `skills.external_dirs` apenas com `C:/Labs/sabor-da-maria-s19/skills`. Descoberta, hooks e catálogo efetivo pendentes; matriz real NOT_RUN.
+
+**Gate humano S19 — diretório da skill configurado:** pessoa confirmou `skills.external_dirs` contendo somente `C:/Labs/sabor-da-maria-s19/skills`. Próximo comando humano `hermes -p sabor-da-maria-s19 skills list --enabled-only` confere descoberta da skill e eventuais extras. Hooks/catálogo efetivo ainda pendentes; nenhuma conversa real.
+
+**Gate humano S19 — skills descobertas:** pessoa confirmou `dona-maria-cardapio` external/local e `hermes-agent` builtin. Código instalado marca a segunda como essencial e ignora sua desativação por configuração; limite registrado, sem modificar host ou homologar isolamento. Próxima leitura humana `hermes -p sabor-da-maria-s19 mcp list` verifica servidores preexistentes antes do binding sintético. Hooks, contexto/catálogo efetivos e invocações reais continuam pendentes.
+
+**Gate humano S19 — MCP vazio e próximo vínculo:** pessoa confirmou nenhum servidor MCP configurado. Agente conferiu campos mínimos do binding privado EV-17, existência do SQLite e Python do projeto. Próximo comando humano `mcp add dona_maria` usa launcher ATTENDANCE, caminhos absolutos, UUID do binding, um único `--env` e `--args` por último. Aguardar catálogo/pergunta de habilitação antes de responder. Descoberta e execução de modelo ainda pendentes; matriz real NOT_RUN.
+
+**Gate humano S19 — descoberta STDIO 6/6:** pessoa confirmou conexão, seis ferramentas esperadas e salvamento após `y`. Não é execução de modelo ou validação de hooks. Próximo comando humano fixa `mcp_servers.dona_maria.tools` com include dos seis nomes e resources/prompts false; ramo `y` não grava include no instalador conferido. Toolset CLI, catálogo de conversa e precondições EV17 pendentes; matriz real NOT_RUN.
+
+**Gate humano S19 — filtro MCP explícito:** pessoa confirmou include dos seis nomes e resources/prompts false. Próximo comando humano configura `platform_toolsets.cli` somente com `mcp-dona_maria`, nome conferido no runtime instalado. Leitura final de seleção, catálogo de conversa e hooks ainda pendentes; zero invocações de modelo e matriz NOT_RUN.
+
+**Gate humano S19 — seleção CLI gravada:** pessoa confirmou `platform_toolsets.cli = ['mcp-dona_maria']`. Próximo comando humano `hermes -p sabor-da-maria-s19 tools list --platform cli` confere seleção, esperando somente o MCP habilitado. Hooks, catálogo de conversa e precondições EV17 pendentes; matriz real NOT_RUN.
+
+**Gate humano S19 — seleção CLI conferida:** listagem humana confirmou toolsets nativos e `a2a` disabled e MCP `dona_maria` com include dos seis nomes. Próximo comando humano `hermes -p sabor-da-maria-s19 mcp test dona_maria` testa nova conexão/descoberta pela configuração salva, sem chamadas de negócio/modelo. Catálogo efetivo, hooks e precondições EV17 pendentes; matriz NOT_RUN.
+
+**Gate humano S19 — conexão e precondição:** pessoa confirmou mcp test conectado em 2146ms com seis ferramentas. Agente preparou via AttendanceService uma única proposta PENDING de fato fictício EQUIPMENT/stove=true, sem aprovação; receipt privado exclusivo na tentativa EV17, execução exit0. Próxima ação humana approval_cli inspect com IDs privados entregues; atestação posterior, prazo dez minutos. Hooks, catálogo de conversa e export efetivo pendentes; modelo não invocado e matriz NOT_RUN.
+
+**Gate humano S19 — proposta inspecionada:** pessoa informou fato fictício EQUIPMENT/stove=true, revisão 0, PENDING e hash igual ao recibo. Relógio 02:07:19 UTC, prazo 02:16:04 UTC de 16/11/2026. Próximo comando humano approval_cli approve com hash revisado e atestação manual; nenhuma aprovação confirmada ainda. Matriz real NOT_RUN.
+
+**Gate humano S19 — atestação incompleta recusada:** entrada humana `atesto` sem hash retornou AUTHORIZATION_REQUIRED. Inspeção local posterior confirmou mesma proposta PENDING/hash, prazo vigente às 02:08:42 UTC; leitura repetida com permissão ampliada após bloqueio do cache uv, exit0. Próximo passo: repetir approve com entrada manual completa `ATESTO HASH_REVISADO`. Não contabilizar recusa local como falha Hermes do EV17; zero invocações reais.
+
+**Gate humano S19 — precondição atestada:** após entradas incompletas recusadas, pessoa confirmou approve ok=true, revisão 1 e fato fictício EQUIPMENT/stove=true. Agente capturou start pelo CLI integrado, exit0; conferiu revisão 1, APPROVED e fato esperado. Próximo comando humano `hermes -p sabor-da-maria-s19 --cli chat --skills dona-maria-cardapio`; enviar tela inicial antes de mensagem/avisos. Hooks, catálogo/contexto efetivos, export e falha/retomada EV17 pendentes; zero invocações de modelo observadas, matriz NOT_RUN.
+
+**Gate humano S19 — abertura sem conclusão:** pessoa escolheu No thanks na telemetria, recebeu Shared metrics off e relatou travamento antes de qualquer tela de conversa observada. Causa não identificada; próxima ação humana Ctrl+C uma vez nessa CLI para obter reação/erro, sem kill/restart global. Não contabilizar como falha de ferramenta EV17. Matriz real NOT_RUN, catálogo/hooks/contexto ainda pendentes.
+
+**Gate humano S19 — espera na conexão gateway:** traceback humano do Ctrl+C localizou GatewayConnection.start/_ready durante runtime.describe, antes de session.create. Código instalado confirma dependência da CLI no gateway. Reavaliar orientação parked para abertura, sem atribuir causa conclusiva ao marcador. Próximo comando humano `hermes -p sabor-da-maria-s19 gateway status`; nenhum restart/kill global autorizado ou executado. Modelo/catálogo/hooks ainda não verificados.
+
+**Gate humano S19 — parked confirmado:** pessoa informou status parked. Próximo comando humano `hermes -p sabor-da-maria-s19 gateway start`, escopo do perfil conferido em código/documentação; sem --all/--force/restart global. Se pedir host default, aguardar análise. Orientação anterior de manter parked durante abertura corrigida pela dependência da CLI no gateway; causa exclusiva e sucesso ainda não comprovados.
+
+**Gate humano S19 — unparked sem serviço confirmado:** pessoa informou gateway start com `host multiplexer is not ready`, perfil unparked e nova varredura em até 30s. Próxima ação humana após essa janela: gateway status do perfil S19. Não registrar prontidão, repetir start ou reiniciar host global. EV17 real NOT_RUN.
+
+**Gate humano S19 — status inconclusivo:** saída enviada só lista Other profiles (default PID560 e s18-cost-readiness-review PID684), sem confirmar S19 servido ou endpoint pronto. Próximo comando humano gateway status --deep do S19, enviar saída completa. Não alterar esses processos; abertura/catalogo/hooks continuam pendentes e matriz NOT_RUN.
+
+**Gate humano S19 — diagnóstico direto preparado:** status --deep humano repetiu apenas Other profiles, S18 PID corrigido para 6844. Helper privado discover-gateway.py usa função instalada discover_gateway_endpoint, só state/reason_code/detail, sem ensure/attach/ticket/start/modelo. Sintaxe/AST validadas localmente; Python instalado localizado após escalada somente de leitura. Próximo comando humano executa helper conforme roteiro; agente não executou Hermes. Prontidão ainda pendente.
+
+**Gate humano S19 — descoberta pronta:** helper executado pela pessoa retornou ready, reason_code/detail nulos. Próxima ação humana repete CLI com --skills dona-maria-cardapio e envia abertura/erro antes de mensagem. Descoberta não comprova WebSocket/sessão/hooks; nenhum restart/start adicional, matriz real NOT_RUN.
+
+**Gate humano S19 — CLI iniciou:** pessoa confirmou abertura, sem detalhes de banner. Próxima ação humana na sessão `/tools` (sem list), enviar catálogo antes de mensagem ao modelo. Catálogo e hooks ainda pendentes; abertura não equivale a execução de EV ou resposta real.
+
+**EV17 real em andamento:** catálogo inicial confirmou seis ferramentas; abertura e retomada pelo ID após /exit produziram respostas que reutilizam arroz5kg/fogão/orçamento80. Duas respostas reais observadas, APIs exatas desconhecidas, uma tentativa incompleta; matriz NOT_RUN com IN_PROGRESS e contador null. Próxima ação humana /tools na retomada, depois falha/refresh/export/auditoria. Pedido de rapidez incorporado, sem iniciar S20 nem declarar aceite.
+
+**EV17 — falha controlada ativa:** catálogo retomado confirmou seis tools. Agente iniciou BEGIN EXCLUSIVE no SQLite sintético sem writes, self-check de leitura bloqueada, autoliberação300s/signal e recibos/hash privados. Próxima entrada humana pede nova consulta à despensa. Após resposta liberar lock e conferir hash; não contar preparação como falha observada. Fonte controlada explicitada.
+
+**EV17 — falha observada e lock liberado:** resposta humana colada relata indisponibilidade, sem sucesso fictício, com auxílio da pessoa operadora como próximo passo. Agente liberou por signal, helper exit0/LOCK_RELEASED e hash unchanged=true. Próxima ação /reload-mcp somente esta vez, depois catálogo/readback/export; três respostas reais observadas, APIs exatas pendentes. Nenhum lock ativo.
+
+**EV17 — recuperação e captura final:** pessoa informou refresh, catálogo seis nomes e resposta de consulta recuperada. Agente capturou after, exit0; business/inventory iguais a start, revisão1. Quatro respostas reais observadas, export oficial por ID exato solicitado humanamente para destino privado novo; auditoria/rubrica ainda pendentes. Nenhum lock ativo.
+
+**EV17 — export/auditoria técnica:** export oficial preservado22mensagens/5users/9APIs/8tools; CLI dizia12tools, divergência registrada. Quinta mensagem foi comando export no chat, recusado sem terminal. Audit001 exit0 NOT_RUN apenas por revisão humana pendente; controles automáticos/estado/catálogo/chamadas/falha/readbacks/fingerprint passaram. Pergunta humana de apresentação/clareza/retomada/falha enviada; rubrica técnica proposta2/2/1. Próximo passo é registrar resposta e reauditar preservando audit001, não nova conversa. S19/S20 sem aceite.
+
+**EV17 — PASS após aceite humano:** pessoa respondeu sim à revisão de clareza/apresentação/retomada/falha. Evidência privada registrada, revisão atualizada e audit002 exit0 PASS,9APIs/8tools/rubrica5/6. Audit001 NOT_RUN e export preservados. Matriz1PASS/17NOT_RUN. Nenhum lock ativo, sessão encerrada; não pedir aceite EV17 novamente. S19/S11 continuam abertos, S20 não iniciado. Próximo trabalho autorizado: demais casos S19, começando preparação EV01. Sem alterações de código nesta etapa.
 
 ## Extensões do baseline e revisão de qualidade — 14/11/2026
 
