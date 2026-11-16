@@ -7,6 +7,17 @@
 - [Verificação do percurso REAL](verification-local-real.md): testes atuais e pendências humanas.
 - [Verificação e limites S20](verification-s20.md): resultados reais e integração.
 
+## Publicação no GitHub Pages
+
+Após o primeiro deploy, acesse a
+[apresentação online](https://glaucia86.github.io/sabor-da-maria-hermes-agent/).
+O workflow [Publish presentation](../../.github/workflows/pages.yml) publica
+`docs/speaker/slides` quando essa pasta ou o workflow muda na `main`.
+Também permite disparo manual pela aba Actions, selecionando a `main`.
+Em Settings → Pages, mantenha a origem como **GitHub Actions**.
+Os arquivos gerados são publicados como versionados; ao editar as fontes,
+execute o build abaixo e inclua os artefatos atualizados na alteração.
+
 ## Abrir localmente
 
 Na raiz do checkout:
@@ -74,4 +85,4 @@ Funcionamento das notas: [documentação oficial Reveal.js](https://revealjs.com
 Ensaie a jornada completa com o perfil definitivo e a planilha original.
 Não apresente a demo como evidência de autonomia geral. A pesquisa real faz parte do percurso completo;
 se falhar, registre a limitação sem apresentar uma receita própria como essa prova.
-Nenhuma publicação em GitHub Pages foi feita ou é necessária para apresentar.
+A apresentação local continua disponível independentemente do GitHub Pages.
