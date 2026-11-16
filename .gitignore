@@ -16,6 +16,12 @@ __pycache__/
 *.egg-info/
 build/
 dist/
+!/docs/speaker/slides/vendor/reveal-5.2.1/dist/
+!/docs/speaker/slides/vendor/reveal-5.2.1/dist/**
+
+# Node (ferramentas de build dos slides)
+node_modules/
+*.map
 
 # Coverage
 .coverage

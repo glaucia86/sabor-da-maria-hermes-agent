@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sabor da Maria — Da despensa ao cardápio com um agente de IA</title>
+<meta name="description" content="Desafio técnico Senior AI Engineer: agente Hermes que conduz Dona Maria da despensa ao cardápio e ao preço. Glaucia Lemos.">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="assets/deck.css">
+</head><body>
+<div class="reveal"><div class="slides">
+
+<!-- 1 · Capa -->
+<section data-timing="30">
+ <div class="slide justify-between">
+  <p class="kicker"><span class="inline-block size-2.5 rounded-full bg-ifood"></span>Desafio técnico · Senior AI Engineer · iFood</p>
+  <div class="flex items-center justify-between gap-10">
+   <div class="max-w-[760px]">
+    <h1 class="text-[96px] font-bold leading-[0.95] tracking-[-0.045em]">Sabor da <span class="text-mint">Maria</span></h1>
+    <p class="mt-7 text-[30px] leading-snug text-muted">Da despensa ao cardápio, com um agente de IA que <span class="text-ink">pergunta antes de recomendar</span> e <span class="text-ink">calcula antes de precificar</span>.</p>
+   </div>
+   <div class="relative grid size-[260px] flex-none place-items-center rounded-[48px] border border-line bg-panel-2 shadow-2xl">
+    <div class="absolute -right-3 -top-3 size-6 rounded-full bg-ifood"></div>
+    {{icon chef-hat size-[130px] text-mint stroke-[1.4]}}
+   </div>
+  </div>
+  <div class="flex items-end justify-between">
+   <div>
+    <p class="text-[26px] font-semibold">Glaucia Lemos</p>
+    <p class="text-lg text-muted">Conversa com Lucas Rolim &amp; Hildebrando Azevedo</p>
+   </div>
+   <div class="flex gap-3">
+    <span class="chip">{{icon bot}}Hermes Agent</span>
+    <span class="chip">{{icon plug}}MCP stdio</span>
+    <span class="chip">{{icon code}}Python 3.13</span>
+    <span class="chip">{{icon database}}SQLite</span>
+   </div>
+  </div>
+ </div>
+ <aside class="notes">
+Olá, Lucas e Hildebrando, obrigada pelo tempo de vocês.
+Vou apresentar o Sabor da Maria, a minha solução para o desafio de Senior AI Engineer.
+O roteiro é simples: primeiro o que o desafio pede, depois o problema real que está por trás dele, a solução que eu escolhi e por quê, e a arquitetura, fluxo a fluxo.
+Em seguida mostro a aplicação funcionando ao vivo e fecho com melhorias e próximos passos.
+São uns quinze minutos de apresentação antes da demonstração.
+ </aside>
+</section>
+
+<!-- 2 · O que é o desafio? -->
+<section data-timing="75">
+ <div class="slide">
+  <p class="kicker">{{icon clipboard-list}}01 · O que é o desafio?</p>
+  <h2 class="title">Uma consultora de cardápio<br>e preço para a Dona Maria.</h2>
+  <div class="mt-8 grid flex-1 grid-cols-[1fr_1.25fr] gap-7">
+   <div class="flex flex-col gap-4">
+    <div class="card flex gap-4 p-5">
+     <div class="icon-tile">{{icon chef-hat}}</div>
+     <p class="text-[21px] leading-snug">Ela abre o primeiro delivery. <span class="text-muted">Sabe o que tem e quanto pagou, mas não sabe o que cozinhar nem quanto cobrar.</span></p>
+    </div>
+    <div class="card flex items-center gap-4 p-5">
+     <div class="icon-tile">{{icon file-spreadsheet}}</div>
+     <p class="text-[21px] leading-snug"><span class="font-mono text-[18px] text-mint">despensa_dona_maria.xlsx</span><br><span class="text-muted">37 ingredientes · abas <b class="text-ink">Despensa</b> e <b class="text-ink">Precos</b></span></p>
+    </div>
+    <div class="grid grid-cols-2 gap-4">
+     <div class="card p-5"><p class="text-[40px] font-bold text-mint">R$ 80</p><p class="text-lg text-muted">para complementos</p></div>
+     <div class="card p-5"><p class="text-[40px] font-bold text-amber">10%</p><p class="text-lg text-muted">de taxa sobre a venda</p></div>
+    </div>
+    <p class="chip self-start">{{icon bot}}Obrigatório: Hermes Agent customizado</p>
+   </div>
+   <ol class="flex flex-col gap-3">
+    <li class="card flex items-center gap-4 p-4"><div class="icon-tile">{{icon search}}</div><div><p class="text-sm font-bold tracking-widest text-amber">2.1 · PESQUISA</p><p class="text-[21px] leading-snug">Buscar receitas reais na web e ouvir a opinião dela.</p></div></li>
+    <li class="card flex items-center gap-4 border-mint/60 p-4"><div class="icon-tile">{{icon list-checks}}</div><div><p class="text-sm font-bold tracking-widest text-amber">2.2 · RESTRIÇÕES · O CORAÇÃO</p><p class="text-[21px] leading-snug">Descobrir equipamentos, técnicas e limites <b>antes</b> de ela comprar.</p></div></li>
+    <li class="card flex items-center gap-4 p-4"><div class="icon-tile">{{icon shopping-cart}}</div><div><p class="text-sm font-bold tracking-widest text-amber">2.3 · INGREDIENTES</p><p class="text-[21px] leading-snug">O que já tem, o que falta e se cabe no orçamento.</p></div></li>
+    <li class="card flex items-center gap-4 p-4"><div class="icon-tile">{{icon calculator}}</div><div><p class="text-sm font-bold tracking-widest text-amber">2.4 · CMV E PREÇO</p><p class="text-[21px] leading-snug">Calcular o custo, propor 2–3 preços e deixar ela decidir.</p></div></li>
+   </ol>
+  </div>
+ </div>
+ <aside class="notes">
+O enunciado é sobre a Dona Maria, que está abrindo o primeiro delivery, o Sabor da Maria.
+Ela entrega uma planilha com duas abas: Despensa, com o que tem em estoque, e Precos, com quanto pagou por cada compra. São trinta e sete ingredientes.
+Ela tem oitenta reais para complementos, e a plataforma cobra dez por cento sobre o preço de venda.
+O desafio pede um agente construído customizando o Hermes Agent, da Nous Research, que faça quatro coisas:
+pesquisar receitas reais na internet e pedir a opinião dela;
+descobrir, na conversa, se ela tem equipamento, técnica e condições operacionais — o próprio enunciado chama isso de coração do desafio;
+comparar a receita com a despensa e dizer o que falta e se cabe no orçamento;
+e, quando ela aceitar um prato, calcular o CMV, propor dois ou três cenários de preço e deixar a decisão com ela.
+ </aside>
+</section>
+
+<!-- 3 · Qual problema resolve? -->
+<section data-timing="75">
+ <div class="slide">
+  <p class="kicker">{{icon target}}02 · Qual problema resolve?</p>
+  <h2 class="title">Aqui, uma recomendação errada<br>vira <span class="text-coral">prejuízo real</span>.</h2>
+  <div class="mt-8 grid grid-cols-3 gap-5">
+   <div class="card p-5"><div class="icon-tile">{{icon cooking-pot}}</div><p class="mt-4 text-[23px] font-semibold leading-snug">O que consigo produzir com o que tenho?</p></div>
+   <div class="card p-5"><div class="icon-tile">{{icon flame}}</div><p class="mt-4 text-[23px] font-semibold leading-snug">Tenho equipamento, técnica e tempo para isso?</p></div>
+   <div class="card p-5"><div class="icon-tile">{{icon hand-coins}}</div><p class="mt-4 text-[23px] font-semibold leading-snug">Quanto cobrar para não perder dinheiro?</p></div>
+  </div>
+  <p class="mt-8 text-sm font-bold tracking-widest text-coral">O QUE PODE DAR ERRADO</p>
+  <ul class="mt-3 grid grid-cols-2 gap-x-8 gap-y-4 text-[21px] leading-snug">
+   <li class="flex gap-3">{{icon triangle-alert size-6 flex-none text-coral mt-0.5}}Comprar ingredientes e descobrir depois que não consegue cozinhar.</li>
+   <li class="flex gap-3">{{icon triangle-alert size-6 flex-none text-coral mt-0.5}}Planejar R$ 80 por prato e estourar o orçamento total.</li>
+   <li class="flex gap-3">{{icon triangle-alert size-6 flex-none text-coral mt-0.5}}Aplicar a taxa sobre o custo, e não sobre a venda, e cobrar abaixo do piso.</li>
+   <li class="flex gap-3">{{icon triangle-alert size-6 flex-none text-coral mt-0.5}}O LLM inventar um número, esquecer um fato ou “aceitar” um prato sozinho.</li>
+  </ul>
+ </div>
+ <aside class="notes">
+Por trás do enunciado existem três perguntas da Dona Maria: o que eu consigo produzir, se eu tenho condição de produzir, e quanto cobrar.
+O que torna isso difícil é que o erro custa dinheiro de verdade.
+Se o agente recomenda um prato assado e ela não tem forno, ela já comprou os ingredientes.
+Se cada prato é planejado olhando oitenta reais isoladamente, a soma estoura o orçamento.
+Se a taxa de dez por cento é aplicada sobre o custo, e não sobre a venda, o preço fica abaixo do mínimo.
+E existe o risco específico de IA: um modelo pode errar uma conta, esquecer um fato de uma sessão anterior ou interpretar "parece bom" como aceite.
+Então o problema que eu resolvi não é só recomendar receitas; é recomendar de um jeito em que esses erros não passem.
+ </aside>
+</section>
+
+<!-- 4 · Solução escolhida -->
+<section data-timing="75">
+ <div class="slide">
+  <p class="kicker">{{icon lightbulb}}03 · Solução escolhida</p>
+  <h2 class="title">O LLM <span class="text-mint">conversa</span>. O código <span class="text-mint">valida</span>.<br>A Dona Maria <span class="text-mint">decide</span>.</h2>
+  <div class="mt-9 grid grid-cols-4 gap-5">
+   <div class="card flex flex-col p-6"><div class="icon-tile">{{icon bot}}</div><h3 class="mt-5 text-[25px] font-bold">Hermes Agent</h3><p class="mt-2 flex-1 text-[19px] leading-snug text-muted">Conduz a conversa, pesquisa receitas, faz as perguntas certas e explica os números.</p><p class="mt-4 font-mono text-[15px] text-amber">context file · skill · plugins</p></div>
+   <div class="card flex flex-col p-6"><div class="icon-tile">{{icon shield-check}}</div><h3 class="mt-5 text-[25px] font-bold">Python + MCP</h3><p class="mt-2 flex-1 text-[19px] leading-snug text-muted">Valida viabilidade, orçamento e preço com regras determinísticas e <span class="font-mono">Decimal</span>.</p><p class="mt-4 font-mono text-[15px] text-amber">6 tools · stdio</p></div>
+   <div class="card flex flex-col p-6"><div class="icon-tile">{{icon database}}</div><h3 class="mt-5 text-[25px] font-bold">SQLite</h3><p class="mt-2 flex-1 text-[19px] leading-snug text-muted">Guarda fatos, receitas, decisões e auditoria. Retomar não depende da memória do modelo.</p><p class="mt-4 font-mono text-[15px] text-amber">estado · histórico</p></div>
+   <div class="card flex flex-col p-6"><div class="icon-tile">{{icon user-check}}</div><h3 class="mt-5 text-[25px] font-bold">Decisão humana</h3><p class="mt-2 flex-1 text-[19px] leading-snug text-muted">Toda decisão vira proposta, aprovada num terminal local fora do alcance do modelo.</p><p class="mt-4 font-mono text-[15px] text-amber">aprovação local</p></div>
+  </div>
+  <p class="mt-auto flex items-center gap-3 text-[22px] text-muted">{{icon flask-conical size-7 text-mint}}Regra no código, não no prompt: um teste prova a regra sem chamar um LLM.</p>
+ </div>
+ <aside class="notes">
+A solução separa três papéis.
+O Hermes Agent é quem conversa: ele recebe um context file com o papel de consultora, uma skill com o procedimento de atendimento e dois plugins — um de política, que restringe as ferramentas, e um de pesquisa.
+Tudo que precisa ser verdade passa pelo serviço Python, exposto ao Hermes por MCP via stdio, com seis ferramentas. Lá ficam as regras: se a receita é viável, se as compras cabem em oitenta reais, qual é o CMV e o preço mínimo, sempre com Decimal.
+O estado do negócio fica no SQLite, com histórico e auditoria. Se a sessão cai, o agente consulta o estado em vez de confiar na memória.
+E a decisão é da Dona Maria: o agente só cria propostas; quem aplica é uma aprovação local, num terminal que o modelo não enxerga.
+O ganho prático é que as regras de negócio são testadas sem chamar nenhum LLM.
+ </aside>
+</section>
+
+<!-- 5 · Por que essa solução? -->
+<section data-timing="90">
+ <div class="slide">
+  <p class="kicker">{{icon scale}}04 · Por que essa solução?</p>
+  <h2 class="title-sm">Cada escolha fecha um risco concreto.</h2>
+  <div class="card mt-6 overflow-hidden">
+   <table class="w-full text-[19px] leading-snug">
+    <thead class="bg-white/5 text-left text-[15px] uppercase tracking-widest text-amber">
+     <tr><th class="px-5 py-3 font-bold">Caminho óbvio</th><th class="px-5 py-3 font-bold">Risco</th><th class="px-5 py-3 font-bold text-mint">O que eu fiz</th></tr>
+    </thead>
+    <tbody class="divide-y divide-line">
+     <tr><td class="px-5 py-3">LLM faz as contas pelo prompt</td><td class="px-5 py-3 text-muted">Conta errada, regra esquecida</td><td class="px-5 py-3">Regras e cálculos em Python, testados sem LLM</td></tr>
+     <tr><td class="px-5 py-3">Memória do agente guarda o estado</td><td class="px-5 py-3 text-muted">Sessão cai, fato some ou é inventado</td><td class="px-5 py-3">SQLite + <span class="font-mono text-[17px] text-mint">get_business_state</span>; memória automática desligada</td></tr>
+     <tr><td class="px-5 py-3">Valores em <span class="font-mono text-[17px]">float</span></td><td class="px-5 py-3 text-muted">Arredondamento leva o preço abaixo do piso</td><td class="px-5 py-3"><span class="font-mono text-[17px]">Decimal</span> e piso arredondado para cima</td></tr>
+     <tr><td class="px-5 py-3">Agente confirma a própria decisão</td><td class="px-5 py-3 text-muted">“Parece bom” vira aceite</td><td class="px-5 py-3">Proposta + aprovação local fora do modelo</td></tr>
+     <tr><td class="px-5 py-3">Busca web livre</td><td class="px-5 py-3 text-muted">Prompt injection, vazamento da despensa</td><td class="px-5 py-3">Pesquisa mediada: termos liberados, extração por ID</td></tr>
+     <tr><td class="px-5 py-3">Backend distribuído</td><td class="px-5 py-3 text-muted">Complexidade sem demanda</td><td class="px-5 py-3">MCP local + SQLite, reproduzível em 1 máquina</td></tr>
+    </tbody>
+   </table>
+  </div>
+ </div>
+ <aside class="notes">
+Eu cheguei a essa solução olhando para o caminho mais óbvio e para o risco que ele traz.
+O mais óbvio seria deixar o modelo fazer as contas pelo prompt. Funciona na demo, mas uma regra esquecida ou um arredondamento errado não aparece até custar dinheiro. Por isso as regras estão em Python, com testes.
+A memória do agente também não serve como banco de dados: desliguei a memória automática do Hermes e o estado vem do SQLite.
+Dinheiro em float pode arredondar para baixo do piso; uso Decimal e arredondo o preço para cima em centavos.
+Se o agente puder confirmar a própria decisão, um "parece bom" vira aceite. Então a confirmação acontece fora do modelo.
+Busca livre na web abre espaço para prompt injection e para vazar dados da despensa na consulta; a pesquisa é mediada, só com termos liberados.
+E eu não coloquei infraestrutura distribuída porque o problema é local; o custo dessa escolha está nos próximos passos.
+ </aside>
+</section>
+
+<!-- 6 · Arquitetura -->
+<section data-timing="90">
+ <div class="slide">
+  <p class="kicker">{{icon layers}}05 · Arquitetura</p>
+  <h2 class="title-sm">Quem conversa, quem valida, quem guarda e quem aprova.</h2>
+  <figure class="board">{{diagram arquitetura}}</figure>
+ </div>
+ <aside class="notes">
+Este é o mapa da solução, da esquerda para a direita.
+A Dona Maria conversa com o Hermes. Dentro do Hermes estão o context file e a skill, que definem o papel e a condução; o plugin de política, que mantém uma lista fechada de ferramentas e usa hooks para recusar chamadas fora dela; o plugin de pesquisa; e o modelo, escolhido no perfil.
+O plugin de pesquisa é o único caminho para a web, e só com termos liberados.
+Para qualquer coisa de negócio, o Hermes chama o servidor MCP por stdio. São seis ferramentas, e o banco e o workspace são fixados pelo operador, não pelo modelo.
+O domínio Python valida com Pydantic e calcula com Decimal: inventário, planejamento, cotações, preço e aprovações. Tudo é gravado no SQLite com histórico e auditoria.
+Embaixo está o canal do operador, que o modelo não enxerga: o setup-real importa a planilha, e a CLI de aprovação lista, inspeciona e atesta as decisões que a Dona Maria manifestou na conversa.
+ </aside>
+</section>
+
+<!-- 7 · Fluxo 1 -->
+<section data-timing="60">
+ <div class="slide">
+  <p class="kicker">{{icon route}}06 · Fluxo 1 · Despensa → candidatas</p>
+  <h2 class="title-sm">Da planilha às receitas que valem a conversa.</h2>
+  <figure class="board">{{diagram fluxo-despensa}}</figure>
+  <div class="mt-5 flex flex-wrap gap-3">
+   <span class="chip">{{icon package}}Estoque decide disponibilidade</span>
+   <span class="chip">{{icon receipt}}Compra decide o custo unitário</span>
+   <span class="chip">{{icon globe}}Conteúdo web é dado, não instrução</span>
+  </div>
+ </div>
+ <aside class="notes">
+O primeiro fluxo começa fora da conversa: o operador importa a planilha com o comando setup-real.
+O importador cruza as duas abas. Quantidade em estoque diz o que está disponível; quantidade comprada e preço pago dizem o custo unitário. Um preço ou uma conversão ausente não vira zero; fica pendente.
+O resultado é um snapshot imutável no SQLite.
+Na conversa, o Hermes consulta esse inventário e pesquisa receitas. Ele escolhe entre termos liberados — não monta consulta livre — e depois extrai a página pelo identificador do resultado. O backend guarda a URL, o horário e um hash do conteúdo.
+A Dona Maria também pode trazer uma receita própria, sem URL.
+O Hermes apresenta as candidatas com a fonte e pergunta se ela gosta de fazer e se vê algum impedimento. Gostar ainda não é aceite: é a entrada do próximo fluxo.
+ </aside>
+</section>
+
+<!-- 8 · Fluxo 2 -->
+<section data-timing="75">
+ <div class="slide">
+  <p class="kicker">{{icon list-checks}}07 · Fluxo 2 · Elicitação e viabilidade</p>
+  <h2 class="title-sm">Nenhum aceite com pergunta pendente.</h2>
+  <figure class="board">{{diagram fluxo-viabilidade}}</figure>
+  <div class="mt-5 flex flex-wrap gap-3">
+   <span class="chip">{{icon circle-help}}Desconhecido vira pergunta</span>
+   <span class="chip">{{icon circle-x}}Impeditivo bloqueia o aceite</span>
+   <span class="chip">{{icon wallet}}Orçamento é de todos os pratos juntos</span>
+  </div>
+ </div>
+ <aside class="notes">
+Este é o coração do desafio.
+Cada receita tem requisitos: equipamento, técnica, operação — tempo, gás, espaço na geladeira — e ingredientes na quantidade do plano.
+Cada requisito é comparado com os fatos que a Dona Maria já confirmou. Se está confirmado, segue. Se é desconhecido, vira uma pergunta. Se é impeditivo, o plano precisa mudar.
+Quando ela responde, por exemplo "tenho forno, mas só uma assadeira", isso não vai direto para o banco: vira uma proposta e passa pela aprovação local. Depois a receita é reavaliada.
+Com os requisitos resolvidos, evaluate_recipe_feasibility diz se a receita é elegível, pendente ou bloqueada.
+Aí entram as compras: evaluate_purchase_plan soma o que falta em todos os pratos, considera o pacote inteiro e o frete, e só conta ofertas que ela confirmou, com validade de até vinte e quatro horas.
+Se passar de oitenta reais, o status é OVER_BUDGET e o plano volta para revisão. Só com tudo resolvido o prato fica pronto para o aceite.
+ </aside>
+</section>
+
+<!-- 9 · Fluxo 3 -->
+<section data-timing="75">
+ <div class="slide">
+  <p class="kicker">{{icon user-check}}08 · Fluxo 3 · Proposta e aprovação humana</p>
+  <h2 class="title-sm">O modelo propõe. A pessoa aprova.</h2>
+  <figure class="board">{{diagram fluxo-aprovacao}}</figure>
+  <p class="mt-5 flex flex-wrap items-center gap-3 text-[18px] text-muted"><span class="font-bold tracking-widest text-amber">VALE PARA</span>
+   <span class="chip">fatos da cozinha</span><span class="chip">receitas</span><span class="chip">cotações</span><span class="chip">aceite do prato</span><span class="chip">escolha do preço</span></p>
+ </div>
+ <aside class="notes">
+Este fluxo é transversal: vale para fatos da cozinha, receitas, cotações, aceite do prato e escolha do preço.
+Quando a Dona Maria manifesta uma decisão, o Hermes chama propose_user_change. Isso grava uma proposta pendente com um resumo, um hash do conteúdo e prazo de dez minutos. O negócio ainda não mudou.
+Em outro terminal, o operador lista e inspeciona a proposta e confere o conteúdo exato. Se corresponde ao que ela disse, ele registra a atestação. Essa ação não é uma ferramenta do modelo; o agente não tem como aprovar a si mesmo.
+Antes de aplicar, a aplicação revalida a revisão do estado, o prazo e as regras, porque o mundo pode ter mudado enquanto alguém lia a proposta.
+Se está tudo certo, o efeito e a auditoria são gravados na mesma transação. Se não, nada é aplicado pela metade.
+Por fim, o Hermes consulta o estado e explica o resultado. Se uma resposta se perder, repetir a mesma operação devolve o resultado já gravado, sem duplicar.
+ </aside>
+</section>
+
+<!-- 10 · Fluxo 4 -->
+<section data-timing="75">
+ <div class="slide">
+  <p class="kicker">{{icon calculator}}09 · Fluxo 4 · CMV e preço</p>
+  <h2 class="title-sm">Do custo do prato ao preço que ela escolhe.</h2>
+  <figure class="board">{{diagram fluxo-preco}}</figure>
+  <div class="mt-5 grid grid-cols-3 gap-4 font-mono text-[17px]">
+   <p class="card px-4 py-3"><span class="text-muted">piso&nbsp;</span>P = CMV ÷ 0,90</p>
+   <p class="card px-4 py-3"><span class="text-muted">margem m&nbsp;</span>P = CMV ÷ (0,90 − m)</p>
+   <p class="card px-4 py-3"><span class="text-muted">sobra&nbsp;</span>0,90 · P − CMV</p>
+  </div>
+ </div>
+ <aside class="notes">
+O preço só pode ser calculado depois de um aceite vigente.
+calculate_pricing_scenarios calcula o CMV por porção: para cada ingrediente, a quantidade usada vezes o custo unitário da origem — estoque ou complemento —, dividido pelo rendimento do lote. Comprar um pacote pesa no orçamento inteiro, mas o CMV usa só o que a receita consome.
+Como a Dona Maria recebe noventa por cento do preço, o piso é CMV dividido por zero vírgula noventa. Para uma margem sobre a venda, o divisor é zero vírgula noventa menos a margem.
+No exemplo dos testes, com CMV de dez reais, o piso é onze e doze. Onze e onze ficaria abaixo do custo, por isso arredondo para cima. Os cenários de dez, vinte e trinta por cento dão doze e cinquenta, quatorze e vinte e nove, e dezesseis e sessenta e sete.
+O enunciado chama a sobra de lucro; eu explico como sobra após ingredientes e taxa, porque embalagem, gás e trabalho ainda não estão na conta.
+Ela escolhe um cenário ou um preço próprio, desde que não fique abaixo do piso, e a escolha passa pela mesma aprovação local.
+ </aside>
+</section>
+
+<!-- 11 · Demonstração -->
+<section data-timing="30">
+ <div class="slide items-center justify-center text-center">
+  <div class="grid size-28 place-items-center rounded-full bg-mint/15 text-mint ring-1 ring-mint/40">{{icon play size-14 translate-x-1}}</div>
+  <h2 class="mt-8 text-[96px] font-bold tracking-[-0.045em]">Demonstração</h2>
+  <p class="mt-3 text-[24px] text-muted">Hermes Desktop para conversar · terminal para aprovar · planilha original</p>
+  <ol class="mt-10 grid grid-cols-3 gap-4 text-left text-[19px]">
+   <li class="card flex items-center gap-3 px-5 py-4"><span class="font-mono text-amber">1</span>Despensa carregada</li>
+   <li class="card flex items-center gap-3 px-5 py-4"><span class="font-mono text-amber">2</span>Receita pesquisada na web</li>
+   <li class="card flex items-center gap-3 px-5 py-4"><span class="font-mono text-amber">3</span>Perguntas sobre a cozinha</li>
+   <li class="card flex items-center gap-3 px-5 py-4"><span class="font-mono text-amber">4</span>Compras dentro de R$ 80</li>
+   <li class="card flex items-center gap-3 px-5 py-4"><span class="font-mono text-amber">5</span>Aceite aprovado no terminal</li>
+   <li class="card flex items-center gap-3 px-5 py-4"><span class="font-mono text-amber">6</span>CMV, cenários e escolha</li>
+  </ol>
+ </div>
+ <aside class="notes">
+Agora vou mostrar a aplicação funcionando.
+Vou usar o Hermes Desktop para a conversa e um terminal ao lado para as aprovações, com a planilha original.
+O roteiro segue os quatro fluxos: a despensa carregada, uma receita pesquisada na web, as perguntas sobre a cozinha, o plano de compras dentro dos oitenta reais, o aceite aprovado no terminal e, por fim, o CMV com os cenários e a escolha do preço.
+Se em algum momento faltar um dado, o comportamento correto é o agente perguntar ou bloquear, e eu vou mostrar isso também.
+ </aside>
+</section>
+
+<!-- 12 · Melhorias -->
+<section data-timing="60">
+ <div class="slide">
+  <p class="kicker">{{icon sparkles}}10 · O que pode virar melhoria?</p>
+  <h2 class="title-sm">Sobre o que já existe.</h2>
+  <div class="mt-7 grid grid-cols-2 gap-4">
+   <div class="card flex gap-4 p-5"><div class="icon-tile">{{icon search}}</div><div><p class="text-[22px] font-semibold">Pesquisa mais rica</p><p class="mt-1 text-[18px] leading-snug text-muted">Termos derivados da despensa e 2–3 candidatas por busca. Hoje: 1 resultado por busca e termos liberados pelo operador.</p></div></div>
+   <div class="card flex gap-4 p-5"><div class="icon-tile">{{icon mouse-pointer-click}}</div><div><p class="text-[22px] font-semibold">Aprovação mais fluida</p><p class="mt-1 text-[18px] leading-snug text-muted">Revisão na própria interface, ainda fora do catálogo do modelo. Hoje: um terminal separado.</p></div></div>
+   <div class="card flex gap-4 p-5"><div class="icon-tile">{{icon receipt}}</div><div><p class="text-[22px] font-semibold">Lucro de verdade</p><p class="mt-1 text-[18px] leading-snug text-muted">Embalagem, gás, energia e trabalho no cálculo. Hoje: sobra após ingredientes e taxa.</p></div></div>
+   <div class="card flex gap-4 p-5"><div class="icon-tile">{{icon gauge}}</div><div><p class="text-[22px] font-semibold">Evals entre modelos</p><p class="mt-1 text-[18px] leading-snug text-muted">Comparar qualidade, latência e custo com os mesmos 12 roteiros. Hoje: um modelo verificado.</p></div></div>
+   <div class="card col-span-2 flex gap-4 p-5"><div class="icon-tile">{{icon heart}}</div><div><p class="text-[22px] font-semibold">Preferências semânticas</p><p class="mt-1 text-[18px] leading-snug text-muted">“Não gosto de fritura” reconhecer “empanado”, com confirmação. Hoje: a correspondência é literal.</p></div></div>
+  </div>
+ </div>
+ <aside class="notes">
+Algumas melhorias partem diretamente do que já está implementado.
+A pesquisa hoje traz um resultado por busca, com termos liberados pelo operador. O próximo passo é derivar os termos da despensa e trazer duas ou três candidatas por vez.
+A aprovação no terminal é segura, mas tem atrito. Dá para levar a revisão para a interface, sem colocá-la ao alcance do modelo.
+O cálculo para na sobra após ingredientes e taxa. Com dados de embalagem, gás, energia e trabalho, dá para falar em lucro de verdade.
+Tenho doze roteiros de avaliação do agente e um modelo verificado. Rodar os mesmos roteiros em outros modelos permite escolher por qualidade, latência e custo.
+E a correspondência de preferências é literal; uma versão semântica, com confirmação, entenderia que empanado é fritura.
+ </aside>
+</section>
+
+<!-- 13 · Próximos passos -->
+<section data-timing="45">
+ <div class="slide">
+  <p class="kicker">{{icon rocket}}11 · Próximos passos</p>
+  <h2 class="title-sm">Do protótipo local a um serviço em produção.</h2>
+  <ol class="relative mt-9 flex flex-col gap-4 border-l-2 border-line pl-8">
+   <li class="relative"><span class="absolute -left-[45px] top-1 grid size-8 place-items-center rounded-full bg-mint font-bold text-night">1</span><p class="text-[23px] font-semibold">Identidade</p><p class="text-[19px] text-muted">Autenticar a cozinheira e o operador; hoje a atestação é local.</p></li>
+   <li class="relative"><span class="absolute -left-[45px] top-1 grid size-8 place-items-center rounded-full bg-mint font-bold text-night">2</span><p class="text-[23px] font-semibold">Serviço multiusuário</p><p class="text-[19px] text-muted">MCP remoto com Postgres e isolamento por restaurante.</p></li>
+   <li class="relative"><span class="absolute -left-[45px] top-1 grid size-8 place-items-center rounded-full bg-mint font-bold text-night">3</span><p class="text-[23px] font-semibold">Observabilidade</p><p class="text-[19px] text-muted">Tracing das chamadas de ferramenta, métricas por jornada e custo de LLM.</p></li>
+   <li class="relative"><span class="absolute -left-[45px] top-1 grid size-8 place-items-center rounded-full bg-mint font-bold text-night">4</span><p class="text-[23px] font-semibold">CI do agente</p><p class="text-[19px] text-muted">Host Hermes e evals de conversa no pipeline, além dos testes do núcleo.</p></li>
+   <li class="relative"><span class="absolute -left-[45px] top-1 grid size-8 place-items-center rounded-full bg-mint font-bold text-night">5</span><p class="text-[23px] font-semibold">Integração com o delivery</p><p class="text-[19px] text-muted">Publicar o cardápio aprovado e atualizar preços de fornecedores.</p></li>
+  </ol>
+ </div>
+ <aside class="notes">
+Para virar produto, eu seguiria esta ordem.
+Primeiro identidade: hoje a atestação é de um operador local, não uma autenticação forte da cozinheira.
+Depois um serviço multiusuário: o MCP sai do stdio local para um serviço remoto, com Postgres e isolamento por restaurante. É aqui que o SQLite deixa de ser suficiente.
+Com usuários reais, observabilidade: rastrear cada chamada de ferramenta, medir as jornadas e acompanhar o custo do modelo.
+Levar o host Hermes e os evals de conversa para o CI, porque hoje o CI cobre o núcleo.
+E, por fim, integrar com a plataforma de delivery para publicar o cardápio aprovado.
+ </aside>
+</section>
+
+<!-- 14 · Agradecimentos -->
+<section data-timing="30">
+ <div class="slide items-center justify-center text-center">
+  <div class="text-coral">{{icon heart-handshake size-20 stroke-[1.5]}}</div>
+  <h2 class="mt-6 text-[104px] font-bold tracking-[-0.045em]">Obrigada!</h2>
+  <p class="mt-2 text-[26px] text-muted">Lucas Rolim &amp; Hildebrando Azevedo, obrigada pela conversa.</p>
+  <div class="mt-10 flex flex-wrap justify-center gap-3">
+   <a class="chip text-[18px]" href="https://github.com/glaucia86/sabor-da-maria-hermes-agent">{{icon folder-git-2}}github.com/glaucia86/sabor-da-maria-hermes-agent</a>
+   <a class="chip text-[18px]" href="https://www.linkedin.com/in/glaucialemos/">{{icon user}}linkedin.com/in/glaucialemos</a>
+  </div>
+  <p class="mt-10 flex items-center gap-3 text-[30px] font-semibold text-mint">{{icon message-circle size-8}}Perguntas?</p>
+ </div>
+ <aside class="notes">
+Muito obrigada, Lucas e Hildebrando.
+O repositório está público, com o README explicando as decisões e o guia para rodar localmente.
+Tenho slides de apêndice sobre invariantes, persistência, segurança, verificação e trade-offs, caso queiram aprofundar algum ponto.
+Fico à disposição para as perguntas.
+ </aside>
+</section>
+
+<!-- Apêndice -->
+<section>
+ <div class="slide justify-center">
+  <p class="kicker">{{icon book-open}}Apêndice</p>
+  <h2 class="title">Para as perguntas.</h2>
+  <div class="mt-8 flex flex-wrap gap-3">
+   <span class="chip">A1 · Invariantes</span><span class="chip">A2 · Persistência</span><span class="chip">A3 · Segurança</span><span class="chip">A4 · Verificação</span><span class="chip">A5 · Trade-offs</span>
+  </div>
+ </div>
+ <aside class="notes">Use estes slides só se a pergunta pedir. Volte para Agradecimentos ao terminar.</aside>
+</section>
+
+<section>
+ <div class="slide">
+  <p class="kicker">{{icon lock}}A1 · Invariantes</p>
+  <h2 class="title-sm">Regras que nenhuma conversa contorna.</h2>
+  <div class="mt-7 grid grid-cols-3 gap-4">
+   <div class="card p-5"><p class="text-[40px] font-bold text-mint">R$ 80</p><p class="text-[19px] text-muted">Limite agregado de todos os pratos, com pacote inteiro e encargos.</p></div>
+   <div class="card p-5"><p class="text-[40px] font-bold text-mint">10%</p><p class="text-[19px] text-muted">Taxa sobre a venda: recebe 0,90 × P. Não é acréscimo sobre o custo.</p></div>
+   <div class="card p-5"><p class="text-[40px] font-bold text-mint">Decimal</p><p class="text-[19px] text-muted">34 dígitos de precisão; preço arredondado para cima em centavos.</p></div>
+  </div>
+  <ul class="mt-7 grid grid-cols-2 gap-x-8 gap-y-3 text-[20px]">
+   <li class="flex gap-3">{{icon circle-check size-6 flex-none text-mint}}UNKNOWN vira pergunta; BLOCKED impede o aceite.</li>
+   <li class="flex gap-3">{{icon circle-check size-6 flex-none text-mint}}Preço ou quantidade ausente não vira zero.</li>
+   <li class="flex gap-3">{{icon circle-check size-6 flex-none text-mint}}Selecionar o cardápio não consome estoque físico.</li>
+   <li class="flex gap-3">{{icon circle-check size-6 flex-none text-mint}}Custos incompletos bloqueiam aceite e preço definitivos.</li>
+   <li class="flex gap-3">{{icon circle-check size-6 flex-none text-mint}}Mudar uma premissa invalida as decisões dependentes.</li>
+   <li class="flex gap-3">{{icon circle-check size-6 flex-none text-mint}}REAL e SIMULATION ficam em bancos separados.</li>
+  </ul>
+ </div>
+ <aside class="notes">
+O orçamento é agregado: não dá para aprovar dois pratos olhando oitenta reais para cada um.
+A taxa é a regra didática do desafio, não uma afirmação sobre o contrato real do iFood.
+Informação ausente nunca vira zero. Desconhecido exige pergunta, impeditivo bloqueia o aceite.
+Se uma premissa muda — escala, rendimento, receita —, as decisões que dependem dela são invalidadas e precisam ser reavaliadas.
+O modo de simulação é fixado por banco; o modelo não consegue transformar uma hipótese em dado real pela conversa.
+ </aside>
+</section>
+
+<section>
+ <div class="slide">
+  <p class="kicker">{{icon database}}A2 · Domínio e persistência</p>
+  <h2 class="title-sm">Consistência na unidade de decisão.</h2>
+  <div class="mt-7 grid grid-cols-3 gap-4">
+   <div class="card p-6"><div class="icon-tile">{{icon boxes}}</div><p class="mt-4 text-[22px] font-semibold">Workspace</p><p class="mt-1 text-[19px] text-muted">Receitas, plano, fatos e escolhas que dividem orçamento e estoque.</p></div>
+   <div class="card p-6"><div class="icon-tile">{{icon git-compare}}</div><p class="mt-4 text-[22px] font-semibold">Revisão esperada</p><p class="mt-1 text-[19px] text-muted">Nada é aplicado sobre estado antigo; a transação impede gravação parcial.</p></div>
+   <div class="card p-6"><div class="icon-tile">{{icon repeat}}</div><p class="mt-4 text-[22px] font-semibold">Idempotência</p><p class="mt-1 text-[19px] text-muted">Mesma operação e conteúdo devolvem o resultado gravado; conteúdo diferente é conflito.</p></div>
+  </div>
+  <p class="mt-8 text-[21px] text-muted">O snapshot importado é imutável. Correções viram versões e overlays, preservando a origem de cada dado.</p>
+ </div>
+ <aside class="notes">
+O workspace agrupa as decisões que compartilham orçamento e estoque.
+Cada alteração informa a revisão que ela espera; se o estado mudou, ela é recusada. A transação SQLite garante que efeito e auditoria entram juntos.
+O registro idempotente associa a operação ao conteúdo e à resposta: repetir devolve o mesmo resultado, e conteúdo diferente com o mesmo identificador é conflito.
+A planilha importada nunca é reescrita; esclarecimentos de embalagem ou medida viram camadas por cima, com origem.
+SQLite atende bem o escopo local; com vários operadores ou serviço remoto eu trocaria, como está nos próximos passos.
+ </aside>
+</section>
+
+<section>
+ <div class="slide">
+  <p class="kicker">{{icon shield-check}}A3 · Segurança</p>
+  <h2 class="title-sm">Reduzir capacidades. Validar no ponto do efeito.</h2>
+  <div class="mt-7 grid grid-cols-2 gap-5">
+   <div class="card p-6"><p class="flex items-center gap-3 text-[22px] font-semibold">{{icon bot size-6 text-mint}}No host Hermes</p><ul class="mt-3 flex flex-col gap-2 text-[19px] text-muted"><li>Allowlist com as 6 tools MCP + 2 de pesquisa.</li><li>Hooks comparam o nome pedido com o executado.</li><li>Memória automática e perfil de usuário desligados.</li></ul></div>
+   <div class="card p-6"><p class="flex items-center gap-3 text-[22px] font-semibold">{{icon server size-6 text-mint}}No domínio Python</p><ul class="mt-3 flex flex-col gap-2 text-[19px] text-muted"><li>Banco e workspace fixados pelo operador.</li><li>Schemas estritos: campo extra é recusado.</li><li>Aprovação fora do catálogo do modelo.</li></ul></div>
+   <div class="card p-6"><p class="flex items-center gap-3 text-[22px] font-semibold">{{icon globe size-6 text-mint}}Na pesquisa</p><ul class="mt-3 flex flex-col gap-2 text-[19px] text-muted"><li>Sem consulta ou URL livre.</li><li>Limites de redirect, volume e destino.</li></ul></div>
+   <div class="card p-6"><p class="flex items-center gap-3 text-[22px] font-semibold">{{icon file-spreadsheet size-6 text-mint}}Na planilha</p><ul class="mt-3 flex flex-col gap-2 text-[19px] text-muted"><li>Até 5 MiB, 50 MiB descompactado, 20 mil linhas.</li><li>Células são dados, nunca instruções.</li></ul></div>
+  </div>
+ </div>
+ <aside class="notes">
+Um achado relevante foi o reparo de nomes no host: uma chamada proibida podia ser transformada numa consulta permitida. Esconder a ferramenta não bastava, então a política relaciona a intenção original ao nome efetivamente executado e recusa quando diverge.
+No servidor, o catálogo também é fechado e o modelo não troca de banco ou workspace por argumento.
+A pesquisa nunca recebe URL ou consulta livre e tem limites de rede e de volume.
+A planilha tem limites de tamanho e expansão e é tratada como dado.
+Limite honesto: um perfil não é sandbox do sistema operacional; em produção eu separaria identidades e permissões de processo.
+ </aside>
+</section>
+
+<section>
+ <div class="slide">
+  <p class="kicker">{{icon flask-conical}}A4 · Verificação</p>
+  <h2 class="title-sm">Cada evidência tem um escopo.</h2>
+  <div class="card mt-7 overflow-hidden">
+   <table class="w-full text-[20px]">
+    <thead class="bg-white/5 text-left text-[15px] uppercase tracking-widest text-amber"><tr><th class="px-5 py-3">Camada</th><th class="px-5 py-3">O que verifica</th><th class="px-5 py-3">O que não cobre</th></tr></thead>
+    <tbody class="divide-y divide-line">
+     <tr><td class="px-5 py-3">800+ testes pytest + Hypothesis</td><td class="px-5 py-3 text-muted">Regras, limites, persistência, concorrência</td><td class="px-5 py-3 text-muted">Qualidade da conversa</td></tr>
+     <tr><td class="px-5 py-3">Integração MCP stdio</td><td class="px-5 py-3 text-muted">Contrato, catálogo e dispatch reais</td><td class="px-5 py-3 text-muted">Interface do Hermes</td></tr>
+     <tr><td class="px-5 py-3">12 roteiros de Agent Evals</td><td class="px-5 py-3 text-muted">Jornadas, ferramentas e estado</td><td class="px-5 py-3 text-muted">Autonomia geral</td></tr>
+     <tr><td class="px-5 py-3">CI em Windows, Ubuntu e macOS</td><td class="px-5 py-3 text-muted">Núcleo e MCP</td><td class="px-5 py-3 text-muted">Host e modelo reais</td></tr>
+    </tbody>
+   </table>
+  </div>
+  <p class="mt-6 text-[20px] text-muted">Nos evals, a resposta do modelo não basta: a verificação olha as ferramentas chamadas e o estado gravado.</p>
+ </div>
+ <aside class="notes">
+Eu separo três tipos de prova.
+Os testes determinísticos cobrem regras, limites, persistência e concorrência, com fixtures sintéticas e banco temporário; o Hypothesis gera sequências de alterações.
+Os testes de integração sobem o servidor MCP de verdade, via stdio.
+Os evals do agente são roteiros de jornada; neles eu confiro as ferramentas chamadas e o estado no banco, não só o texto da resposta.
+A CI roda o núcleo em três sistemas operacionais, mas não instala o Hermes nem um modelo. Por isso a demonstração ao vivo continua importante.
+ </aside>
+</section>
+
+<section>
+ <div class="slide">
+  <p class="kicker">{{icon scale}}A5 · Trade-offs</p>
+  <h2 class="title-sm">Menos infraestrutura. Mais contratos verificáveis.</h2>
+  <div class="card mt-7 overflow-hidden">
+   <table class="w-full text-[20px]">
+    <thead class="bg-white/5 text-left text-[15px] uppercase tracking-widest text-amber"><tr><th class="px-5 py-3">Escolha</th><th class="px-5 py-3">Benefício</th><th class="px-5 py-3">Custo assumido</th></tr></thead>
+    <tbody class="divide-y divide-line">
+     <tr><td class="px-5 py-3">Hermes + MCP local</td><td class="px-5 py-3 text-muted">Reuso do host, regras testáveis sem LLM</td><td class="px-5 py-3 text-muted">Depende da versão do host e dos hooks</td></tr>
+     <tr><td class="px-5 py-3">SQLite</td><td class="px-5 py-3 text-muted">Atomicidade e reprodução local</td><td class="px-5 py-3 text-muted">Escala e acesso compartilhado limitados</td></tr>
+     <tr><td class="px-5 py-3">Aprovação externa</td><td class="px-5 py-3 text-muted">O modelo não autoriza a si mesmo</td><td class="px-5 py-3 text-muted">Operação mais lenta</td></tr>
+     <tr><td class="px-5 py-3">Pesquisa por termos liberados</td><td class="px-5 py-3 text-muted">Menor exposição de dados</td><td class="px-5 py-3 text-muted">Menos liberdade de busca</td></tr>
+    </tbody>
+   </table>
+  </div>
+ </div>
+ <aside class="notes">
+Não adicionei backend distribuído, ORM ou outro frontend porque o problema local não exigia.
+Os custos são explícitos: o fluxo assistido é mais lento, a pesquisa é restrita e a integração depende de uma versão do host.
+Eu trocaria o SQLite quando concorrência, isolamento por usuário ou acesso remoto justificassem — não por antecipação.
+ </aside>
+</section>
+
+</div></div>
+<script src="vendor/reveal-5.2.1/dist/reveal.js"></script>
+<script src="vendor/reveal-5.2.1/plugin/notes/notes.js"></script>
+<script>
+Reveal.initialize({width:1280,height:800,margin:0.04,hash:true,slideNumber:'c/t',
+  transition:matchMedia('(prefers-reduced-motion: reduce)').matches?'none':'fade',
+  transitionSpeed:'fast',controls:true,progress:true,center:false,totalTime:900,
+  plugins:[RevealNotes]});
+</script>
+</body></html>

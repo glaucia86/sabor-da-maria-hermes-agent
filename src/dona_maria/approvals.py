@@ -12,7 +12,7 @@ from functools import lru_cache, reduce
 from operator import or_
 from pathlib import Path
 from types import UnionType
-from typing import Annotated, Literal, Union, get_args, get_origin
+from typing import TYPE_CHECKING, Annotated, Literal, Union, get_args, get_origin
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field, StrictBool, StrictInt, create_model
@@ -46,6 +46,12 @@ from dona_maria.quotes import (
     RegisterQuoteRequest,
     quote_confirmation_statement,
 )
+
+if TYPE_CHECKING:
+    from dona_maria.candidates import Quantity
+    from dona_maria.cost_readiness import AvailableQuantity
+    from dona_maria.provenance import Note
+    from dona_maria.quotes import MoneyText
 
 
 class FactPayload(CandidateModel):
