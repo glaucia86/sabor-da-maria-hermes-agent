@@ -8,9 +8,15 @@ from decimal import Decimal, localcontext
 from typing import Literal
 from uuid import UUID, uuid4
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, model_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StrictBool, model_validator
 
 from dona_maria.candidates import CandidateInput, RecipeCandidate
+from dona_maria.cost_readiness import (
+    OperationalResource,
+    ReportedAcquisition,
+    apply_acquisitions,
+    current_resources,
+)
 from dona_maria.ingredients import (
     ComplementIngredient,
     IngredientConversion,
@@ -44,9 +50,11 @@ from dona_maria.production import (
     ProductionPlan,
     RecipeAcceptance,
     RecipeFeedback,
+    UserEvidence,
     UserPreference,
     explicit_acceptance,
 )
+from dona_maria.provenance import InformationRef, UserProvidedSource, context_labels
 from dona_maria.quotes import (
     ComplementQuote,
     QuoteConfirmation,
@@ -57,10 +65,34 @@ from dona_maria.quotes import (
 )
 
 
+def plan_context(state):
+    active = {item.recipe_id for item in state.plan.items} if state.plan else set()
+    recipes = [recipe for recipe in state.candidates if recipe.id in active]
+    ingredients = {line.ingredient_id for recipe in recipes for line in recipe.ingredients}
+    conversions = [
+        conversion
+        for conversion in current_conversions(state.ingredient_conversions)
+        if conversion.ingredient_id in ingredients
+        and (
+            conversion.scope == "HISTORICAL_PACKAGE"
+            or any(recipe_conversion_applies(conversion, recipe) for recipe in recipes)
+        )
+    ]
+    return context_labels(
+        state.context_mode, [entry.model_dump(mode="json") for entry in [*recipes, *conversions]]
+    )
+
+
 class WorkspaceState(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     state_schema_version: Literal["1.0"] = "1.0"
+    context_mode: Literal["REAL", "SIMULATION"] | None = Field(
+        default=None, frozen=True, exclude_if=lambda value: value is None
+    )
+    decision_simulation_dependencies: dict[UUID, StrictBool] = Field(
+        default_factory=dict, exclude_if=lambda value: not value
+    )
     id: UUID
     inventory_snapshot_id: UUID
     budget_initial: Literal["80.00"] = "80.00"
@@ -81,9 +113,22 @@ class WorkspaceState(BaseModel):
     complement_ingredients: list[ComplementIngredient] = []
     complement_quotes: list[ComplementQuote] = []
     quote_confirmations: list[QuoteConfirmation] = []
+    financial_data_version: Literal["1.0"] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    inventory_acquisitions: list[ReportedAcquisition] = Field(
+        default_factory=list, exclude_if=lambda value: not value
+    )
+    operational_resources: list[OperationalResource] = Field(
+        default_factory=list, exclude_if=lambda value: not value
+    )
 
     @model_validator(mode="after")
     def valid_references(self):
+        if bool(self.inventory_acquisitions or self.operational_resources) != (
+            self.financial_data_version == "1.0"
+        ):
+            raise ValueError("Versão dos dados financeiros não corresponde aos registros.")
         recipes = {recipe.id: recipe for recipe in self.candidates}
         collections = [
             [recipe.id for recipe in self.candidates],
@@ -127,6 +172,11 @@ class WorkspaceState(BaseModel):
                         raise ValueError("Rendimento derivado inconsistente.")
         if any(len(values) != len(set(values)) for values in collections):
             raise ValueError("Identidade ou chave duplicada no agregado.")
+        if not self.decision_simulation_dependencies.keys() <= {
+            item.id
+            for item in [*self.acceptances, *self.pricing_calculations, *self.menu_decisions]
+        }:
+            raise ValueError("Proveniência sem decisão histórica.")
         preferences = {}
         for preference in self.preferences:
             key = (preference.category, normalize_name(preference.term))
@@ -219,6 +269,8 @@ def _calculate_pricing(state, request: CalculatePricingRequest, snapshot, revisi
         complement_ingredients=state.complement_ingredients,
         quotes=state.complement_quotes,
         confirmations=state.quote_confirmations,
+        acquisitions=state.inventory_acquisitions,
+        resources=state.operational_resources,
         now=now,
     )
     acceptance = next(
@@ -233,6 +285,8 @@ def _calculate_pricing(state, request: CalculatePricingRequest, snapshot, revisi
         raise BusinessRuleError(
             "ACCEPTANCE_REQUIRED", "Aceite vigente necessário antes do cálculo."
         )
+    if evaluation["financial_readiness"]["gaps"]:
+        raise BusinessRuleError("FINANCIAL_INCOMPLETE", "Confirme os custos antes de calcular.")
     if (
         acceptance.id in state.invalidated_acceptance_ids
         or acceptance.fingerprint != evaluation["fingerprint"]
@@ -255,6 +309,9 @@ def _calculate_pricing(state, request: CalculatePricingRequest, snapshot, revisi
         recipes, effective = apply_overlays(
             state.candidates, snapshot, state.ingredient_conversions
         )
+        effective = apply_acquisitions(
+            with_complements(effective, state.complement_ingredients), state.inventory_acquisitions
+        )
         recipe = next(r for r in recipes if r.id == request.recipe_id)
         calculation = calculate_pricing(
             recipe,
@@ -268,12 +325,12 @@ def _calculate_pricing(state, request: CalculatePricingRequest, snapshot, revisi
                 for a in allocate_plan_costs(
                     recipes,
                     state.plan,
-                    with_complements(effective, state.complement_ingredients),
+                    effective,
                     state.complement_quotes,
                 )
                 if a.recipe_id == recipe.id
             ]
-            if state.plan.quote_selections
+            if state.plan.quote_selections or state.inventory_acquisitions
             else None,
         )
         state.pricing_calculations.append(calculation)
@@ -293,8 +350,14 @@ def _save_menu_decision(state, request: SaveMenuDecisionRequest, snapshot, revis
         complement_ingredients=state.complement_ingredients,
         quotes=state.complement_quotes,
         confirmations=state.quote_confirmations,
+        acquisitions=state.inventory_acquisitions,
+        resources=state.operational_resources,
         now=now,
     )
+    if evaluation["financial_readiness"]["gaps"]:
+        raise BusinessRuleError(
+            "FINANCIAL_INCOMPLETE", "Confirme os custos antes de escolher preço."
+        )
     acceptance = next(
         (
             a
@@ -372,6 +435,7 @@ def pricing_view(state: WorkspaceState, evaluation: dict) -> dict:
         if a.id not in state.invalidated_acceptance_ids
         and a.fingerprint == evaluation["fingerprint"]
         and evaluation["purchase_status"] == "CONFIRMED"
+        and evaluation["financial_readiness"]["status"] == "READY"
     }
     calculations = [
         c.model_dump(mode="json")
@@ -521,11 +585,14 @@ def evaluate_plan(
     complement_ingredients=(),
     quotes=(),
     confirmations=(),
+    acquisitions=(),
+    resources=(),
     now=None,
 ) -> dict:
     original_snapshot = snapshot
     candidates, snapshot = apply_overlays(candidates, snapshot, conversions)
     snapshot = with_complements(snapshot, complement_ingredients)
+    snapshot = apply_acquisitions(snapshot, acquisitions)
     active_ids = {item.recipe_id for item in plan.items} if plan else set()
     relevant_keys = {
         (r.category, r.key) for c in candidates if c.id in active_ids for r in c.requirements
@@ -584,12 +651,26 @@ def evaluate_plan(
         inputs["effective_inventory"] = [
             i.model_dump(mode="json") for i in snapshot.items if i.id in ingredient_ids
         ]
+    if acquisitions:
+        inputs["financial_fingerprint_version"] = "1.0"
+        inputs["acquisitions"] = [
+            a.model_dump(mode="json") for a in acquisitions if a.ingredient_id in ingredient_ids
+        ]
+    relevant_resources = [r for r in current_resources(resources) if r.recipe_id in active_ids]
+    if relevant_resources:
+        inputs["financial_fingerprint_version"] = "1.0"
+        inputs["operational_resources"] = [r.model_dump(mode="json") for r in relevant_resources]
     if inputs["plan"]:
         if not inputs["plan"]["quote_selections"]:
             # Campo aditivo vazio não muda as entradas de decisões já persistidas.
             inputs["plan"].pop("quote_selections")
         for item in inputs["plan"]["items"]:
             item["recipe_version"] = item["business_recipe_version"]
+    if any(
+        r.business_content().get("provenance_version") == "2.0" and r.id in active_ids
+        for r in candidates
+    ):
+        inputs["fingerprint_version"] = "2.0"
     digest = fingerprint(inputs)
     feasibility = []
     gaps = [] if plan and plan.items else ["Confirme o plano de produção."]
@@ -602,6 +683,7 @@ def evaluate_plan(
                 evaluate_feasibility(recipe, item, facts, plan=plan, candidates=candidates)
             )
             item_demand = {}
+            quantity_sources = {}
             for ingredient in recipe.ingredients:
                 if not ingredient.quantity or not ingredient.ingredient_id:
                     gaps.append(f"MISSING_INFORMATION: {ingredient.line_id}")
@@ -623,6 +705,10 @@ def evaluate_plan(
                 key = str(ingredient.ingredient_id)
                 demand[key] = demand.get(key, Decimal("0")) + amount
                 item_demand[key] = item_demand.get(key, Decimal("0")) + amount
+                if ingredient.quantity_source is not None:
+                    quantity_sources.setdefault(key, []).append(
+                        ingredient.quantity_source.model_dump(mode="json")
+                    )
             consumption.append(
                 dict(
                     recipe_id=str(recipe.id),
@@ -633,6 +719,11 @@ def evaluate_plan(
                             ingredient_id=key,
                             unit=next(s.dimension for s in snapshot.items if str(s.id) == key),
                             required=format(amount, "f"),
+                            **(
+                                {"quantity_sources": quantity_sources[key]}
+                                if key in quantity_sources
+                                else {}
+                            ),
                         )
                         for key, amount in sorted(item_demand.items())
                     ],
@@ -664,6 +755,43 @@ def evaluate_plan(
     disbursement = simulate_purchases(
         lines, plan.quote_selections if plan else [], quotes, gaps, confirmations, now
     )
+    financial_gaps = []
+    with localcontext(FINANCIAL_CONTEXT):
+        for line in lines:
+            stock = next(s for s in snapshot.items if str(s.id) == line["ingredient_id"])
+            used = Decimal(line["stock_used"]) if line["stock_used"] is not None else None
+            known = (
+                stock.acquisition_total is not None
+                and stock.acquisition_total > 0
+                and stock.purchase_quantity_base is not None
+                and stock.purchase_quantity_base > 0
+                and stock.purchase_source is not None
+            )
+            line["historical_consumed_cost"] = (
+                format(used * stock.acquisition_total / stock.purchase_quantity_base, "f")
+                if used and known
+                else "0"
+                if used == 0
+                else None
+            )
+            line["historical_cost_status"] = "KNOWN" if known else "UNKNOWN"
+            if used and not known:
+                financial_gaps.append(
+                    dict(
+                        ingredient_id=line["ingredient_id"],
+                        quantity=line["stock_used"],
+                        unit=line["unit"],
+                        origin="INVENTORY",
+                        source=stock.purchase_source.model_dump(mode="json")
+                        if stock.purchase_source
+                        else None,
+                        message=(
+                            f"Temos {stock.name_original} na despensa, mas ainda não sabemos "
+                            "quanto custou essa parte. Confirme o valor pago e a quantidade "
+                            "comprada na mesma aquisição; o preço de hoje não substitui isso."
+                        ),
+                    )
+                )
     sufficient = not gaps
     with localcontext(FINANCIAL_CONTEXT):
         remaining = (
@@ -687,9 +815,32 @@ def evaluate_plan(
         else "CONFIRMED"
         if sufficient
         else "PENDING",
-        is_simulation=not sufficient,
+        data_complete=sufficient
+        and not gaps
+        and not financial_gaps
+        and all(f["status"] == "ELIGIBLE" for f in feasibility),
         disbursement=disbursement,
         remaining_budget=remaining,
+        operational_resources=[
+            r.model_dump(mode="json")
+            | dict(
+                included_in_ingredient_cmv=False,
+                applicability="CURRENT"
+                if any(
+                    c.id == r.recipe_id and c.business_version == r.business_recipe_version
+                    for c in candidates
+                )
+                else "REVIEW_REQUIRED",
+            )
+            for r in relevant_resources
+        ],
+        financial_readiness=dict(
+            status="READY" if sufficient and not financial_gaps else "PENDING",
+            gaps=financial_gaps,
+            net_profit_complete=False,
+            explanation="O resultado simplificado desconta taxa e ingredientes; não demonstra "
+            "lucro líquido completo com despesas operacionais não informadas.",
+        ),
     )
 
 
@@ -740,6 +891,12 @@ def _accept_recipe(
             )
         raise BusinessRuleError(
             "MISSING_INFORMATION", "Ingredientes insuficientes ou sem medida sustentada."
+        )
+    if evaluation["financial_readiness"]["status"] != "READY":
+        raise BusinessRuleError(
+            "FINANCIAL_INCOMPLETE",
+            "O estoque está disponível, mas falta comprovar seu custo.",
+            details={"gaps": [g["message"] for g in evaluation["financial_readiness"]["gaps"]]},
         )
     feedback = next((item for item in state.feedback if item.recipe_id == request.recipe_id), None)
     if feedback is None or feedback.feedback != "INTERESTED":
@@ -1027,6 +1184,8 @@ def invalidate_expired_acceptances(state, snapshot, revision, now):
         complement_ingredients=state.complement_ingredients,
         quotes=state.complement_quotes,
         confirmations=state.quote_confirmations,
+        acquisitions=state.inventory_acquisitions,
+        resources=state.operational_resources,
         now=now,
     )
     if any("QUOTE_EXPIRED:" in gap for gap in evaluation["gaps"]):
@@ -1047,6 +1206,8 @@ def record_conversion(state, request, snapshot, now):
             complement_ingredients=state.complement_ingredients,
             quotes=state.complement_quotes,
             confirmations=state.quote_confirmations,
+            acquisitions=state.inventory_acquisitions,
+            resources=state.operational_resources,
             now=now,
         )
 
@@ -1080,6 +1241,22 @@ def record_conversion(state, request, snapshot, now):
         version=previous.version + 1 if previous else 1,
         recorded_at=now,
     )
+    if (request.source is not None or recipe and recipe.provenance_version == "2.0") and isinstance(
+        request.evidence, UserEvidence
+    ):
+        source = request.source or UserProvidedSource(kind="USER_PROVIDED")
+        conversion.source = source.model_copy(
+            update=dict(
+                evidence=request.evidence,
+                local_event_id=UUID(request.evidence.turn_ref.removeprefix("local:")),
+                information_ref=InformationRef(
+                    entity="CONVERSION",
+                    entity_id=str(conversion.id),
+                    version=conversion.version,
+                    field="conversion",
+                ),
+            )
+        )
     state.ingredient_conversions.append(conversion)
     evaluation = current_evaluation()
     if evaluation["fingerprint"] != before:

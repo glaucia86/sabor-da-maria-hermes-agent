@@ -2,6 +2,20 @@
 # All paths are placeholders; they are not expanded automatically.
 # Do not replace the entire private profile with this example.
 # Provider credentials belong only in Hermes' private configuration.
+plugins:
+  enabled:
+    - dona-maria-attendance-policy
+platform_toolsets:
+  cli: [mcp-dona_maria]
+tools:
+  tool_search:
+    enabled: "off"
+memory:
+  memory_enabled: false
+  user_profile_enabled: false
+display:
+  tool_progress: "off"
+  show_reasoning: false
 skills:
   external_dirs:
     - /ABSOLUTE/PATH/TO/CHECKOUT/skills
@@ -10,8 +24,20 @@ mcp_servers:
   dona_maria:
     # Windows executable; use .venv/bin/python on Linux/macOS.
     command: /ABSOLUTE/PATH/TO/CHECKOUT/.venv/Scripts/python.exe
-    args: ["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"]
+    args: ["-X", "utf8", "-B", "-m", "dona_maria.launcher"]
     env:
-      # Imported database; the negative smoke uses an unregistered workspace ID.
+      # Operator-only binding; never ask the customer to supply these values.
       DONA_MARIA_DB_PATH: /ABSOLUTE/PATH/TO/CHECKOUT/artifacts/private/quickstart/workspace.sqlite3
+      DONA_MARIA_WORKSPACE_ID: WORKSPACE_UUID_FROM_LOCAL_IMPORT
+      DONA_MARIA_MODE: ATTENDANCE
+    tools:
+      include:
+        - get_business_state
+        - get_inventory_snapshot
+        - evaluate_recipe_feasibility
+        - evaluate_purchase_plan
+        - propose_user_change
+        - calculate_pricing_scenarios
+      resources: false
+      prompts: false
     connect_timeout: 15

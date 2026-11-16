@@ -1,4 +1,8 @@
-doc-specs/**
+# Contexto de engenharia: versionar apenas fontes canônicas
+/doc-specs/*
+!/doc-specs/PRD.md
+!/doc-specs/spec.md
+!/doc-specs/implementation-slices.md
 
 
 # Python
@@ -6,11 +10,18 @@ __pycache__/
 *.py[cod]
 .venv/
 .pytest_cache/
+/.test-*/
 .hypothesis/
 .ruff_cache/
 *.egg-info/
 build/
 dist/
+!/docs/speaker/slides/vendor/reveal-5.2.1/dist/
+!/docs/speaker/slides/vendor/reveal-5.2.1/dist/**
+
+# Node (ferramentas de build dos slides)
+node_modules/
+*.map
 
 # Coverage
 .coverage

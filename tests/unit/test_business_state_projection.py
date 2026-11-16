@@ -77,6 +77,9 @@ def test_read_projection_preserves_status_history_envelope_and_database(
     )
     data = result["data"]
     assert set(data) == {
+        "context_mode",
+        "depends_on_simulation",
+        "hypothetical",
         "inventory_snapshot_id",
         "budget_initial",
         "budget_remaining",

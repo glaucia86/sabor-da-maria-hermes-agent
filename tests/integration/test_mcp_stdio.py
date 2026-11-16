@@ -8,6 +8,7 @@ from pathlib import Path
 import anyio
 import pytest
 from anyio.streams.buffered import BufferedByteReceiveStream
+from conftest import OPERATOR_STDIO_ARGS
 from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, get_default_environment, stdio_client
 from mcp.shared.exceptions import MCPError
@@ -33,7 +34,7 @@ def test_missing_database_config_exits_without_stdout_or_default_database(tmp_pa
 
     assert result.returncode != 0
     assert result.stdout == ""
-    assert "Configure DONA_MARIA_DB_PATH" in result.stderr
+    assert "Atendimento indisponível" in result.stderr
     assert "Traceback" not in result.stderr
     assert list(tmp_path.iterdir()) == []
 
@@ -47,7 +48,7 @@ async def test_official_client_discovers_and_calls_the_real_stdio_server(tmp_pat
     sqlite3.connect(database).close()
     server = StdioServerParameters(
         command=sys.executable,
-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
+        args=OPERATOR_STDIO_ARGS,
         env={"DONA_MARIA_DB_PATH": str(database)},
         cwd=tmp_path,
     )
@@ -108,7 +109,7 @@ async def test_invalid_calls_are_structured_and_the_server_remains_usable(tmp_pa
     sqlite3.connect(database).close()
     server = StdioServerParameters(
         command=sys.executable,
-        args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
+        args=OPERATOR_STDIO_ARGS,
         env={"DONA_MARIA_DB_PATH": str(database)},
         cwd=tmp_path,
     )
@@ -144,7 +145,7 @@ async def test_storage_lock_does_not_block_mcp_ping_and_read_recovers(tmp_path):
         before = database.read_bytes()
         server = StdioServerParameters(
             command=sys.executable,
-            args=["-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
+            args=OPERATOR_STDIO_ARGS,
             env={"DONA_MARIA_DB_PATH": str(database)},
             cwd=tmp_path,
         )
@@ -187,7 +188,7 @@ async def test_stdout_is_only_protocol_stderr_accepts_logs_and_eof_exits_cleanly
     environment = get_default_environment() | {"DONA_MARIA_DB_PATH": str(database)}
     with anyio.fail_after(15):
         async with await anyio.open_process(
-            [sys.executable, "-X", "utf8", "-B", "-m", "dona_maria.mcp_server"],
+            [sys.executable, *OPERATOR_STDIO_ARGS],
             cwd=tmp_path,
             env=environment,
             stdin=subprocess.PIPE,

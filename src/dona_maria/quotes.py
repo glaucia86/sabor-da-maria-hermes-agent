@@ -139,21 +139,24 @@ def _confirmation_deadline(confirmed_at: datetime, valid_until: datetime | None)
     return min(operational_deadline, valid_until) if valid_until else operational_deadline
 
 
-def explicit_quote_confirmation(request):
-    scope = request.scope
+def quote_confirmation_statement(scope):
     price = format(Decimal(scope.package_price), ".2f").replace(".", ",")
     extra = format(Decimal(scope.purchase_extra_total), ".2f").replace(".", ",")
-    expected = (
+    return (
         f"Confirmo {scope.packages} pacote{'s' if scope.packages != 1 else ''} de "
         f"{scope.package_quantity.value} {scope.package_quantity.unit} a R$ {price} por pacote, "
         f"encargos R$ {extra}, {scope.extra_conditions}, disponível em "
         f"{scope.supplier}: {scope.availability_context}"
     )
 
+
+def explicit_quote_confirmation(request):
     def normalized(text):
         return " ".join(text.casefold().strip().rstrip(".! ").split())
 
-    return normalized(request.evidence.statement) == normalized(expected)
+    return normalized(request.evidence.statement) == normalized(
+        quote_confirmation_statement(request.scope)
+    )
 
 
 def create_confirmation(quote, request):

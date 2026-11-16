@@ -11,10 +11,17 @@ from dona_maria.persistence import SQLiteWorkspaceRepository
 
 
 def bootstrap_workspace(
-    database: Path, inventory: Path, *, allowed_directory: Path, workspace_id: str | None = None
+    database: Path,
+    inventory: Path,
+    *,
+    allowed_directory: Path,
+    workspace_id: str | None = None,
+    context_mode: str = "REAL",
 ) -> dict:
     snapshot = import_inventory(inventory, allowed_directory=allowed_directory)
-    return SQLiteWorkspaceRepository(database).bootstrap(snapshot, datetime.now(UTC), workspace_id)
+    return SQLiteWorkspaceRepository(database).bootstrap(
+        snapshot, datetime.now(UTC), workspace_id, context_mode=context_mode
+    )
 
 
 def main() -> None:
@@ -23,6 +30,7 @@ def main() -> None:
     parser.add_argument("--inventory", type=Path, required=True)
     parser.add_argument("--allowed-directory", type=Path, required=True)
     parser.add_argument("--workspace-id", help="Reutiliza somente workspace da mesma fotografia.")
+    parser.add_argument("--context-mode", choices=("REAL", "SIMULATION"), default="REAL")
     args = parser.parse_args()
     try:
         result = bootstrap_workspace(
@@ -30,6 +38,7 @@ def main() -> None:
             args.inventory,
             allowed_directory=args.allowed_directory,
             workspace_id=args.workspace_id,
+            context_mode=args.context_mode,
         )
     except (ValueError, OSError, sqlite3.Error):
         parser.exit(1, "Importação recusada; conferir origem, diretório e armazenamento.\n")
