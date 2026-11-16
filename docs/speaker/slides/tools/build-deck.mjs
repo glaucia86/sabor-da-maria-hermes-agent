@@ -29,9 +29,14 @@ const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, 
 // que o tldraw (Ctrl+V) e o Excalidraw convertem em formas nativas.
 let scene = null;
 let elementId = 0;
+// O importador do tldraw só reconhece a paleta open-color; troca as cores fora dela.
+const EXPORT_COLORS = { "#6741d9": "#9c36b5", "#d0bfff": "#eebefa", "#e8a400": "#f08c00", [INK]: "#343a40" };
+const exportColor = (hex) => EXPORT_COLORS[hex] ?? hex;
 function el(type, props) {
   if (!scene) return;
   elementId += 1;
+  const colors = {};
+  for (const key of ["strokeColor", "backgroundColor"]) if (props[key]) colors[key] = exportColor(props[key]);
   scene.push({
     id: `sdm-${elementId}`,
     type,
@@ -55,10 +60,13 @@ function el(type, props) {
     link: null,
     locked: false,
     ...props,
+    ...colors,
   });
 }
-function textEl(x, cy, text, size, color = INK, align = "center") {
-  const width = Math.round(text.length * size * 0.55);
+function textEl(x, cy, text, svgSize, color = INK, align = "center") {
+  // 16 vira o tamanho "S" do tldraw; menores viram "S" com escala.
+  const size = Math.round(svgSize * 0.8);
+  const width = Math.round(text.length * size * 0.6);
   const height = Math.round(size * 1.25);
   el("text", {
     x: align === "center" ? x - width / 2 : align === "right" ? x - width : x,
@@ -197,18 +205,34 @@ function arrow(points, { tone = "gray", text, at, dash = false, both = false } =
   let out = draw(gen.linearPath(points, o), { dash });
   out += head(points.at(-1), points.at(-2));
   if (both) out += head(points[0], points[1]);
-  const [x0, y0] = points[0];
-  const xs = points.map((p) => p[0]);
-  const ys = points.map((p) => p[1]);
+  // O importador transforma setas com 3+ pontos em curvas; exporta a dobra como linha + seta.
+  const tail = points.slice(-2);
+  if (points.length > 2) {
+    const body = points.slice(0, -1);
+    const [lx, ly] = body[0];
+    el("line", {
+      x: lx,
+      y: ly,
+      width: Math.max(...body.map((p) => p[0])) - Math.min(...body.map((p) => p[0])),
+      height: Math.max(...body.map((p) => p[1])) - Math.min(...body.map((p) => p[1])),
+      points: body.map(([px, py]) => [px - lx, py - ly]),
+      strokeColor: stroke,
+      strokeStyle: dash ? "dashed" : "solid",
+      startArrowhead: null,
+      endArrowhead: null,
+      lastCommittedPoint: null,
+    });
+  }
+  const [x0, y0] = tail[0];
   el("arrow", {
     x: x0,
     y: y0,
-    width: Math.max(...xs) - Math.min(...xs),
-    height: Math.max(...ys) - Math.min(...ys),
-    points: points.map(([px, py]) => [px - x0, py - y0]),
+    width: Math.abs(tail[1][0] - x0),
+    height: Math.abs(tail[1][1] - y0),
+    points: tail.map(([px, py]) => [px - x0, py - y0]),
     strokeColor: stroke,
     strokeStyle: dash ? "dashed" : "solid",
-    startArrowhead: both ? "arrow" : null,
+    startArrowhead: both && points.length === 2 ? "arrow" : null,
     endArrowhead: "arrow",
     startBinding: null,
     endBinding: null,

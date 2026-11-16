@@ -1,8 +1,8 @@
 # Apresentação técnica — Sabor da Maria
 
-- [Slides Reveal.js](slides/index.html): 15 slides, 20 minutos, notas em português.
-- [Guia para Lucas Rolim](guia-apresentacao-lucas.md): fala, decisão, trade-off,
-  transição e corte para cada slide; perguntas difíceis ligadas ao código.
+- [Slides Reveal.js](slides/index.html): 14 slides (~15 minutos) + 5 de apêndice, notas em português.
+- [Guia para Lucas Rolim](guia-apresentacao-lucas.md): fala de cada slide, ritmo,
+  cortes e perguntas difíceis ligadas ao código.
 - [Demo Hermes](demo-hermes.md): 5–10 minutos, Desktop, planilha real e aprovação no terminal.
 - [Verificação do percurso REAL](verification-local-real.md): testes atuais e pendências humanas.
 - [Verificação e limites S20](verification-s20.md): resultados reais e integração.
@@ -24,9 +24,37 @@ percurso recomendado. Confirme a janela de notas antes de compartilhar tela.
 
 Reveal.js **5.2.1**, CSS, JavaScript e plugin de notas ficam em
 `slides/vendor/reveal-5.2.1/`, com [licença MIT](slides/vendor/reveal-5.2.1/LICENSE).
-Sem CDN, fontes remotas, imagens decorativas ou dependência de build Node.
-Tipografia do sistema; animação fade curta respeita redução de movimento.
+Sem CDN nem recursos remotos: `index.html`, `assets/deck.css`, os diagramas e a
+fonte são versionados, então apresentar não exige Node nem internet.
+Animação fade curta respeita redução de movimento.
 Para imprimir, acrescente `?print-pdf` à URL e use a impressão do navegador.
+
+## Editar o deck
+
+O `index.html` é gerado. Edite `slides/src/index.template.html` (conteúdo e notas),
+`slides/src/deck.css` (tema Tailwind) ou `slides/tools/build-deck.mjs` (diagramas) e rode:
+
+```sh
+cd docs/speaker/slides
+npm ci
+npm run build
+```
+
+- **Tailwind CSS v4** compila `src/deck.css` em `assets/deck.css`; o CSS do Reveal
+  entra numa camada própria para não sobrepor as utilidades.
+- **Ícones [Lucide](https://lucide.dev)** (ISC) entram inline no HTML com
+  `{{icon nome classes}}`.
+- **Diagramas estilo Excalidraw** são desenhados com [rough.js](https://roughjs.com)
+  (MIT, seed fixa) e a fonte Excalifont ([OFL](slides/assets/fonts/Excalifont-OFL.txt)).
+  Use `{{diagram nome}}` no template; cópias avulsas ficam em `slides/assets/diagrams/`.
+
+### Editar um diagrama no tldraw ou no Excalidraw
+
+Cada diagrama também é exportado como `slides/assets/diagrams/<nome>.excalidraw.json`
+(formato de clipboard do Excalidraw). Copie todo o conteúdo do arquivo e cole com
+**Ctrl+V** no [tldraw](https://www.tldraw.com) ou no [Excalidraw](https://excalidraw.com):
+as caixas, textos e setas viram formas nativas e editáveis. Edições feitas lá não
+voltam para o deck; para mudar os slides, ajuste `tools/build-deck.mjs`.
 
 ## Referência de organização
 
@@ -39,7 +67,7 @@ Funcionamento das notas: [documentação oficial Reveal.js](https://revealjs.com
 
 ## Antes da entrevista
 
-Ensaie com o perfil definitivo, leia o relatório S20 e confira o status S19.
+Ensaie a jornada completa com o perfil definitivo e a planilha original.
 Não apresente a demo como evidência de autonomia geral. A pesquisa real faz parte do percurso completo;
 se falhar, registre a limitação sem apresentar uma receita própria como essa prova.
 Nenhuma publicação em GitHub Pages foi feita ou é necessária para apresentar.
