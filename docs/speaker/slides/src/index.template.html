@@ -305,7 +305,7 @@ Se em algum momento faltar um dado, o comportamento correto é o agente pergunta
    <div class="card flex gap-4 p-5"><div class="icon-tile">{{icon search}}</div><div><p class="text-[22px] font-semibold">Pesquisa mais rica</p><p class="mt-1 text-[18px] leading-snug text-muted">Termos derivados da despensa e 2–3 candidatas por busca. Hoje: 1 resultado por busca e termos liberados pelo operador.</p></div></div>
    <div class="card flex gap-4 p-5"><div class="icon-tile">{{icon mouse-pointer-click}}</div><div><p class="text-[22px] font-semibold">Aprovação mais fluida</p><p class="mt-1 text-[18px] leading-snug text-muted">Revisão na própria interface, ainda fora do catálogo do modelo. Hoje: um terminal separado.</p></div></div>
    <div class="card flex gap-4 p-5"><div class="icon-tile">{{icon receipt}}</div><div><p class="text-[22px] font-semibold">Lucro de verdade</p><p class="mt-1 text-[18px] leading-snug text-muted">Embalagem, gás, energia e trabalho no cálculo. Hoje: sobra após ingredientes e taxa.</p></div></div>
-   <div class="card flex gap-4 p-5"><div class="icon-tile">{{icon gauge}}</div><div><p class="text-[22px] font-semibold">Evals entre modelos</p><p class="mt-1 text-[18px] leading-snug text-muted">Comparar qualidade, latência e custo com os mesmos 12 roteiros. Hoje: um modelo verificado.</p></div></div>
+   <div class="card flex gap-4 p-5"><div class="icon-tile">{{icon gauge}}</div><div><p class="text-[22px] font-semibold">Evals entre modelos</p><p class="mt-1 text-[18px] leading-snug text-muted">Comparar qualidade, latência e custo com os mesmos 18 roteiros integrados. Hoje: um modelo verificado.</p></div></div>
    <div class="card col-span-2 flex gap-4 p-5"><div class="icon-tile">{{icon heart}}</div><div><p class="text-[22px] font-semibold">Preferências semânticas</p><p class="mt-1 text-[18px] leading-snug text-muted">“Não gosto de fritura” reconhecer “empanado”, com confirmação. Hoje: a correspondência é literal.</p></div></div>
   </div>
  </div>
@@ -451,7 +451,7 @@ Limite honesto: um perfil não é sandbox do sistema operacional; em produção 
     <tbody class="divide-y divide-line">
      <tr><td class="px-5 py-3">800+ testes pytest + Hypothesis</td><td class="px-5 py-3 text-muted">Regras, limites, persistência, concorrência</td><td class="px-5 py-3 text-muted">Qualidade da conversa</td></tr>
      <tr><td class="px-5 py-3">Integração MCP stdio</td><td class="px-5 py-3 text-muted">Contrato, catálogo e dispatch reais</td><td class="px-5 py-3 text-muted">Interface do Hermes</td></tr>
-     <tr><td class="px-5 py-3">12 roteiros de Agent Evals</td><td class="px-5 py-3 text-muted">Jornadas, ferramentas e estado</td><td class="px-5 py-3 text-muted">Autonomia geral</td></tr>
+     <tr><td class="px-5 py-3">18 Agent Evals integrados</td><td class="px-5 py-3 text-muted">CLI assistido, ferramentas e estado</td><td class="px-5 py-3 text-muted">Autonomia geral ou Desktop</td></tr>
      <tr><td class="px-5 py-3">CI em Windows, Ubuntu e macOS</td><td class="px-5 py-3 text-muted">Núcleo e MCP</td><td class="px-5 py-3 text-muted">Host e modelo reais</td></tr>
     </tbody>
    </table>
@@ -463,6 +463,7 @@ Eu separo três tipos de prova.
 Os testes determinísticos cobrem regras, limites, persistência e concorrência, com fixtures sintéticas e banco temporário; o Hypothesis gera sequências de alterações.
 Os testes de integração sobem o servidor MCP de verdade, via stdio.
 Os evals do agente são roteiros de jornada; neles eu confiro as ferramentas chamadas e o estado no banco, não só o texto da resposta.
+S19 concluiu 18 casos no recorte CLI assistido, com revisão explicitamente delegada. Os 12 roteiros anteriores, as tentativas com falha e as versões executadas permanecem históricos; não são 18 novas execuções da mesma versão. Desktop continua NOT_RUN.
 A CI roda o núcleo em três sistemas operacionais, mas não instala o Hermes nem um modelo. Por isso a demonstração ao vivo continua importante.
  </aside>
 </section>

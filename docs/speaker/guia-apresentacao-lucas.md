@@ -133,7 +133,7 @@ ou bloquear, e vou mostrar isso também.” Siga o [roteiro da demo](demo-hermes
 
 **Fala:** “Pesquisa com termos derivados da despensa e mais candidatas; aprovação
 na própria interface, ainda fora do modelo; lucro real com embalagem, gás e
-trabalho; os mesmos 12 evals em outros modelos; e preferências semânticas com
+trabalho; os mesmos 18 evals integrados em outros modelos; e preferências semânticas com
 confirmação.”
 
 ## 13 — Próximos passos · 45 s

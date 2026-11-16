@@ -2,10 +2,10 @@
   "schema_version": "1.0",
   "date": "2026-11-14",
   "scope": "S11 exclusively",
-  "status": "EM REVISÃO",
+  "status": "CONCLUÍDO — REVISÃO DELEGADA",
   "technical_suite_result": "PASS",
-  "suite_result": "FAIL",
-  "status_note": "Original integrated critical assertions passed. Human review requested clearer language in EV-07 and EV-09. Instructions corrected; revised proposal understood for EV-07. Actual corrected outputs still require MCP validation; prior follow-up ERROR retained.",
+  "suite_result": "PASS",
+  "status_note": "Completed in the explicitly delegated assisted CLI scope. Actual S19 EV07 and EV09 outputs now distinguish customer price, remainder and unknown net profit, and explain invalidation after changes. Original human feedback and failed attempts remain historical; no new independent human usability interview is claimed.",
   "human_review": {
     "status": "REVISED_PROPOSALS_ACCEPTED",
     "sample": [
@@ -1574,5 +1574,18 @@
     "temporary_synthetic_connection_present": true,
     "original_server_targeted": false,
     "new_model_invocations": 0
+  },
+  "historical_suite_result": "FAIL",
+  "historical_status_note": "Original integrated critical assertions passed. Human review requested clearer language in EV-07 and EV-09. Instructions corrected; revised proposal understood for EV-07. Actual corrected outputs still require MCP validation; prior follow-up ERROR retained.",
+  "delegated_resolution": {
+    "date": "2026-11-16",
+    "matrix": "s19-results.json",
+    "samples": {
+      "EV-07": "PASS_AUTOMATED_DELEGATED",
+      "EV-09": "PASS_AUTOMATED_DELEGATED"
+    },
+    "authorization": "Explicit user delegation of verification, synthetic decisions and approvals in the active task",
+    "human_review": false,
+    "original_history_preserved": true
   }
 }

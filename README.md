@@ -49,7 +49,7 @@ O Sabor da Maria combina **Hermes para conversar e pesquisar** com **Python/MCP 
 
 | Requisito do desafio | Como foi implementado | Onde conferir |
 | --- | --- | --- |
-| Pesquisar receitas reais e pedir feedback | Pesquisa e extração mediadas, fontes registradas e distinção entre interesse e aceite | [Pesquisa real e controles](docs/s17-mediated-research.md) |
+| Pesquisar receitas reais e pedir feedback | Pesquisa e extração mediadas, fontes registradas e distinção entre interesse e aceite | [Pesquisa real e controles](evals/s19-results.json) |
 | Descobrir restrições antes do aceite | Perguntas orientadas à receita e validação de condições na escala do plano | [Skill de atendimento](skills/dona-maria-cardapio/SKILL.md), [testes de aceite](tests/unit/test_acceptance.py) |
 | Comparar despensa e faltantes dentro do orçamento | Estoque e compras agregados entre pratos; pacotes, encargos e confirmações de ofertas | [Testes do plano compartilhado](tests/unit/test_shared_plan.py) |
 | Explicar CMV, propor cenários e deixar a escolha com Dona Maria | Custos por origem, três margens e preço personalizado; cálculo e escolha separados | [Testes financeiros](tests/unit/test_pricing.py), [aprovação local](tests/unit/test_local_approval.py) |
@@ -441,15 +441,23 @@ Os testes usam fixtures sintéticas e SQLite temporário. Cobrem importação, c
 | Evidência registrada | Alcance e limite |
 | --- | --- |
 | [Percurso local REAL e Desktop](docs/speaker/verification-local-real.md) | Regressão: 804 testes aprovados e dois ignorados; 15 testes do onboarding passaram após o refinamento final do guard de versão. Diagramas, links e slides conferidos. Lint geral tem quatro imports preexistentes não usados; Desktop com modelo autenticado e planilha original ainda não foi homologado. |
-| [Verificação integrada histórica](docs/verification.md) e [12 evals originais](evals/s11-results.json) | Jornada assistida, pesquisa real, decisões e retomada em dados sintéticos. Assertions críticas originais passaram; revisão humana apontou clareza insuficiente em EV-07 e EV-09. As orientações foram corrigidas, com revalidação conversacional pendente nesse registro. |
-| [Pesquisa mediada](docs/s17-mediated-research.md) | Registro de pesquisa/extração reais de receitas e ofertas, recusas no host e encerramento da revisão humana no perfil testado. Não homologa automaticamente outro perfil ou versão. |
+| [Verificação integrada histórica](docs/verification.md) e [12 evals originais](evals/s11-results.json) | Jornada assistida, pesquisa real, decisões e retomada em dados sintéticos. Assertions críticas originais passaram; revisão humana apontou clareza insuficiente em EV-07 e EV-09. As respostas reais corrigidas passaram na revisão delegada em S19; a avaliação humana original permanece registrada, sem alegar nova entrevista humana de usabilidade. |
+| [Pesquisa mediada — handoff S17](doc-specs/implementation-slices.md) | Registro de pesquisa/extração reais de receitas e ofertas, recusas no host e encerramento da revisão humana no perfil testado. O relatório separado S17 não acompanha este checkout; seu handoff histórico foi preservado. Não homologa automaticamente outro perfil ou versão. |
 | [Onboarding e apresentação](docs/speaker/verification-s20.md) | Registro anterior de 795 testes aprovados e dois ignorados, preflight e MCP conferidos. Perfil novo sem modelo; não houve conversa LLM nessa etapa. Os skips foram anexo original ausente e symlink indisponível no Windows. |
 | [CI](.github/workflows/ci.yml) | Configura checks de núcleo/MCP em Windows, Ubuntu e macOS. Não instala o Hermes nem testa a conversa. Sucesso histórico não comprova a execução de uma alteração posterior. |
-| [Agent Evals](evals/README.md) | O catálogo presente contém 12 roteiros versionados. Execuções assistidas não comprovam autonomia geral; testes com fixtures não substituem pesquisa real ou revisão humana de qualidade. |
+| [Agent Evals](evals/README.md) e [matriz S19](evals/s19-results.json) | 18 casos integrados concluídos no recorte CLI assistido, com versões executadas, falhas e revisão automatizada explicitamente delegada preservadas. Os 12 roteiros anteriores permanecem históricos. Não são 18 novas execuções da mesma versão nem homologação Desktop. |
 
 **Estado da versão documentada:** o percurso REAL prepara banco, perfil, pesquisa e abertura do Desktop; a jornada humana completa nesse canal ainda precisa ser validada com planilha original e modelo autenticado. Resultados históricos e `NOT_RUN` mantêm seu alcance. Consulte o [registro desta revisão](docs/speaker/verification-local-real.md) para distinguir os testes atuais das evidências anteriores.
 
 A avaliação completa precisa conferir conversa acessível, pesquisa real, decisões, retomada e estado persistido na mesma versão/perfil. **Desktop é o canal escolhido para a avaliação; os resultados históricos em CLI não o homologam.** A demonstração é feita ao vivo; slides e roteiro não substituem um ensaio concluído.
+
+Testes com fixtures não comprovam pesquisa real nem a qualidade da conversa.
+Os evals assistidos não comprovam autonomia geral nem autenticam consentimento
+humano. A matriz S19 preserva tentativas com falha e o alcance histórico das
+versões executadas. A [verificação integrada](docs/verification.md) registra a
+reprodução em ambiente limpo, a jornada com complemento pesquisado e a matriz
+dos 22 critérios. A CI histórica de núcleo/MCP passou em Windows, Linux e macOS;
+Desktop e vídeo não foram testados naquela execução.
 
 ### Teste básico opcional sem modelo
 

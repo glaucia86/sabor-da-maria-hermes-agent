@@ -172,6 +172,21 @@ Não remova diretórios de perfil, banco ou dados do Hermes para tentar corrigir
 uma falha. A limpeza é manual e posterior à identificação do atendimento que
 você realmente deseja descartar. Bancos e credenciais permanecem fora do Git.
 
+### Reconexão do perfil dedicado
+
+No gateway, `/reload-mcp` pode preservar conexões já registradas. No perfil
+dedicado, desabilite somente `mcp_servers.dona_maria.enabled`, recarregue,
+reabilite e recarregue novamente. Confira catálogo e vínculo antes de atender.
+Na instalação v0.23.1 observada em S19, a recarga compara nomes habilitados:
+alterar somente `env` manteve o banco anterior. Confirme ausência de ferramentas
+após desabilitar e o estado esperado após reconectar; “no server changes” ou
+seis ferramentas, isoladamente, não comprovam troca de banco.
+
+A ausência de ferramentas perigosas deve ser conferida no catálogo efetivo.
+Uma skill builtin essencial pode permanecer no contexto conforme a versão;
+isso não justifica habilitar shell, execução de código ou gestão de memória.
+O contrato de leitura não autentica consentimento humano.
+
 <a id="despensa"></a>
 ## Importação manual para diagnóstico
 
@@ -202,6 +217,20 @@ Esse fluxo histórico cria somente arroz em `artifacts/private/demo-s20`, modo
 do avaliador. Os comandos `configure`, `model`, `chat` e `review` desse modo
 continuam disponíveis para diagnóstico assistido; não promovem a base a REAL.
 Em sistemas sem `python`, use `python3` no primeiro comando.
+
+### Agent Evals integrados S19
+
+Para a versão integrada S19, consulte o
+[CLI de evidências](../evals/README.md#jornada-integrada-s19). `prepare` cria um
+banco sintético schema3 já migrado; não execute novamente `migrate` nesse banco.
+Configuração, catálogo e atestações no Hermes continuam sendo passos humanos
+separados. Resultados históricos não aprovam a versão integrada.
+
+Os 18 casos foram concluídos no recorte CLI assistido registrado na
+[matriz S19](../evals/s19-results.json), com tentativas e limitações preservadas.
+Isso não homologa o novo perfil S20 nem o canal Desktop. Após integrar as
+orientações e os plugins, prepare outro atendimento e repita o preflight;
+configuração e bytes conferidos antes da integração são evidências históricas.
 
 <a id="teste-do-original"></a>
 ## Conferência do anexo original

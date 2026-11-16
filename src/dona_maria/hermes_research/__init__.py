@@ -3,6 +3,7 @@
 import asyncio
 import importlib.util
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -54,6 +55,30 @@ class HermesSearchAdapter:
         if _configured_backend("search") != self.provider_name:
             raise BusinessRuleError("COMPATIBILITY_BLOCKED", "Provedor de busca incompatível.")
         provider = get_provider(self.provider_name)
+        if (
+            provider is None
+            and self.provider_name == "ddgs"
+            and os.environ.get("HERMES_PLUGIN_HOST_PROCESS") == "1"
+            and os.environ.get("HERMES_SAFE_MODE", "").strip().lower()
+            not in {"1", "true", "yes", "on"}
+        ):
+            from hermes_cli.config import load_config_readonly
+
+            configuration = load_config_readonly()
+            settings = configuration.get("plugins") if isinstance(configuration, dict) else None
+            if not isinstance(settings, dict):
+                raise BusinessRuleError("COMPATIBILITY_BLOCKED", "Configuração incompatível.")
+            enabled, disabled = settings.get("enabled", []), settings.get("disabled", [])
+            if (
+                isinstance(enabled, list)
+                and isinstance(disabled, list)
+                and any(key in enabled for key in ("web-ddgs", "web/ddgs"))
+                and not any(key in disabled for key in ("web-ddgs", "web/ddgs"))
+            ):
+                # Provedores bundled ficam no processo principal; use o mesmo DDGS autorizado.
+                from plugins.web.ddgs.provider import DDGSWebSearchProvider
+
+                provider = DDGSWebSearchProvider()
         if provider is None or not provider.supports_search():
             raise BusinessRuleError("COMPATIBILITY_BLOCKED", "Provedor de busca indisponível.")
         response = await asyncio.to_thread(provider.search, query, 1)
