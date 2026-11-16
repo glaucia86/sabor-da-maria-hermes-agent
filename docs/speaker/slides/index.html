@@ -200,12 +200,12 @@ Por fim, mantive uma arquitetura local, sem infraestrutura distribuída, porque 
   <figure class="board"><img class="diagram" src="assets/diagrams/arquitetura.svg" alt="Arquitetura: Hermes conduz a conversa, Python/MCP valida as regras e SQLite persiste o estado; o operador aprova decisões fora do modelo."></figure>
  </div>
  <aside class="notes">
-Este é o mapa da solução, da esquerda para a direita.
-A Dona Maria conversa com o Hermes. Dentro do Hermes estão o context file e a skill, que definem o papel e a condução; o plugin de política, que mantém uma lista fechada de ferramentas e usa hooks para recusar chamadas fora dela; o plugin de pesquisa; e o modelo, escolhido no perfil.
-O plugin de pesquisa é o único caminho para a web, e só com termos liberados.
-Para qualquer coisa de negócio, o Hermes chama o servidor MCP por stdio. São seis ferramentas, e o banco e o workspace são fixados pelo operador, não pelo modelo.
-O domínio Python valida com Pydantic e calcula com Decimal: inventário, planejamento, cotações, preço e aprovações. Tudo é gravado no SQLite com histórico e auditoria.
-Embaixo está o canal do operador, que o modelo não enxerga: o setup-real importa a planilha, e a CLI de aprovação lista, inspeciona e atesta as decisões que a Dona Maria manifestou na conversa.
+Esse é o desenho da solução. A ideia principal aqui foi separar bem as responsabilidades.
+A Dona Maria conversa com o Hermes, que usa o arquivo de contexto e a skill para orientar o atendimento. Dentro dele, um plugin de política restringe quais ferramentas podem ser utilizadas. Já o acesso à web acontece por uma pesquisa controlada, usando apenas termos autorizados.
+Quando precisa consultar o estoque, avaliar receitas ou calcular preços, o Hermes se comunica com o servidor MCP, por stdio, que disponibiliza seis ferramentas de atendimento.
+A partir daí, o domínio Python aplica as regras de negócio, valida os dados com Pydantic e faz os cálculos financeiros com Decimal. O SQLite mantém o estado e o histórico.
+E aqui está uma separação importante: na parte inferior, temos o canal local do operador, fora do alcance do modelo. É nele que a planilha é importada e as decisões manifestadas pela Dona Maria são revisadas e atestadas.
+Ou seja, o Hermes conversa, o Python valida, o SQLite guarda e a aprovação humana acontece separadamente.
  </aside>
 </section>
 
