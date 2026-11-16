@@ -4,7 +4,22 @@
 
 ## Context Retrieval Contract
 
+**Integração S19/S20 — 16/11/2026:** resolução semântica e verificações do merge
+já iniciado autorizadas em `C:/Labs/sabor-da-maria-s20`, branch
+`feat/s20-portable-onboarding`, com S19/PR #18 integrado na origem em `8e4c765`.
+As autorizações e pendências abaixo são registros históricos de cada etapa;
+o encerramento S19 vale somente no recorte CLI assistido/delegado documentado.
+S20 permanece EM REVISÃO; Desktop/LLM/planilha original continuam NOT_RUN.
+Não repetir os 18 evals reais nem finalizar merge, commit, push ou PR.
+Resultados desta integração no handoff próprio abaixo, para revisão HITL.
+
 **Atualização S19 — 15/11/2026:** execução e implementação exclusivamente de S19 autorizadas pela pessoa no worktree `C:/Labs/sabor-da-maria-s19`, branch `feat/s19-integrated-agent-evals`, baseline integrado `82a8fe6`. As referências anteriores a S19 não autorizado e merge aberto são históricas. Gates de execução real do Hermes, revisão humana e ausência de commit/push/PR/merge permanecem vigentes. Análise, lacunas, plano, matriz inicial e evidências em [verificação S19](../docs/s19-integrated-verification.md). Aceites S13–S18 preservados; S11 continua EM REVISÃO.
+
+**Autorização S20 — 16/11/2026:** implementação de onboarding portátil e apresentação
+Reveal.js autorizada exclusivamente em `C:/Labs/sabor-da-maria-s20`, branch
+`feat/s20-portable-onboarding`. S16–S18 integrados; S19 em andamento separado no
+PR #18, conforme informação humana. Declarações anteriores de não autorização
+são históricas. Não executar S19, merge, commit, push ou publicação nesta entrega.
 
 **Integração S16/S17/S18 — 15/11/2026:** resolução e verificação autorizadas em `C:/Labs/sabor-da-maria-s18`, sem finalizar o merge. Os aceites individuais e as evidências históricas permanecem preservados; referências anteriores a slices não autorizados descrevem o escopo da execução original. Nenhuma nova homologação Hermes/rede real ou liberação S19 está implícita. Plano de execução e evidências desta integração em `.harness/s16-s17-s18-merge/`.
 
@@ -1948,6 +1963,201 @@ Somente documentação e base sintética mudaram; não reexecutada a regressão
 **EV17 — export/auditoria técnica:** export oficial preservado22mensagens/5users/9APIs/8tools; CLI dizia12tools, divergência registrada. Quinta mensagem foi comando export no chat, recusado sem terminal. Audit001 exit0 NOT_RUN apenas por revisão humana pendente; controles automáticos/estado/catálogo/chamadas/falha/readbacks/fingerprint passaram. Pergunta humana de apresentação/clareza/retomada/falha enviada; rubrica técnica proposta2/2/1. Próximo passo é registrar resposta e reauditar preservando audit001, não nova conversa. S19/S20 sem aceite.
 
 **EV17 — PASS após aceite humano:** pessoa respondeu sim à revisão de clareza/apresentação/retomada/falha. Evidência privada registrada, revisão atualizada e audit002 exit0 PASS,9APIs/8tools/rubrica5/6. Audit001 NOT_RUN e export preservados. Matriz1PASS/17NOT_RUN. Nenhum lock ativo, sessão encerrada; não pedir aceite EV17 novamente. S19/S11 continuam abertos, S20 não iniciado. Próximo trabalho autorizado: demais casos S19, começando preparação EV01. Sem alterações de código nesta etapa.
+
+## S20 — Portable Onboarding, Evaluator Experience & Technical Presentation
+
+**Extensão autorizada — 16/11/2026, percurso REAL/Desktop:** a usuária aprovou
+preparação guiada com XLSX real fornecido localmente, modelo escolhido/autenticado
+no Hermes do avaliador, pesquisa web real e Desktop como canal de apresentação.
+Essa preferência atual substitui o percurso sintético/CLI como entrada principal;
+não altera os registros históricos ou os controles GRILL de domínio/atestação.
+Preservados contextos imutáveis, Decimal, orçamento, catálogo, decisões humanas
+fora do modelo e proibição de commit/push/PR automáticos. Não executado S19.
+
+Implementação reutiliza bootstrap/migrações, perfil vazio, política, pesquisa
+DDGS e revisão local. `setup-real --inventory --directory` prepara dados REAL;
+`configure` exige termos públicos explicitamente liberados; `desktop` verifica
+perfil/modelo/rótulo de versão e usa diretório com orientações + skill incorporadas.
+O plugin continua verificando o commit completo no host efetivo. Sem nova API MCP,
+dependência, schema de negócio ou regra financeira. Comandos de simulação mantidos.
+
+TDD no seam CLI/subprocesso e SQLite temporário: importação/origem preservada,
+reexecução sem regravação, troca de origem/modo recusada, entrada ausente/inválida,
+custo incompleto não inventado, isolamento do perfil, termos autorizados,
+modelo obrigatório, contexto Desktop e bloqueio de versão/commit divergentes.
+Regressão: **804 PASS/2 SKIP, 698,08 s**; após refinamento final do guard,
+**15 PASS, 28,51 s** no onboarding. Ruff dirigido PASS; format75 PASS;
+Ruff geral registra quatro F401 em imports TYPE_CHECKING preexistentes de
+`approvals.py`, preservados. Skips: original ausente e symlink Windows1314.
+
+README reorganizado em dez etapas, guia operacional consolidado e diagramas
+corrigidos (terminal chama ApprovalService, não MCP). Mermaid parse/render PASS;
+84 links locais PASS; 15 slides/15 notas, 30 verificações em duas resoluções PASS.
+HTML preparado para Pages atualizado no worktree separado, sem publicação.
+Evidências e limites: `docs/speaker/verification-local-real.md`. Original REAL,
+Desktop/LLM/pesquisa ao vivo e instalação limpa em outro SO: **NOT_RUN**.
+RULES §5 mantém experimentação Hermes conduzida pela pessoa, um passo por vez.
+Nenhuma configuração pessoal, credencial, banco ou sessão Hermes foi alterada
+durante os testes; integração do lançamento usa processo externo controlado.
+
+**Status:** EM REVISÃO — P0. **Objetivo / Resultado observável:** avaliador
+prepara SQLite sintético SIMULATION e perfil isolado sem copiar segredos; consulta
+catálogo e estado; dispõe de apresentação técnica de 20 minutos e demo assistida
+de 10 minutos, com limites e passos HITL explícitos.
+
+**Bloqueado por:** nenhum para implementação autorizada; homologação conversacional
+do perfil novo, Desktop e regressões S19 não são presumidas.
+
+**Source IDs:** SPEC REQ-017, SEC-003/004/006, AC-025/026/030, GUD-003,
+INF-001/002/003, DAT-001/002/003, PLT-001/004/007. Localizadores canônicos:
+§3.6.1, §4.4.1 Atendimento vinculado e projeções, §4.4.2 aprovação local,
+§4.8 persistência e §8.4 portabilidade. Fontes adicionais: pedido S20 desta sessão,
+README/setup, `.hermes.md`, skill de atendimento, plugins e handoffs S13–S19.
+Referência editorial externa: `glaucia86/grok-bot-engineering-workshop`,
+`docs/speaker/slides/index.html` e `docs/speaker/guia-glaucia.md`.
+
+**Dependências e alcance:** reutilizar bootstrap, migração explícita de propostas,
+AttendanceService, launcher e CLI de aprovação. Novos `scripts/demo.py`, módulo
+`onboarding.py` e testes no seam CLI/subprocesso + SQLite temporário/MCP stdio;
+README, setup, este plano e `docs/speaker/`. Sem alteração de domínio, schema,
+finanças, orientações da skill ou resultados históricos. Configurar somente um
+home novo com comandos oficiais; não sobrescrever perfil ou banco existente.
+
+**Acceptance Criteria**
+
+- [x] Diagnóstico de Python 3.13/uv/Hermes/dependências e preparação idempotente
+  de ambiente/SQLite sintético, recusando diretório alheio ou vínculo inválido.
+- [x] MCP com seis capacidades; skill/política verificáveis; pesquisa desabilitada
+  por padrão e configuração incompleta diagnosticada sem credenciais.
+- [x] Quick Start, recuperação, limpeza manual segura e importação legítima do
+  original; nenhuma atestação humana automatizada.
+- [x] Quinze slides Reveal.js local com notas, guia por slide e roteiro de demo;
+  evidências separadas de planos/NOT_RUN e perguntas sustentadas pelo código.
+- [x] TDD, regressão, Ruff, renderização/links, revisão independente e handoff;
+  riscos de integração S19 identificados, revisão HITL antes de commit/push.
+
+**Testes / Verification:** CLI real em diretórios sintéticos temporários;
+reexecução preserva bytes do banco e identidade; recusa de alvo preexistente;
+binding/catalog/dispatch MCP; configuração privada lida por chaves permitidas;
+slides em servidor loopback, notas e navegação. Windows executado localmente;
+macOS/Linux somente após evidência própria ou CI da alteração.
+
+**Handoff — início:** árvore S20 inicialmente limpa. Contratos e histórico
+recuperados, sem alterar outros worktrees. Python3.13.15, uv0.9.5 e dependências
+do lock instalados em `.venv` novo. Hermes0.23.1/3b4215785882 e help CLI/Desktop
+conferidos; Desktop não homologado. RED inicial funcional: módulo ausente;
+GREEN2PASS. RED de manifesto inválido: traceback por tipo inesperado;
+GREEN4PASS após validação. Falhas prévias de permissão no tmp global/cache uv
+registradas como erros de ambiente, não falhas de negócio. Temporários locais
+em `artifacts/private/` e execução autorizada fora do sandbox resolvem o caminho.
+Evidências finais e pendências serão acrescidas ao fim, preservando este registro.
+
+**Handoff — entrega técnica S20, 16/11/2026:** implementação concluída para revisão
+HITL; checkboxes acima representam verificações técnicas, não aceite humano.
+Módulo/CLI local reutilizam bootstrap, migração de propostas, AttendanceService,
+MCP stdio e approval_cli. Setup idempotente, diretórios alheios recusados, ambiente
+filtrado inclusive no uv sync, perfil novo criado a partir de origem vazia para
+evitar herança model/provider; nenhuma credencial copiada pela implementação
+final. A tentativa intermediária que herdou modelo foi descartada pelo comando
+nativo somente no perfil criado para o smoke; perfil pessoal não modificado.
+Manifesto fixa SIMULATION e workspace; review não permite override/migração;
+chat faz preflight, skill é descoberta no host e conversa roda fora da árvore Git.
+Modelo ausente corretamente diagnosticado; nenhuma conversa LLM, pesquisa nova
+ou atestação humana executada nesta etapa. Perfil é capacidade, não sandbox.
+
+TDD adicional: RED do override/diagnóstico e RED do ambiente UV externo, corrigidos;
+6 testes de onboarding PASS. Regressão final795PASS/2SKIPPED/347,51s; Ruff check e
+format75PASS; diff-checkPASS. Smoke real setup repetido, configure, descoberta da
+skill e conexão Hermes MCP PASS, sem modelo/credenciais; catálogos e recusa MCP
+testados deterministicamente. Windows3.13.15; macOS/Linux aguardam CI S20.
+Quinze slides Reveal5.2.1/assets locais, notas e1200s; teste headless em Chromium
+confirmou navegação, popup, sem cortes verticais/erros JS/requests externos.
+Inspeção visual corrigiu contraste do fundo antes da rodada final; navegador
+integrado indisponível. 46links locais válidos; handoffs S13–S19 idênticos ao HEAD.
+Revisão independente de arquitetura/segurança teve achados corrigidos e conferidos,
+sem pendência nos achados; não substitui homologação conversacional.
+
+Inventário, comandos, tentativas, limites e integração em
+[verification-s20.md](../docs/speaker/verification-s20.md). Harness local ausente,
+não restaurado nem alegado PASS. Resultados históricos de evals intactos;
+S19/PR18 não alterado. Conflitos potenciais: README, setup e plano; após integrar
+orientações S19, novo perfil/preflight e ensaio humano. Próximo passo exato:
+revisão HITL do diff/slides/guia, configurar modelo no perfil vazio e ensaiar
+manifestações/atestações reais do cenário hipotético. Desktop não homologado.
+Sem commit, push, merge ou publicação; aceite final permanece pendente.
+
+## Integração S19/S20 — 16/11/2026
+
+**Handoff — resolução semântica para revisão HITL:** merge já iniciado de
+`8e4c76505f3ba18e900ed7d9d7310935ca97e6c3` sobre HEAD `3779dd8`, sem finalizar
+merge, commit, push ou PR. README conserva Quick Start/REAL/SIMULATION/Desktop
+e distingue 18 evals S19 assistidos dos 12 históricos. Setup conserva diagnóstico,
+comandos, aprovação local e a observação S19 sobre reconexão após mudar `env`.
+Blocos completos S11/S13–S19 idênticos à origem; S20 idêntico ao HEAD anterior.
+Matrizes de resultados, orientações e plugins S19 preservados literalmente.
+
+Revisados os arquivos mesclados automaticamente, inclusive captura/auditoria,
+política do host e adapter DDGS contra a configuração/cópia do onboarding.
+Nenhuma alteração adicional de domínio, dependência, schema ou regra financeira.
+Guia/template/HTML ajustados apenas para refletir os 18 evals e seu alcance;
+15 slides principais, 5 apêndices, 20 notas, diagramas e roteiro preservados.
+
+**Verificações desta integração:**
+
+- Focados S19/S20: **158 PASS, 255,25 s**, incluindo harness integrado,
+  evidência correlacionada, onboarding e plugins de política/pesquisa.
+- Regressão completa: **924 PASS, 2 SKIP, 1 FAIL, 1 ERROR, 4607,80 s**.
+  FAIL em replay `quote_expiry-EV-12` e ERROR no setup de reordenação
+  `False-EV-05`: ambos `subprocess.TimeoutExpired` no harness, limite de 30 s,
+  durante `capture --label after` e `prepare`, respectivamente. Não foram falhas
+  de assertion financeira/domínio. Os traces registram tempo restante negativo
+  muito além do limite; a causa ambiental específica não foi comprovada.
+  SKIPs: XLSX original ausente e symlink Windows sem privilégio (1314).
+  Repetição apenas dos dois casos em temporário novo: **2 PASS, 40,41 s**, sem
+  mudar código ou timeout. A rodada completa original continua registrada como
+  não verde; não foi repetida integralmente.
+- Ruff check e format em `src tests evals scripts`: **PASS, 81 arquivos**.
+- Build Reveal.js: `npm.cmd run build` **PASS**. Navegação Chromium: **40 checks**
+  em 1366×768 e 1920×1080, teclado, hash/reload, notas e fullscreen PASS;
+  zero erros JS/HTTP ou requests externos. Dois Mermaid do README renderizados.
+- **101 links/âncoras locais em nove documentos públicos PASS**. Corrigidos
+  dois links do README para relatório S17 retirado anteriormente deste checkout.
+  Sete referências históricas do plano continuam sem alvo local: três `.harness/`,
+  dois relatórios S19 e duas referências ao relatório de qualidade AI-PDLC.
+  Não foram reconstruídas evidências ausentes nem alterados handoffs para ocultá-las.
+- Sem entradas Git não mescladas, marcadores de conflito ou arquivos não rastreados
+  publicáveis; sem bancos/XLSX/chaves privados rastreados ou padrões de credenciais
+  encontrados nos arquivos staged. Artefatos novos de verificação estão ignorados.
+- `git diff --cached --check` e `git diff --check`: **PASS**.
+
+Comandos de pytest usam `.venv/Scripts/python.exe -X utf8 -B -m pytest`, `-q`,
+`--basetemp artifacts/private/merge-s19-s20-{focused,regression}-01` e
+`--junitxml artifacts/private/merge-s19-s20-{focused,regression}-01.xml`, com os
+alvos `tests/integration/test_integrated_evals.py`,
+`tests/integration/test_correlated_evidence.py`, `tests/integration/test_onboarding.py`,
+`tests/unit/test_hermes_attendance_policy.py` e `tests/unit/test_hermes_research_plugin.py`
+na rodada focada; `tests/unit tests/integration` na regressão.
+Ruff: `.venv/Scripts/python.exe -m ruff check src tests evals scripts` e
+`.venv/Scripts/python.exe -m ruff format --check src tests evals scripts`.
+Prova de navegação: `artifacts/private/merge-s19-s20-slides.json`.
+Repetição: mesmos comandos pytest, alvos
+`tests/integration/test_integrated_evals.py::test_identical_replay_uses_occurrence_positions_and_one_approved_effect[quote_expiry-EV-12]`
+e `tests/integration/test_integrated_evals.py::test_aggregate_requires_reordering_and_invalidation[False-EV-05]`,
+com `--basetemp artifacts/private/merge-s19-s20-retry-01` e
+`--junitxml artifacts/private/merge-s19-s20-retry-01.xml`.
+
+O build preexistente regenera os cinco SVGs avulsos com rough.js, diferentes dos
+exports tldraw versionados, e gera cinco JSONs Excalidraw. Os SVGs originais foram
+preservados; os outputs gerados foram guardados em área privada, sem novas fontes
+publicáveis. Primeira tentativa HTTP local encerrou conexões sem resposta;
+repetição em servidor loopback na porta 8876 permitiu concluir a navegação.
+Servidores temporários encerrados após a verificação.
+
+**Limites/gate:** Desktop com modelo autenticado/planilha original continua
+**NOT_RUN**; nenhum dos 18 Agent Evals foi repetido no Hermes real. Links externos,
+instalação limpa em outro SO e evidências locais ausentes não foram homologados.
+Próximo passo: revisão HITL do diff staged e destes resultados, mantendo o merge
+pendente. Perfis anteriores precisam de novo preparo/preflight antes do ensaio.
 
 ## Extensões do baseline e revisão de qualidade — 14/11/2026
 

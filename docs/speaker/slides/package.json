@@ -1,0 +1,17 @@
+{
+  "name": "sabor-da-maria-slides",
+  "private": true,
+  "type": "module",
+  "description": "Ferramentas de build do deck. Os artefatos gerados são versionados; apresentar não exige Node.",
+  "scripts": {
+    "build:css": "tailwindcss -i ./src/deck.css -o ./assets/deck.css --minify",
+    "build:deck": "node ./tools/build-deck.mjs",
+    "build": "npm run build:deck && npm run build:css"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "4.3.5",
+    "lucide-static": "1.73.0",
+    "roughjs": "4.6.6",
+    "tailwindcss": "4.3.5"
+  }
+}

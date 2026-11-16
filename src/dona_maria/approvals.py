@@ -246,6 +246,12 @@ def _expand_bound_command(command, state, snapshot, revision, now):
         "replaces_acquisition_id": state.inventory_acquisitions,
         "replaces_resource_id": state.operational_resources,
     }
+    information_entities = {
+        "RECIPE": state.candidates,
+        "CONVERSION": state.ingredient_conversions,
+        "INVENTORY_ACQUISITION": state.inventory_acquisitions,
+        "OPERATIONAL_RESOURCE": state.operational_resources,
+    }
 
     def expand(value, recipe=None):
         if isinstance(value, list):
@@ -259,12 +265,8 @@ def _expand_bound_command(command, state, snapshot, revision, now):
             recipe = state.candidates[index - 1]
         result = {}
         for key, item in value.items():
-            if key == "entity_id" and value.get("entity") in {"RECIPE", "CONVERSION"}:
-                entries = (
-                    state.candidates
-                    if value["entity"] == "RECIPE"
-                    else state.ingredient_conversions
-                )
+            if key == "entity_id" and value.get("entity") in information_entities:
+                entries = information_entities[value["entity"]]
                 if not 1 <= item <= len(entries):
                     raise BusinessRuleError("NOT_FOUND", "Informação não pertence ao contexto.")
                 result[key] = str(entries[item - 1].id)

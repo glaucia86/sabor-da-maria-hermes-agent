@@ -1,0 +1,184 @@
+/* Fonte do Tailwind. Saída minificada em assets/deck.css (npm run build:css).
+   O CSS do Reveal entra numa camada própria para não sobrepor as utilidades. */
+@layer reveal, theme, base, components, utilities;
+@import "../vendor/reveal-5.2.1/dist/reset.css" layer(reveal);
+@import "../vendor/reveal-5.2.1/dist/reveal.css" layer(reveal);
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+@source "./index.template.html";
+
+@theme {
+  --color-night: #0b1520;
+  --color-panel: #12202f;
+  --color-panel-2: #182a3c;
+  --color-line: #2a3e52;
+  --color-ink: #f4f1e9;
+  --color-muted: #a9b6c4;
+  --color-mint: #8ce4c1;
+  --color-amber: #ffc66d;
+  --color-coral: #ff8a80;
+  --color-ifood: #ea1d2c;
+  --color-paper: #fdfbf6;
+  --font-sans: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-hand: "Excalifont", "Segoe Print", cursive;
+  --font-mono: "Cascadia Code", Consolas, ui-monospace, monospace;
+}
+
+/* URL relativa ao arquivo gerado em assets/. */
+@font-face {
+  font-family: "Excalifont";
+  src: url("fonts/Excalifont-Regular.woff2") format("woff2");
+  font-display: block;
+}
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    box-sizing: border-box;
+  }
+  html,
+  body,
+  .reveal-viewport {
+    background:
+      radial-gradient(1200px 600px at 85% -10%, #15324a 0%, transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, #2a1a26 0%, transparent 55%),
+      var(--color-night);
+  }
+  .reveal {
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+    font-size: 24px;
+    line-height: 1.4;
+  }
+  .reveal .slides {
+    text-align: left;
+  }
+  .reveal .progress {
+    color: var(--color-mint);
+    height: 4px;
+  }
+  .reveal .controls {
+    color: var(--color-mint);
+  }
+  .reveal .slide-number {
+    background: transparent;
+    color: var(--color-muted);
+    font: 14px var(--font-sans);
+    padding: 14px 18px;
+  }
+  .reveal a {
+    color: var(--color-mint);
+    text-decoration: none;
+  }
+  .reveal ol,
+  .reveal ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .reveal a:focus-visible {
+    outline: 3px solid var(--color-amber);
+    outline-offset: 4px;
+    border-radius: 6px;
+  }
+  .reveal svg.diagram {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .reveal svg.lucide {
+    width: 24px;
+    height: 24px;
+    flex: none;
+  }
+}
+
+@layer components {
+  .slide {
+    height: 800px;
+    padding: 52px 64px 48px;
+    display: flex;
+    flex-direction: column;
+  }
+  .kicker {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--color-amber);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  .kicker svg {
+    width: 20px;
+    height: 20px;
+  }
+  .title {
+    margin-top: 16px;
+    font-size: 50px;
+    font-weight: 700;
+    line-height: 1.06;
+    letter-spacing: -0.035em;
+  }
+  .title-sm {
+    margin-top: 12px;
+    font-size: 38px;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+  }
+  .card {
+    border: 1px solid var(--color-line);
+    border-radius: 18px;
+    background: linear-gradient(160deg, var(--color-panel-2), var(--color-panel));
+    box-shadow: 0 18px 40px -24px rgb(0 0 0 / 0.7);
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--color-line);
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: 17px;
+    color: var(--color-muted);
+    background: rgb(255 255 255 / 0.03);
+  }
+  .chip svg {
+    width: 18px;
+    height: 18px;
+    color: var(--color-mint);
+  }
+  .board {
+    margin-top: 18px;
+    border-radius: 20px;
+    background: var(--color-paper);
+    padding: 14px 18px;
+    box-shadow:
+      0 30px 60px -30px rgb(0 0 0 / 0.8),
+      inset 0 0 0 1px rgb(0 0 0 / 0.06);
+  }
+  .icon-tile {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: rgb(140 228 193 / 0.12);
+    color: var(--color-mint);
+  }
+  .icon-tile svg {
+    width: 26px;
+    height: 26px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

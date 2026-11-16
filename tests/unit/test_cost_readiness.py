@@ -57,7 +57,7 @@ def local_decision(reader, workspace, local, kind, **payload):
 
 
 @pytest.mark.parametrize("entity", ["INVENTORY_ACQUISITION", "OPERATIONAL_RESOURCE"])
-def test_financial_information_resolves_exact_historical_entity_and_field(
+def test_financial_information_resolves_and_expands_exact_historical_entity_and_field(
     pricing_workspace, tmp_path, entity
 ):
     reader, workspace, recipe, _, _, _ = pricing_workspace(accept=False)
@@ -119,6 +119,42 @@ def test_financial_information_resolves_exact_historical_entity_and_field(
                     db, str(uuid4()), InformationRef.model_validate(reference)
                 )
             assert foreign.value.code == "NOT_FOUND"
+    request = dict(
+        operation_id=str(uuid4()),
+        command=dict(
+            kind="record_ingredient_conversion",
+            payload=dict(
+                ingredient_id=1,
+                from_unit="g",
+                to_unit="g",
+                factor="1",
+                scope="HISTORICAL_PACKAGE",
+                context="Medição sintética apoiada no relato financeiro.",
+                source=dict(
+                    kind="USER_REPORTED_MEASUREMENT",
+                    method="Pesagem relatada.",
+                    context="Mesmo contexto do relato financeiro.",
+                    inputs=[],
+                ),
+            ),
+        ),
+    )
+    for index, record in enumerate(records, 1):
+        reference = dict(entity=entity, entity_id=index, version=record["version"], field=field)
+        request["operation_id"] = str(uuid4())
+        request["command"]["payload"]["source"]["inputs"] = [reference]
+        assert local.propose_bound(workspace, request)["status"] == "PENDING"
+        proposal = local.list(workspace)[-1]
+        assert proposal["command"]["payload"]["source"]["inputs"] == [
+            reference | {"entity_id": record["id"]}
+        ]
+    proposals_before = local.list(workspace)
+    request["operation_id"] = str(uuid4())
+    request["command"]["payload"]["source"]["inputs"][0]["entity_id"] = len(records) + 1
+    with pytest.raises(BusinessRuleError) as missing:
+        local.propose_bound(workspace, request)
+    assert missing.value.code == "NOT_FOUND"
+    assert local.list(workspace) == proposals_before
     assert reader.repository.load(workspace, with_snapshot=True) == before
 
 
