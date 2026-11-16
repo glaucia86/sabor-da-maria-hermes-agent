@@ -30,10 +30,9 @@ respondem ao “coração do desafio” e mostram que o modelo não aprova a si 
 
 ## 1 — Capa · 30 s
 
-**Fala:** “Olá, Lucas e Hildebrando, obrigada pelo tempo. Vou apresentar o Sabor
-da Maria: o que o desafio pede, o problema por trás dele, a solução que escolhi e
-por quê, e a arquitetura fluxo a fluxo. Depois mostro a aplicação ao vivo e fecho
-com melhorias e próximos passos.”
+**Fala:** “Olá, Lucas e Hildebrando! Obrigada pelo tempo de vocês. Hoje vou apresentar o Sabor da Maria, a solução que desenvolvi para o desafio de Senior AI Engineer.
+
+Vou começar pelo desafio e pelo problema que identifiquei. Depois, explico as principais decisões, a arquitetura e o fluxo da solução. Em seguida, mostro a aplicação funcionando e encerro com as limitações e os próximos passos.”
 
 ## 2 — O que é o desafio? · 75 s
 
