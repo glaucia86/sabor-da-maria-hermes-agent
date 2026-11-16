@@ -270,8 +270,12 @@ A execução local em um sistema não comprova sucesso nos demais; consulte os
 resultados da execução correspondente no GitHub Actions.
 
 Testes com fixtures não comprovam pesquisa real nem a qualidade da conversa.
-Os [Agent Evals](evals/README.md) incluem 12 roteiros versionados, execução
-assistida de adversariais/recuperação com Hermes real e evidências sanitizadas.
+Os [Agent Evals](evals/README.md) preservam 12 roteiros históricos e suas
+execuções assistidas de adversariais/recuperação com Hermes real. O catálogo
+integrado S19 tem 18 casos e um CLI local de preparação/captura/auditoria;
+seus 18 casos foram concluídos no recorte CLI assistido, conforme a
+[matriz atual](evals/s19-results.json). A matriz preserva versões executadas,
+tentativas com falha e a revisão automatizada explicitamente delegada.
 Os resultados distinguem verificações atuais e históricas; evals assistidos
 não comprovam autonomia geral nem autenticam consentimento humano.
 
@@ -279,8 +283,9 @@ A [verificação integrada](docs/verification.md) registra a reprodução em amb
 limpo, a jornada com complemento pesquisado e a matriz dos 22 critérios.
 Os [12 evals integrados](evals/s11-results.json) passaram nas assertions críticas
 originais; a revisão humana pediu mais clareza entre preço e sobra no EV-07
-e nas mudanças de preparo no EV-09. As orientações foram corrigidas, com
-revalidação conversacional pendente. A CI de núcleo/MCP passou em Windows,
+e nas mudanças de preparo no EV-09. As respostas reais corrigidas passaram
+na revisão delegada; isso não representa nova entrevista humana de usabilidade.
+A CI histórica de núcleo/MCP passou em Windows,
 Linux e macOS; Desktop e vídeo ainda não foram testados nesta execução.
 
 <a id="estrutura"></a>

@@ -1,9 +1,12 @@
 # Verificação e reprodução integrada
 
-S11 permanece em revisão: a leitura humana confundiu a sobra de R$1,29 com
-preço/lucro no EV-07. A orientação foi corrigida para destacar o preço de venda
-e explicar para quais custos a sobra ainda serve. A nova resposta precisa ser
-validada; uma tentativa ficou ERROR por MCP indisponível, sem alterar estado.
+S11 e S19 foram concluídos no recorte CLI assistido, com a revisão atual
+explicitamente delegada pela pessoa. As respostas reais EV-07 e EV-09 passaram
+na revisão de clareza: preço cobrado, sobra após ingredientes/taxa e lucro
+líquido desconhecido ficam separados. A [matriz S19](../evals/s19-results.json)
+preserva as versões, tentativas e limitações; não representa uma nova entrevista
+humana de usabilidade. Os registros abaixo descrevem a reprodução histórica,
+incluindo a revisão humana que identificou ambiguidade e a tentativa ERROR.
 A aplicação e seus testes não dependem de `doc-specs/`, `RULES.md` ou `.harness/`.
 Os roteiros dos12casos ficam em [evals/cases.json](../evals/cases.json); fontes
 controladas são explicitamente sintéticas e os diálogos de avaliação assistidos.

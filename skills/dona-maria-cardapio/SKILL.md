@@ -113,8 +113,9 @@ preço de reposição para completar aquisição histórica. Para estoque adicio
 aquisição reportada e finalidades de recursos, siga
 [esclarecimento de ingredientes](references/ingredientes.md).
 
-Liste os `issues` com código, localização, mensagem e caráter bloqueante;
-não conte duas vezes o mesmo diagnóstico repetido no item e na fotografia.
+Explique as pendências por ingrediente e se impedem o próximo passo, sem
+códigos ou localizações técnicas. Não conte duas vezes a mesma pendência
+repetida no item e na fotografia.
 Diferencie incompatibilidade de unidades de conteúdo não informado: um produto
 registrado apenas em `un` pode ter custo válido por unidade, mas não por massa.
 Use o saldo do workspace, não o orçamento padrão, quando o pedido exigir

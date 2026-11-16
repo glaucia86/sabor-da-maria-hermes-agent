@@ -25,7 +25,13 @@ def register(ctx):
     observed = OrderedDict()
     lock = Lock()
 
-    def observe(*, session_id=None, api_request_id=None, assistant_message=None, **kwargs):
+    def observe(
+        *,
+        session_id=None,
+        api_request_id=None,
+        assistant_message=None,
+        **kwargs,
+    ):
         if not all(isinstance(value, str) and value for value in (session_id, api_request_id)):
             return
         record = {}
@@ -41,6 +47,13 @@ def register(ctx):
         for call in calls:
             identifier = _field(call, "id")
             name = _field(_field(call, "function"), "name")
+            if (
+                type(call).__module__ == "hermes_cli.plugin_host_wire"
+                and type(call).__name__ == "Record"
+                and "function" not in call
+            ):
+                # O transporte serializa campos de ToolCall, mas não sua propriedade function.
+                name = call.get("name")
             if isinstance(identifier, str) and identifier:
                 names[identifier] = (
                     name

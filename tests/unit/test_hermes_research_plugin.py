@@ -106,6 +106,56 @@ def test_incompatible_host_registers_no_capability(host_boundary):
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize(
+    "isolated,enabled,disabled,safe,allowed",
+    [
+        (True, ["web-ddgs"], [], False, True),
+        (True, ["web/ddgs"], [], False, True),
+        (False, ["web-ddgs"], [], False, False),
+        (True, [], [], False, False),
+        (True, ["web-ddgs"], ["web-ddgs"], False, False),
+        (True, ["web-ddgs"], ["web/ddgs"], False, False),
+        (True, "web-ddgs", [], False, False),
+        (True, ["web-ddgs"], None, False, False),
+        (True, ["web-ddgs"], [], True, False),
+    ],
+)
+async def test_isolated_host_uses_only_explicitly_enabled_native_ddgs(
+    host_boundary, monkeypatch, isolated, enabled, disabled, safe, allowed
+):
+    context, tools, queries, _ = host_boundary
+    original_config = context.get_config
+    context.get_config = lambda key, default=None: (
+        "ddgs" if key == "search_provider" else original_config(key, default)
+    )
+    registry = sys.modules["agent.web_search_registry"]
+    native_provider = registry.get_provider("ddgs")
+    monkeypatch.setattr(registry, "_configured_backend", lambda capability: "ddgs")
+    monkeypatch.setattr(registry, "get_provider", lambda name: None)
+    monkeypatch.setenv("HERMES_PLUGIN_HOST_PROCESS", "1" if isolated else "0")
+    monkeypatch.setenv("HERMES_SAFE_MODE", " true " if safe else "0")
+    config = ModuleType("hermes_cli.config")
+    config.load_config_readonly = lambda: {
+        "plugins": {
+            "enabled": enabled,
+            "disabled": disabled,
+        }
+    }
+    monkeypatch.setitem(sys.modules, config.__name__, config)
+    native = ModuleType("plugins.web.ddgs.provider")
+    native.DDGSWebSearchProvider = lambda: native_provider
+    monkeypatch.setitem(sys.modules, native.__name__, native)
+    register(context)
+    response = json.loads(
+        await tools["search_culinary_sources"]["handler"](
+            {"purpose": "RECIPE", "public_term_ids": ["arroz"]}
+        )
+    )
+    assert response["ok"] is allowed
+    assert queries == ([("receita arroz", 1)] if allowed else [])
+
+
+@pytest.mark.anyio
 async def test_quote_search_requests_one_complete_result_without_trimming_metadata(
     host_boundary, monkeypatch
 ):

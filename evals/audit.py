@@ -59,7 +59,11 @@ def tool_result(output):
     if isinstance(output.get("result"), str):
         output = json.loads(output["result"])
     if isinstance(output.get("error"), str):
-        output = json.loads(output["error"])
+        try:
+            output = json.loads(output["error"])
+        except json.JSONDecodeError:
+            # Native transport errors are text, not business error codes.
+            pass
     assert isinstance(output, dict), "Resultado sem objeto JSON."
     return output
 

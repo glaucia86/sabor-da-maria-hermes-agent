@@ -416,6 +416,10 @@ verifique a versão ou uma cópia de segurança antes de continuar.
 No gateway, `/reload-mcp` pode preservar conexões já registradas. No perfil
 dedicado, desabilite somente `mcp_servers.dona_maria.enabled`, recarregue,
 reabilite e recarregue novamente. Confira catálogo e vínculo antes de atender.
+Na instalação v0.23.1 observada em S19, a recarga compara nomes habilitados:
+alterar somente `env` manteve o banco anterior. Confirme ausência de ferramentas
+após desabilitar e o estado esperado após reconectar; “no server changes” ou
+seis ferramentas, isoladamente, não comprovam troca de banco.
 
 A ausência de ferramentas perigosas deve ser conferida no catálogo efetivo.
 Uma skill builtin essencial pode permanecer no contexto conforme a versão;
@@ -424,6 +428,12 @@ O contrato de leitura não autentica consentimento humano.
 
 <a id="aprovacao-local"></a>
 ### Revisão local de decisões
+
+Para a versão integrada S19, consulte o
+[CLI de evidências](../evals/README.md#jornada-integrada-s19). `prepare` cria um
+banco sintético schema3 já migrado; não execute novamente `migrate` nesse banco.
+Configuração, catálogo e atestações no Hermes continuam sendo passos humanos
+separados. Resultados históricos não aprovam a versão integrada.
 
 Este é um fluxo assistido. A pessoa operadora atesta que a cozinheira manifestou
 a decisão sobre o conteúdo exato; não escolhe prato ou preço em seu lugar.
@@ -467,12 +477,14 @@ restauradas automaticamente.
 Os comandos tipados cobrem preferências, feedback, fatos, plano/seleções,
 equivalências, conversões e aquisição histórica por conversão, confirmação
 de cotação, aceite, preço e revisões de candidatas/ofertas já existentes.
-Novos overlays de estoque/aquisição, proveniência expandida e pesquisa mediada
-não são habilitados aqui. Snapshot original permanece imutável.
+Na versão integrada, overlays de aquisição, proveniência por informação e
+pesquisa mediada têm contratos próprios já implementados. A aprovação local
+não habilita pesquisa nem amplia o catálogo do host. Snapshot original permanece imutável.
 
 Provas determinísticas usam SQLite sintético, CLI em processo separado e MCP
-stdio real. A homologação do catálogo ampliado no Hermes real e o aceite humano
-da entrega permanecem pendentes; siga a experimentação humana um passo por vez.
+stdio real. Os aceites históricos S13–S18 permanecem registrados; a revalidação
+da jornada integrada e o aceite S19 continuam pendentes. Siga a experimentação
+humana um passo por vez.
 
 <a id="teste-do-original"></a>
 ### Teste opcional do anexo original
