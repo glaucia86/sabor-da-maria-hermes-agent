@@ -65,7 +65,7 @@ O Sabor da Maria combina **Hermes para conversar e pesquisar** com **Python/MCP 
 Este é o percurso completo para o avaliador: **XLSX real → seu modelo no Hermes → pesquisa web → conversa no Desktop → aprovação local → cardápio e preço**. Não usa dados de demonstração, respostas gravadas ou credenciais da autora. Tenha dois canais: o Desktop para conversar e um terminal para revisar propostas.
 
 > [!IMPORTANT]
-> O plugin de pesquisa suporta **Hermes 0.23.1, commit `3b421578588243f920886e6fe79a6faa87ea026e`**. O lock Python não fixa o Hermes. Outra versão é recusada pelo plugin até validação de compatibilidade; instalar simplesmente a versão mais recente não garante funcionamento. O percurso Desktop está implementado, mas sua homologação conversacional nesta revisão permanece pendente. Veja [verificações](#validar).
+> O plugin de pesquisa suporta **Hermes 0.23.1, commit `3b421578588243f920886e6fe79a6faa87ea026e`**. O lock Python não fixa o Hermes. Outra versão é recusada pelo plugin até validação de compatibilidade; instalar simplesmente a versão mais recente não garante funcionamento. Uma [jornada E2E assistida no Desktop](docs/verification-desktop-e2e.md) foi concluída em um workspace `SIMULATION`; a jornada com a planilha original no perfil REAL permanece a validar pelo avaliador. Veja [verificações](#validar).
 
 <a id="requisitos"></a>
 ### 1. Confira os pré-requisitos
@@ -128,13 +128,7 @@ Use **o mesmo `--directory` em todas as etapas**. Repetir `setup-real` com o mes
 <a id="configuracao-local"></a>
 ### 5. Prepare a pesquisa e o perfil do projeto
 
-O percurso guiado usa **DDGS**, sem chave de API de pesquisa e sem fallback automático. Na instalação Hermes compatível, instale seu componente opcional se ainda estiver ausente:
-
-```sh
-hermes tools post-setup ddgs
-```
-
-Esse comando prepara dependências **do Hermes**, compartilhadas pela instalação; não configura seu modelo. Se já havia processos do Hermes abertos, encerre-os normalmente e reabra após a instalação. Não é necessário instalar um serviço de gateway para seguir este guia.
+O percurso guiado usa o **Exa pelo endpoint anônimo**, sem chave de API de pesquisa e sem fallback automático. O provedor `web-exa` acompanha o Hermes; não há componente opcional a instalar nem `EXA_API_KEY` a configurar. O endpoint anônimo tem cota e disponibilidade externas: uma falha deixa a pesquisa pendente, sem trocar de provedor. Não é necessário instalar um serviço de gateway para seguir este guia.
 
 ```sh
 uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding configure --directory "artifacts/private/local"
@@ -161,6 +155,14 @@ uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding verify-profile
 ```
 
 **Esperado:** configuração, arquivos dos plugins, descoberta da skill e conexão MCP em `PASS`, além de `model_configured: true`. `credentials: NOT_CHECKED` e `host_dispatch_and_conversation: NOT_RUN` são intencionais: o diagnóstico não envia uma mensagem ao modelo nem comprova a pesquisa. Essa prova acontece na próxima etapa.
+
+Opcionalmente, confirme a pesquisa ao vivo antes de abrir o Desktop:
+
+```sh
+uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding check-research --directory "artifacts/private/local"
+```
+
+**Esperado:** `research: LIVE_SEARCH_AND_EXTRACTION_PASS`, `provider: exa`, `authentication: ANONYMOUS` e `business_writes: false`. O comando busca `receita <primeiro termo liberado>` e extrai o primeiro resultado no runtime do perfil, sem gravar fontes, propostas ou decisões. Não usa o modelo.
 
 <a id="desktop-local"></a>
 ### 8. Abra o Desktop e inicie o atendimento
@@ -434,12 +436,20 @@ uv run --locked --no-sync ruff check src tests/conftest.py tests/unit tests/inte
 uv run --locked --no-sync ruff format --check src tests/conftest.py tests/unit tests/integration evals scripts
 ```
 
+> [!NOTE]
+> **Windows, opcional:** se o diretório temporário padrão do pytest recusar acesso (`PermissionError: [WinError 5]` em `pytest-of-<usuário>`), todos os testes que usam `tmp_path` falham na preparação. Use uma pasta nova e privada, sem apagar a anterior:
+>
+> ```powershell
+> uv run --locked --no-sync python -X utf8 -B -m pytest tests/unit tests/integration -q -p no:cacheprovider --basetemp artifacts/private/pytest-local-1
+> ```
+
 Os testes usam fixtures sintéticas e SQLite temporário. Cobrem importação, custos, condições desconhecidas ou bloqueadas, orçamento agregado, aprovação, concorrência, rollback, replay, invalidação e retomada. Integrações exercitam MCP stdio real; testes com Hypothesis exploram sequências de alterações. O [teste do anexo original](docs/setup.md#teste-do-original) é ignorado quando o arquivo privado está ausente.
 
 ### O que as evidências demonstram
 
 | Evidência registrada | Alcance e limite |
 | --- | --- |
+| [Jornada E2E assistida no Desktop](docs/verification-desktop-e2e.md) | Workspace `SIMULATION` com planilha sintética: pesquisa Exa, receita web, adaptação hipotética, viabilidade `ELIGIBLE`, compras `CONFIRMED`, aceite e preço M30 persistidos. Separa as ações do Hermes das intervenções operacionais; não usa a planilha original nem o perfil REAL. |
 | [Percurso local REAL e Desktop](docs/speaker/verification-local-real.md) | Regressão: 804 testes aprovados e dois ignorados; 15 testes do onboarding passaram após o refinamento final do guard de versão. Diagramas, links e slides conferidos. Lint geral tem quatro imports preexistentes não usados; Desktop com modelo autenticado e planilha original ainda não foi homologado. |
 | [Verificação integrada histórica](docs/verification.md) e [12 evals originais](evals/s11-results.json) | Jornada assistida, pesquisa real, decisões e retomada em dados sintéticos. Assertions críticas originais passaram; revisão humana apontou clareza insuficiente em EV-07 e EV-09. As respostas reais corrigidas passaram na revisão delegada em S19; a avaliação humana original permanece registrada, sem alegar nova entrevista humana de usabilidade. |
 | [Pesquisa mediada — handoff S17](doc-specs/implementation-slices.md) | Registro de pesquisa/extração reais de receitas e ofertas, recusas no host e encerramento da revisão humana no perfil testado. O relatório separado S17 não acompanha este checkout; seu handoff histórico foi preservado. Não homologa automaticamente outro perfil ou versão. |
@@ -447,7 +457,7 @@ Os testes usam fixtures sintéticas e SQLite temporário. Cobrem importação, c
 | [CI](.github/workflows/ci.yml) | Configura checks de núcleo/MCP em Windows, Ubuntu e macOS. Não instala o Hermes nem testa a conversa. Sucesso histórico não comprova a execução de uma alteração posterior. |
 | [Agent Evals](evals/README.md) e [matriz S19](evals/s19-results.json) | 18 casos integrados concluídos no recorte CLI assistido, com versões executadas, falhas e revisão automatizada explicitamente delegada preservadas. Os 12 roteiros anteriores permanecem históricos. Não são 18 novas execuções da mesma versão nem homologação Desktop. |
 
-**Estado da versão documentada:** o percurso REAL prepara banco, perfil, pesquisa e abertura do Desktop; a jornada humana completa nesse canal ainda precisa ser validada com planilha original e modelo autenticado. Resultados históricos e `NOT_RUN` mantêm seu alcance. Consulte o [registro desta revisão](docs/speaker/verification-local-real.md) para distinguir os testes atuais das evidências anteriores.
+**Estado da versão documentada:** o percurso REAL prepara banco, perfil, pesquisa e abertura do Desktop e é o caminho oficial reproduzível. A jornada completa no Desktop foi concluída de forma assistida em `SIMULATION`, com intervenções operacionais registradas; com a planilha original no perfil REAL, ela ainda precisa ser validada. Resultados históricos e `NOT_RUN` mantêm seu alcance. Consulte o [registro desta revisão](docs/speaker/verification-local-real.md) para distinguir os testes atuais das evidências anteriores.
 
 A avaliação completa precisa conferir conversa acessível, pesquisa real, decisões, retomada e estado persistido na mesma versão/perfil. **Desktop é o canal escolhido para a avaliação; os resultados históricos em CLI não o homologam.** A demonstração é feita ao vivo; slides e roteiro não substituem um ensaio concluído.
 
@@ -461,7 +471,7 @@ Desktop e vídeo não foram testados naquela execução.
 
 ### Teste básico opcional sem modelo
 
-Para verificar somente o núcleo com uma fixture sintética, use `python scripts/demo.py setup` e depois `uv run --locked --no-sync python -X utf8 scripts/demo.py check`. Esse fluxo é `SIMULATION`, contém somente arroz e não habilita pesquisa. Ele permanece separado do [percurso real do avaliador](#executar).
+Para verificar somente o núcleo com uma fixture sintética, use `python scripts/demo.py setup` e depois `uv run --locked --no-sync python -X utf8 scripts/demo.py check`. Esse fluxo é `SIMULATION`, contém somente arroz e não habilita pesquisa. Ele permanece separado do [percurso real do avaliador](#executar). O onboarding atual não configura pesquisa em perfis `SIMULATION`; o ensaio E2E registrado completou essa parte manualmente.
 
 <a id="problemas"></a>
 ## 🛠️ Resolva problemas de execução
@@ -472,7 +482,9 @@ Para verificar somente o núcleo com uma fixture sintética, use `python scripts
 | Planilha ausente/inválida | Confira caminho entre aspas, abas, cabeçalhos e limite de 5 MiB. A aplicação não gera uma substituta. |
 | Outra planilha/contexto ou pasta incompleta | Preserve a pasta; escolha outro `--directory`. Não edite manifesto ou banco. |
 | Modelo ausente ou falha de autenticação | Repita `model` no mesmo diretório; autentique localmente. `model_configured` não prova credenciais válidas. |
-| Pesquisa incompatível/indisponível | Confira versão/commit do Hermes, componente DDGS, termos liberados e rede. Não habilite busca livre como fallback. |
+| Pesquisa incompatível/indisponível | Confira versão/commit do Hermes, termos liberados e rede; execute `check-research`. Cota ou indisponibilidade do endpoint anônimo Exa deixa a pesquisa pendente. Não habilite busca livre como fallback. |
+| Perfil REAL preparado com o provedor anterior | Execute `refresh-research` no mesmo diretório, reabra o Desktop e repita `check-research` e `verify-profile`. Não reimporte a planilha. Detalhes no [guia](docs/setup.md#comandos). |
+| Aprovação concluída, mas o agente ainda vê `PENDING` | A consulta pode ter ocorrido antes do commit. Aguarde `ok: true` no terminal e peça nova consulta do estado. |
 | Termo desejado não foi liberado | Siga [como revisar termos](docs/setup.md#pesquisa); não peça ao modelo para contornar a restrição. |
 | Desktop mostra outro perfil ou ferramentas extras | Interrompa o atendimento e confira perfil/contexto. O catálogo esperado é seis MCP e duas de pesquisa. |
 | Proposta expirada ou hash divergente | Consulte novamente o estado; peça uma proposta atual e faça nova inspeção. |

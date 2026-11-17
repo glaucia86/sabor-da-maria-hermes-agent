@@ -5,6 +5,7 @@
   cortes e perguntas difíceis ligadas ao código.
 - [Demo Hermes](demo-hermes.md): 5–10 minutos, Desktop, planilha real e aprovação no terminal.
 - [Verificação do percurso REAL](verification-local-real.md): testes atuais e pendências humanas.
+- [Jornada E2E assistida no Desktop](../verification-desktop-e2e.md): ensaio `SIMULATION` concluído e intervenções operacionais.
 - [Verificação e limites S20](verification-s20.md): resultados reais e integração.
 
 ## Publicação no GitHub Pages

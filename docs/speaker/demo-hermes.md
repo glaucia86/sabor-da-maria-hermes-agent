@@ -10,11 +10,13 @@ papéis de cozinheira e operadora, explique essa alternância ao avaliador.
 Complete as [dez etapas de preparação](../../README.md#executar) e faça um
 ensaio completo. Confira versão/commit do backend, perfil, contexto, catálogo
 efetivo (seis MCP e duas de pesquisa) e ausência de detalhes privados na conversa.
-A revisão atual não é evidência de homologação Desktop: registre o resultado
-real em [verificações](verification-local-real.md).
+A [jornada E2E assistida](../verification-desktop-e2e.md) foi concluída em
+`SIMULATION`; ela não homologa o perfil REAL com a planilha original. Registre
+o resultado real em [verificações](verification-local-real.md).
 
-Tenha a planilha original local, modelo autenticado, DDGS disponível, termos
-públicos autorizados e um segundo terminal na raiz do projeto. Não projete
+Tenha a planilha original local, modelo autenticado, pesquisa Exa confirmada
+por `check-research`, termos públicos autorizados e um segundo terminal na raiz
+do projeto. Não projete
 credenciais, configurações completas ou logs privados. Declare o que foi
 preparado antes da sessão; não apresente uma pesquisa anterior como busca ao vivo.
 Se reutilizar um atendimento já ensaiado, declare também as decisões existentes.
@@ -35,6 +37,9 @@ As aprovações acontecem nos pontos em que surgirem propostas, não somente ao
 final. Use `review list`, `inspect` e `approve` conforme o README. Leia cada
 resumo antes de digitar `ATESTO <hash>`; nunca automatize o stdin nem peça ao
 agente para atestar. Se uma proposta expirar, revise uma proposta atual.
+Volte ao Desktop somente depois de `ok: true` no terminal; uma consulta anterior
+ao commit ainda mostra a proposta como `PENDING`. O aceite exige interesse
+registrado antes; se o agente pular essa etapa, peça a proposta de interesse.
 
 ## Se algo impedir a demonstração
 

@@ -41,8 +41,9 @@ Contagens não homologam uma conversa: o teste de runtime separado cobre o despa
   do Desktop foram exercitados; nenhum callback sentinela foi chamado.
 - CLI real em perfil e SQLite sintéticos: `search_culinary_sources` e
   `extract_culinary_source` retornaram `ok: true`. Tentativas anteriores retornaram
-  `DATA_SOURCE_UNAVAILABLE`; nenhuma ativou busca livre. DDGS é uma dependência
-  externa e sucesso pontual não garante disponibilidade contínua.
+  `DATA_SOURCE_UNAVAILABLE`; nenhuma ativou busca livre. DDGS, provedor desta
+  verificação, é uma dependência externa e sucesso pontual não garante
+  disponibilidade contínua. O onboarding atual usa Exa anônimo, com o mesmo limite.
 - Correção aplicada ao perfil de atendimento existente: plugin copiado,
   isolamento `host`, `desktop_ui` desabilitado e plugins recarregados.
   Registro no gateway aprovado; hash do SQLite de negócio idêntico antes/depois.

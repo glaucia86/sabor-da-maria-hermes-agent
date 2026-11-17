@@ -76,6 +76,8 @@ Acrescente a ação abaixo e `--directory "artifacts/private/local"`.
 | `configure` | Solicita termos públicos, cria perfil exclusivo, copia plugins e prepara contexto/skill. Não escolhe modelo. |
 | `model` | Abre o seletor nativo do Hermes no perfil correspondente; você escolhe e autentica. |
 | `verify-profile` | Confere configurações, arquivos, skill, conexão MCP e registro dos plugins no gateway REAL. Não prova autenticação nem conversa. |
+| `check-research` | Busca `receita <primeiro termo liberado>` e extrai o primeiro resultado no runtime do perfil REAL, pelo Exa anônimo. Não grava fontes nem decisões e não usa o modelo. |
+| `refresh-research` | Somente em perfil REAL já preparado: copia o plugin de pesquisa do checkout e regrava a configuração de pesquisa (`plugins.enabled`, settings do plugin e `web.*`). Não reimporta a planilha, não altera o banco nem os termos de `research.json`. |
 | `desktop` | Repete a verificação e abre o perfil/contexto preparados. Modelo ausente impede lançamento. |
 | `review list/inspect/approve/reject` | Acessa a revisão local com banco/workspace já vinculados. |
 | `doctor` | Diagnostica executáveis e dependências; não configura nem autentica o modelo. |
@@ -102,9 +104,18 @@ compartilhado pode já conter `dona_maria` de outra origem; o plugin recusa esse
 conflito em vez de substituir módulos. O isolamento mantém um processo de
 plugins por perfil, sem ampliar a allowlist.
 
-Para atualizar um perfil existente, preserve a planilha e o SQLite. Copie
-`src/dona_maria/hermes_research/__init__.py` e `plugin.yaml` para o diretório
-`plugins/dona-maria-mediated-research` **desse perfil** e execute:
+Para atualizar a pesquisa de um perfil REAL existente (plugin do checkout e
+provedor Exa), preserve a planilha e o SQLite e use o mesmo diretório:
+
+```sh
+uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding refresh-research --directory "artifacts/private/local"
+```
+
+**Esperado:** `research: UPDATED_NOT_EXERCISED` e `business_writes: false`.
+O comando exige `profile-ready.json` e recusa perfis `SIMULATION`.
+
+Perfis preparados antes do isolamento de plugins também precisam destas duas
+chaves, que `refresh-research` não altera:
 
 ```sh
 hermes -p NOME_DO_PERFIL config set plugins.isolation host
@@ -112,9 +123,10 @@ hermes -p NOME_DO_PERFIL config set agent.disabled_toolsets '["desktop_ui"]'
 ```
 
 Recarregue os plugins ou reinicie normalmente o gateway desse perfil e abra
-uma nova conversa. Execute `verify-profile` antes do atendimento; agora ele
-consulta `plugins.list` no gateway que abre a sessão e recusa registro ausente.
-Não reimporte a planilha nem recrie o banco para corrigir esse problema.
+uma nova conversa. Execute `check-research` e `verify-profile` antes do
+atendimento; `verify-profile` consulta `plugins.list` no gateway que abre a
+sessão e recusa registro ausente. Não reimporte a planilha nem recrie o banco
+para corrigir esse problema.
 
 `plugins doctor dona-maria-mediated-research --ci` usa um home temporário sem
 os settings do perfil nessa versão. Sua falha `SOURCE_NOT_CONFIGURED` não
@@ -129,16 +141,21 @@ diretas às ferramentas excluídas; a exclusão não amplia nenhuma permissão.
 <a id="pesquisa"></a>
 ## Pesquisa real e termos públicos
 
-O percurso guiado usa o provedor DDGS, plugin `web-ddgs`. Se o componente não
-estiver instalado, execute `hermes tools post-setup ddgs` e reinicie normalmente
-os processos do Hermes. Essa instalação afeta o runtime compartilhado do host.
-Não instale pacotes Hermes na `.venv` da aplicação.
+O percurso guiado usa o provedor Exa pelo endpoint anônimo, sem `EXA_API_KEY`.
+`configure` habilita o plugin `web-exa`, distribuído com o Hermes, e grava
+`web.search_backend: exa`, `web.provider_tier.exa: free` e
+`web.keyless_fallback: false`. Não há componente opcional a instalar. Não
+instale pacotes Hermes na `.venv` da aplicação.
+
+O endpoint anônimo tem cota e disponibilidade externas. `check-research`
+diagnostica a pesquisa ao vivo; uma falha não ativa outro provedor e não
+grava fonte ou decisão. Tente mais tarde, sem habilitar busca livre.
 
 `configure` pede termos separados por vírgula: apenas letras, espaços e hífens,
 de 1 a 100 caracteres por termo, até 200 termos. Você vê a lista exata e precisa
 digitar `LIBERAR PESQUISA`. O texto não é obtido automaticamente da planilha.
 O plugin constrói consultas de receita/oferta a partir desses termos; não aceita
-URL ou consulta livre produzida pelo modelo. DDGS pode estar indisponível ou
+URL ou consulta livre produzida pelo modelo. O provedor pode estar indisponível ou
 retornar resultados inadequados: registre a falha, sem inventar uma fonte.
 
 Para **revisar os termos de um atendimento existente**, encerre a sessão e edite
@@ -155,7 +172,7 @@ O objeto precisa ser **idêntico ao de `research.json`**. Depois execute
 `verify-profile` e abra uma nova sessão via `desktop`. Divergência é recusada;
 nenhum ajuste é feito pelo LLM. Para mudar de provedor, o exemplo
 [hermes.s17.example.yaml](../config/hermes.s17.example.yaml) é referência técnica
-de configuração manual, não uma opção homologada pelo onboarding DDGS.
+de configuração manual, não uma opção homologada pelo onboarding Exa.
 
 O estado `CONFIGURED_NOT_EXERCISED` significa configuração preparada. Somente
 uma busca/extração reais na sessão comprovam pesquisa. O catálogo completo
@@ -193,7 +210,8 @@ histórica não recupera validade perdida por alteração posterior.
 | Perfil existe sem marcador de conclusão | Não é sobrescrito. Preserve-o e prepare outro diretório/perfil. |
 | Configuração divergente | O diagnóstico nomeia a chave; revise-a localmente conforme a configuração esperada. Não substitua o YAML inteiro. |
 | Código/skill mudou | Prepare outro atendimento para a avaliação; não alegue que hashes antigos homologam arquivos novos. |
-| Dependência de pesquisa ausente | Instale o componente pelo Hermes e abra um processo novo. |
+| Pesquisa indisponível ou perfil com provedor anterior | Execute `check-research`; se o perfil REAL foi preparado com o provedor anterior, use `refresh-research`, reabra o Desktop e verifique o perfil. |
+| Aprovação concluída, mas o agente ainda vê `PENDING` | A consulta pode ter ocorrido antes do commit. Aguarde `ok: true` no terminal e peça nova consulta do estado. |
 | Plugin incompatível | Confira versão e commit efetivos. Não desative o bloqueio nem alegue pesquisa a partir do MCP isolado. |
 | Interface expõe detalhes privados na conversa normal | Não considere o canal aprovado; registre o comportamento observado. |
 
@@ -246,6 +264,15 @@ Esse fluxo histórico cria somente arroz em `artifacts/private/demo-s20`, modo
 do avaliador. Os comandos `configure`, `model`, `chat` e `review` desse modo
 continuam disponíveis para diagnóstico assistido; não promovem a base a REAL.
 Em sistemas sem `python`, use `python3` no primeiro comando.
+
+O onboarding atual **não configura pesquisa em perfis `SIMULATION`**:
+`configure` habilita somente o MCP e a política, e `refresh-research` exige
+REAL. Se a pesquisa for acrescentada manualmente, `verify-profile` e `desktop`
+recusam o perfil por divergência de configuração; `check-research` só pode
+diagnosticar uma configuração já feita à mão. A
+[jornada E2E assistida](verification-desktop-e2e.md) usou um perfil
+`SIMULATION` completado dessa forma; o procedimento não faz parte do percurso
+reproduzível do avaliador.
 
 ### Agent Evals integrados S19
 

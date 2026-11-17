@@ -9,8 +9,9 @@ localmente no Hermes e Desktop. Os registros históricos em
 - `setup-real` importa o XLSX fornecido sem alterar o original, prepara REAL e
   migrações com backups. Não cria fatos de cozinha, receitas ou decisões.
 - Mesmo arquivo/diretório reaproveitam o banco; troca de origem ou modo é recusada.
-- Perfil novo, pesquisa DDGS explícita, termos aprovados pelo operador e contexto
-  com orientações/skill. Nenhuma credencial pessoal é copiada.
+- Perfil novo, pesquisa explícita (DDGS nesta revisão; o onboarding atual usa
+  Exa anônimo), termos aprovados pelo operador e contexto com orientações/skill.
+  Nenhuma credencial pessoal é copiada.
 - `desktop` verifica a preparação, exige modelo e abre perfil/cwd próprios.
 - O diagnóstico compara o rótulo de versão/commit; a checagem integral do commit
   continua no plugin, dentro do runtime efetivo. Rótulo não é prova de execução.
@@ -36,7 +37,7 @@ por um adaptador controlado; não abre interface nem usa credenciais/rede.
 | Cópia preparada para Pages | HTML atualizado no worktree separado; workflow e oito assets validados. Sem publicação. |
 | Instalação limpa em outra máquina/SO | NOT_RUN. |
 | Planilha original no percurso REAL | NOT_RUN; anexo binário não disponível nesta execução. |
-| Desktop, modelo autenticado e pesquisa ao vivo | NOT_RUN; exigem execução humana. |
+| Desktop, modelo autenticado e pesquisa ao vivo | NOT_RUN nesta revisão. Em 17/11, a [jornada E2E assistida](../verification-desktop-e2e.md) foi concluída em `SIMULATION`; o perfil REAL com a planilha original segue NOT_RUN. |
 
 Comandos executados no Windows, com o Python 3.13 da aplicação:
 
