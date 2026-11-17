@@ -134,8 +134,8 @@
 			}
 		},
 		{
-			"x": 710.5295153870197,
-			"y": 649.4699274413566,
+			"x": 715,
+			"y": 644.5,
 			"rotation": 0,
 			"isLocked": false,
 			"opacity": 1,
@@ -152,7 +152,7 @@
 				"font": "draw",
 				"textAlign": "middle",
 				"autoSize": true,
-				"scale": 1,
+				"scale": 0.75,
 				"richText": {
 					"type": "doc",
 					"content": [
@@ -162,6 +162,15 @@
 								{
 									"type": "text",
 									"text": "Operador"
+								}
+							]
+						},
+						{
+							"type": "paragraph",
+							"content": [
+								{
+									"type": "text",
+									"text": "humano"
 								}
 							]
 						}
@@ -1439,8 +1448,8 @@
 			}
 		},
 		{
-			"x": 378.84644116063487,
-			"y": 651.2825215228804,
+			"x": 354,
+			"y": 650,
 			"rotation": 0,
 			"isLocked": false,
 			"opacity": 1,
@@ -1457,7 +1466,7 @@
 				"font": "draw",
 				"textAlign": "middle",
 				"autoSize": true,
-				"scale": 0.75,
+				"scale": 0.6875,
 				"richText": {
 					"type": "doc",
 					"content": [
@@ -1466,7 +1475,7 @@
 							"content": [
 								{
 									"type": "text",
-									"text": "manifesta a decisão"
+									"text": "manifestação na conversa (fluxo lógico)"
 								}
 							]
 						}
@@ -2450,6 +2459,42 @@
 								{
 									"type": "text",
 									"text": "approvals"
+								}
+							]
+						}
+					]
+				}
+			}
+		},
+		{
+			"x": 748,
+			"y": 281.5,
+			"rotation": 0,
+			"isLocked": false,
+			"opacity": 1,
+			"meta": {},
+			"id": "shape:PYMCPserviceLocalClarification1",
+			"typeName": "shape",
+			"parentId": "page:page",
+			"index": "azzzZ",
+			"type": "text",
+			"props": {
+				"color": "black",
+				"size": "s",
+				"w": 8,
+				"font": "draw",
+				"textAlign": "middle",
+				"autoSize": true,
+				"scale": 0.6875,
+				"richText": {
+					"type": "doc",
+					"content": [
+						{
+							"type": "paragraph",
+							"content": [
+								{
+									"type": "text",
+									"text": "MCP + domínio: mesmo serviço Python local"
 								}
 							]
 						}
