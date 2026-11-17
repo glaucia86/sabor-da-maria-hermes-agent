@@ -3,7 +3,7 @@
 - [Slides Reveal.js](slides/index.html): 15 slides (~17 minutos) + 5 de apêndice, notas em português.
 - [Guia para Lucas Rolim](guia-apresentacao-lucas.md): fala de cada slide, ritmo,
   cortes e perguntas difíceis ligadas ao código.
-- [Demo Hermes](demo-hermes.md): 5–10 minutos, Desktop, planilha real e aprovação no terminal.
+- [Demo Hermes](demo-hermes.md): demo rápida de 8 minutos, somente leitura, no perfil REAL preparado.
 - [Guia interativo da Dona Maria](../demo/hermes-desktop-walkthrough.html): prompts
   naturais da demonstração, também acessível pelo slide 11.
 - [Verificação do percurso REAL](verification-local-real.md): testes atuais e pendências humanas.

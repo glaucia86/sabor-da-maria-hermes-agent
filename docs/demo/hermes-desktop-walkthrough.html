@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Roteiro da demonstração no Hermes Desktop — Sabor da Maria</title>
-<meta name="description" content="Guia interativo para conduzir a demonstração do Sabor da Maria no Hermes Desktop, com prompts copiáveis, revisão humana e recuperação de erros.">
+<meta name="description" content="Guia interativo do Sabor da Maria no Hermes Desktop: demo rápida de 8 minutos, somente leitura, e jornada completa de validação técnica com prompts copiáveis, revisão humana e recuperação de erros.">
 <style>
 @font-face {
   font-family: "Manrope";
@@ -215,8 +215,8 @@ button { font: inherit; }
 .pager button, .btn { display: inline-flex; align-items: center; gap: 8px; padding: 11px 18px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--ink); font-weight: 700; font-size: 14.5px; cursor: pointer; max-width: 44%; }
 .pager button:hover:not(:disabled), .btn:hover { border-color: var(--coral); color: var(--coral); }
 .pager button:disabled { opacity: .4; cursor: not-allowed; }
-.pager #next { background: var(--ifood); border-color: var(--ifood); color: #fff; }
-.pager #next:hover:not(:disabled) { background: #d42a3c; color: #fff; }
+.pager #next, .pager #q-next { background: var(--ifood); border-color: var(--ifood); color: #fff; }
+.pager #next:hover:not(:disabled), .pager #q-next:hover:not(:disabled) { background: #d42a3c; color: #fff; }
 .pager-pos { color: var(--soft); font-size: 13px; text-align: center; }
 .btn.small { padding: 7px 12px; font-size: 13px; }
 .toast { position: fixed; right: 24px; bottom: 24px; z-index: 40; max-width: 420px; padding: 12px 16px; border-radius: 9px; background: #23272b; border: 1px solid var(--real-line); color: var(--ink); font-size: 14px; box-shadow: 0 16px 40px #000a; transform: translateY(20px); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
@@ -228,21 +228,91 @@ noscript p { padding: 12px 16px; border: 1px solid var(--sim-line); border-radiu
 
 html[data-track="real"] [data-only="sim"], html[data-track="sim"] [data-only="real"] { display: none !important; }
 
+/* Modos: escolha, demo rápida e jornada completa */
+.top-center { min-width: 0; }
+.top-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 12px 18px; }
+.mode-switch { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.mode-switch button { padding: 7px 13px; border: 0; background: transparent; color: var(--muted); font-size: 13px; font-weight: 700; cursor: pointer; }
+.mode-switch button + button { border-left: 1px solid var(--line); }
+.mode-switch button small { margin-left: 6px; font-size: 11.5px; font-weight: 650; color: var(--soft); }
+.mode-switch button:hover { color: var(--ink); }
+.mode-switch button[aria-pressed="true"] { background: #3a1f24; color: #fff; }
+.mode-switch button[aria-pressed="true"] small { color: var(--coral); }
+.mode-switch button:focus-visible { outline-offset: -3px; }
+.no-js .mode-switch, .no-js .q-timer { display: none; }
+.q-main, .chooser { min-width: 0; padding: 34px 44px 40px; max-width: 1160px; }
+.chooser { margin: 0 auto; }
+.chooser h1 { font-size: 46px; font-weight: 800; letter-spacing: -.055em; }
+.chooser h1 span { color: var(--coral); }
+.chooser h1:focus { outline: none; }
+.chooser h1:focus-visible { outline: 3px solid var(--coral); outline-offset: 6px; }
+.mode-cards { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 22px; margin-top: 28px; }
+.mode-card { display: flex; flex-direction: column; gap: 14px; padding: 26px 26px 24px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+.mode-card.primary { border-color: var(--ifood); border-top-width: 4px; background: linear-gradient(180deg, #24191c, var(--panel) 60%); box-shadow: 0 18px 40px #0007; }
+.mode-card h2 { font-size: 30px; font-weight: 800; letter-spacing: -.045em; }
+.mode-card h2 span { color: var(--coral); }
+.mode-card p { margin: 0; color: var(--muted); }
+.mode-card .facts { list-style: none; padding: 0; display: grid; gap: 8px; }
+.mode-card .facts li { position: relative; padding-left: 22px; color: var(--ink); }
+.mode-card .facts li + li { margin-top: 0; }
+.mode-card .facts li::before { content: ""; position: absolute; left: 2px; top: .62em; width: 9px; height: 3px; background: var(--coral); }
+.mode-card .cta { margin-top: auto; padding-top: 6px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.mode-card .btn { max-width: none; text-decoration: none; }
+.btn.primary { background: var(--ifood); border-color: var(--ifood); color: #fff; }
+.btn.primary:hover { background: #d42a3c; border-color: #d42a3c; color: #fff; }
+.q-banner { margin: 0 0 26px; }
+.block.say { border-top: 3px solid var(--ifood); }
+.block.say p { font-size: 17px; color: var(--ink); }
+.sidebar .dur { display: block; margin-top: 2px; font-family: var(--mono); font-size: 11.5px; color: var(--soft); }
+.q-timer { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius); background: #16191c; color: var(--muted); }
+.q-timer h2 { margin: 0 !important; }
+.q-timer .clock { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 12.5px; }
+.q-timer .clock strong { font-family: var(--mono); font-size: 21px; font-weight: 650; color: var(--ink); }
+.q-timer .clock strong.over { color: var(--coral); }
+.q-timer .clock span { font-family: var(--mono); }
+.q-timer .actions { display: flex; gap: 8px; }
+.q-timer .btn { max-width: none; }
+.q-timer .btn[aria-pressed="true"] { border-color: var(--real-line); color: var(--real-ink); }
+.op-channel { margin-top: 24px; padding: 22px 24px 24px; border: 1px solid var(--research-line); border-left-width: 5px; border-radius: var(--radius); background: #1a1626; }
+.op-channel > header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 18px; }
+.op-channel > header h3 { font-size: 24px; font-weight: 800; letter-spacing: -.035em; color: #fff; }
+.op-channel > header h3 span { color: var(--research-ink); }
+.op-channel .op-intro { margin: 12px 0 0; max-width: 900px; color: var(--muted); }
+.op-channel .op-intro strong { color: var(--ink); }
+.b-op { background: var(--research-bg); border-color: var(--research-line); color: var(--research-ink); }
+.op-channel .steps-list > li { background: #15121f; border-color: #3a3156; }
+.op-channel .steps-list > li::before { background: var(--research-bg); color: var(--research-ink); }
+.op-channel .steps-list h3 { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.op-channel .steps-list h3 code { font-size: 14px; color: var(--research-ink); background: var(--research-bg); border-color: var(--research-line); }
+.op-channel .steps-list p { margin: 0 0 10px; color: var(--muted); font-size: 15px; }
+.op-channel .cmd-block .prompt-head { justify-content: flex-start; }
+.op-channel .block { background: #15121f; border-color: #3a3156; }
+.op-channel .block h3 { color: var(--research-ink); }
+.op-channel .block li, .op-channel .block p { font-size: 15px; }
+.op-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 4px; }
+.op-stat { padding: 12px 14px; border: 1px solid #3a3156; border-radius: 8px; background: #1f1a2e; }
+.op-stat strong { display: block; font-size: 34px; line-height: 1; font-weight: 800; letter-spacing: -.04em; color: #fff; }
+.op-stat span { display: block; margin-top: 6px; font-size: 13.5px; color: var(--muted); }
+.op-stat.applied strong { color: var(--real-ink); }
+.op-stat.open strong { color: var(--write-ink); }
+
 @keyframes enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-@media (max-width: 1240px) { .grid-2 { grid-template-columns: 1fr; } .cards-3 { grid-template-columns: 1fr; } }
+@media (max-width: 1240px) { .grid-2 { grid-template-columns: 1fr; } .cards-3 { grid-template-columns: 1fr; } .mode-cards { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .op-stats { grid-template-columns: 1fr; } }
 @media (max-width: 980px) {
   .topbar { grid-template-columns: 1fr; gap: 10px; position: static; }
+  .top-actions { justify-content: flex-start; }
   .layout { grid-template-columns: 1fr; }
   .sidebar { position: static; max-height: none; border-right: 0; border-bottom: 1px solid var(--line); }
-  main { padding: 24px 20px; }
+  main, .q-main, .chooser { padding: 24px 20px; }
   .rec dl { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) { *, ::before, ::after { animation: none !important; transition: none !important; } }
 @media print {
   body { background: #fff; color: #111; }
-  .topbar, .sidebar, .pager, .copy, .step-foot, .skip, .toast { display: none !important; }
+  .topbar, .sidebar, .pager, .copy, .step-foot, .skip, .toast, .q-timer { display: none !important; }
   .layout { display: block; }
-  .section[hidden] { display: block !important; }
+  .view[hidden], .section[hidden] { display: block !important; }
   .section { break-before: page; }
 }
 </style>
@@ -251,26 +321,321 @@ html[data-track="real"] [data-only="sim"], html[data-track="sim"] [data-only="re
 <a class="skip" href="#conteudo">Pular para o conteúdo</a>
 
 <header class="topbar">
-  <a class="brand" href="#inicio" data-nav-link>
+  <a class="brand" href="#modos" data-nav-link>
     <strong>Sabor da <span>Maria.</span></strong>
     <small>Roteiro da demo · Hermes Desktop</small>
   </a>
-  <div class="progress-wrap">
-    <span class="progress-text" id="progress-text"><strong>0</strong> de 14 etapas concluídas</span>
-    <div class="progress" id="progress" role="progressbar" aria-label="Etapas do roteiro concluídas" aria-valuemin="0" aria-valuemax="14" aria-valuenow="0" aria-valuetext="0 de 14 etapas concluídas"><span></span></div>
+  <div class="top-center">
+    <div class="progress-wrap" data-for="full">
+      <span class="progress-text" id="progress-text"><strong>0</strong> de 14 etapas concluídas</span>
+      <div class="progress" id="progress" role="progressbar" aria-label="Etapas do roteiro concluídas" aria-valuemin="0" aria-valuemax="14" aria-valuenow="0" aria-valuetext="0 de 14 etapas concluídas"><span></span></div>
+    </div>
+    <div class="progress-wrap" data-for="quick" hidden>
+      <span class="progress-text" id="q-progress-text"><strong>Cena 1</strong> de 5</span>
+      <div class="progress" id="q-progress" role="progressbar" aria-label="Cenas da demo rápida" aria-valuemin="1" aria-valuemax="5" aria-valuenow="1" aria-valuetext="Cena 1 de 5"><span></span></div>
+    </div>
+    <p class="progress-text" data-for="chooser" hidden>Escolha como conduzir a demonstração.</p>
   </div>
-  <fieldset class="track-switch">
-    <legend>Trilha</legend>
-    <span class="opts">
-      <input type="radio" name="track" id="track-real" value="real" checked>
-      <label class="l-real" for="track-real">REAL</label>
-      <input type="radio" name="track" id="track-sim" value="sim">
-      <label class="l-sim" for="track-sim">SIMULATION</label>
-    </span>
-  </fieldset>
+  <div class="top-actions">
+    <div class="mode-switch" role="group" aria-label="Modo do roteiro">
+      <button type="button" data-mode="quick" aria-pressed="false">Demo rápida<small>8 min</small></button>
+      <button type="button" data-mode="full" aria-pressed="false">Jornada completa<small>14 etapas</small></button>
+    </div>
+    <fieldset class="track-switch" data-for="full">
+      <legend>Trilha</legend>
+      <span class="opts">
+        <input type="radio" name="track" id="track-real" value="real" checked>
+        <label class="l-real" for="track-real">REAL</label>
+        <input type="radio" name="track" id="track-sim" value="sim">
+        <label class="l-sim" for="track-sim">SIMULATION</label>
+      </span>
+    </fieldset>
+  </div>
 </header>
 
-<div class="layout">
+<!-- ============================ ESCOLHA DO MODO ============================ -->
+<div class="view" id="view-chooser" data-view="chooser">
+<section class="chooser" id="modos" aria-labelledby="t-modos">
+  <p class="kicker">Guia interativo · Hermes Desktop</p>
+  <h1 id="t-modos" tabindex="-1">Como você quer <span>conduzir?</span></h1>
+  <p class="lead">O mesmo atendimento pode ser apresentado de duas formas. Para uma avaliação com tempo limitado, use a <strong>Demo rápida</strong>: ela só consulta o workspace REAL já preparado. A <strong>Jornada completa</strong> é o roteiro de validação técnica, com propostas e aprovações locais.</p>
+  <noscript><p>Sem JavaScript, os dois modos aparecem em sequência nesta página: primeiro a demo rápida, depois a jornada completa.</p></noscript>
+  <div class="mode-cards">
+    <article class="mode-card primary" aria-labelledby="t-card-rapida">
+      <p class="kicker">Recomendado para apresentações</p>
+      <h2 id="t-card-rapida">Demo rápida <span>— 8 minutos</span></h2>
+      <p>Cinco cenas curtas, somente leitura, sobre o workspace REAL preparado antes da sessão.</p>
+      <ul class="facts">
+        <li>Despensa, fonte Exa, adaptação, viabilidade e decisões.</li>
+        <li>Sem PowerShell, sem novas propostas e sem aprovações.</li>
+        <li>Prompt pronto, resultado esperado e frase para o avaliador em cada cena.</li>
+        <li>Cronômetro indicativo por cena.</li>
+      </ul>
+      <div class="cta"><a class="btn primary" href="#demo-1" data-mode-link="quick">Começar a demo rápida →</a><span class="progress-text" id="resume-quick"></span></div>
+    </article>
+    <article class="mode-card" aria-labelledby="t-card-completa">
+      <p class="kicker">Validação técnica</p>
+      <h2 id="t-card-completa">Jornada completa <span>— 14 etapas</span></h2>
+      <p>Do onboarding à seleção do cardápio, com trilhas REAL e SIMULATION e apêndices de aprovação e recuperação.</p>
+      <ul class="facts">
+        <li>Cria propostas e exige atestação no terminal.</li>
+        <li>No ensaio, a jornada levou mais de uma hora.</li>
+        <li>Indicada para reprodução e avaliação técnica detalhada.</li>
+      </ul>
+      <div class="cta"><a class="btn" href="#inicio" data-mode-link="full">Abrir a jornada completa</a><span class="progress-text" id="resume-full"></span></div>
+    </article>
+  </div>
+</section>
+</div>
+
+<!-- ============================ DEMO RÁPIDA ============================ -->
+<div class="layout view" id="view-quick" data-view="quick">
+<aside class="sidebar">
+  <nav aria-label="Cenas da demo rápida">
+    <h2>Demo rápida · 8 min</h2>
+    <ol>
+      <li><a href="#demo-1" data-qnav><span class="num">01</span><span>Despensa e orçamento<span class="dur">1:30</span></span><span class="state" aria-hidden="true" hidden></span></a></li>
+      <li><a href="#demo-2" data-qnav><span class="num">02</span><span>Fonte Exa registrada<span class="dur">1:30</span></span><span class="state" aria-hidden="true" hidden></span></a></li>
+      <li><a href="#demo-3" data-qnav><span class="num">03</span><span>Adaptação e plano<span class="dur">1:45</span></span><span class="state" aria-hidden="true" hidden></span></a></li>
+      <li><a href="#demo-4" data-qnav><span class="num">04</span><span>Viabilidade pendente<span class="dur">1:30</span></span><span class="state" aria-hidden="true" hidden></span></a></li>
+      <li><a href="#demo-5" data-qnav><span class="num">05</span><span>Decisões e aprovação externa<span class="dur">1:45</span></span><span class="state" aria-hidden="true" hidden></span></a></li>
+    </ol>
+  </nav>
+  <div class="side-actions">
+    <div class="q-timer" role="group" aria-labelledby="t-timer">
+      <h2 id="t-timer">Cronômetro indicativo</h2>
+      <div class="clock"><span>Cena</span><strong id="q-scene-clock">0:00</strong><span id="q-scene-target">/ 1:30</span></div>
+      <div class="clock"><span>Total</span><strong id="q-total-clock">0:00</strong><span>/ 8:00</span></div>
+      <div class="actions"><button type="button" class="btn small" id="q-timer-toggle" aria-pressed="false">Iniciar</button><button type="button" class="btn small" id="q-timer-reset">Zerar</button></div>
+    </div>
+    <p>Somente leitura: nenhum comando, nenhuma proposta, nenhuma aprovação.</p>
+    <p>Atalhos: <kbd>←</kbd> cena anterior · <kbd>→</kbd> próxima.</p>
+  </div>
+</aside>
+
+<main class="q-main" id="conteudo-rapido" tabindex="-1">
+
+<!-- Cena 1 -->
+<section class="section" id="demo-1" data-qscene data-title="Despensa e orçamento" data-seconds="90" aria-labelledby="tq-1">
+  <header>
+    <p class="kicker">Demo rápida · Cena 1 de 5</p>
+    <h2 id="tq-1" tabindex="-1">Despensa REAL e orçamento de R$ 80</h2>
+    <dl class="meta">
+      <div><dt>Duração</dt><dd><span class="badge b-none">1 min 30 s</span></dd></div>
+      <div><dt>Trilha</dt><dd><span class="badge b-real">REAL · preparado antes da sessão</span></dd></div>
+      <div><dt>Ferramentas esperadas</dt><dd><span class="tool t-read">get_business_state</span><span class="tool t-read">get_inventory_snapshot</span></dd></div>
+      <div><dt>Aprovação</dt><dd><span class="badge b-none">Nenhuma — somente leitura</span></dd></div>
+    </dl>
+  </header>
+  <div class="callout info">
+    <span class="ico" aria-hidden="true">i</span>
+    <div>
+      <p><strong>Antes do primeiro prompt.</strong> Abra o Hermes Desktop no perfil REAL já preparado e diga ao avaliador o que foi feito antes da sessão: planilha original importada, pesquisa Exa e cinco decisões aprovadas localmente. Durante a demo não há comandos no terminal. Se o modelo demorar ou falhar, mostre o estado alcançado e siga para a próxima cena, sem completar com hipóteses.</p>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="stack">
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag real">REAL</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Oi! Sou a Maria. Hoje é só para eu ver, então não registre nem proponha nada. Me mostre um resumo da minha despensa: quantos ingredientes estão salvos, alguns exemplos com quanto eu tenho e quanto custa cada grama ou mililitro, e quanto ainda posso gastar com complementos.</blockquote>
+      </figure>
+      <div class="block say"><h3>Diga ao avaliador</h3><p>“Esses números vêm do banco, não da memória do modelo. A planilha original foi importada antes, e o agente só consulta.”</p></div>
+    </div>
+    <div class="stack">
+      <div class="block expected"><h3>Resultado esperado</h3><p>O agente consulta o estado e a despensa e informa os <strong>37 ingredientes</strong> da planilha original, com estoque e custo unitário de alguns deles. O saldo para complementos parte do teto de <strong>R$ 80,00</strong>. Custos ausentes ou unidades ambíguas aparecem como pendência, nunca como zero.</p></div>
+      <div class="block done"><h3>Cena concluída quando</h3><ul class="checks"><li>A contagem de 37 ingredientes foi apresentada.</li><li>O saldo para complementos foi informado a partir dos R$ 80,00.</li><li>A resposta não anuncia nada como registrado ou proposto.</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- Cena 2 -->
+<section class="section" id="demo-2" data-qscene data-title="Fonte Exa registrada" data-seconds="90" aria-labelledby="tq-2">
+  <header>
+    <p class="kicker">Demo rápida · Cena 2 de 5</p>
+    <h2 id="tq-2" tabindex="-1">Receita pesquisada via Exa, fonte original e proveniência</h2>
+    <dl class="meta">
+      <div><dt>Duração</dt><dd><span class="badge b-none">1 min 30 s</span></dd></div>
+      <div><dt>Ferramentas esperadas</dt><dd><span class="tool t-read">get_business_state</span></dd></div>
+      <div><dt>Pesquisa</dt><dd><span class="badge b-none">Nenhuma nova busca — registro anterior</span></dd></div>
+      <div><dt>Aprovação</dt><dd><span class="badge b-none">Nenhuma — somente leitura</span></dd></div>
+    </dl>
+  </header>
+  <div class="grid-2">
+    <div class="stack">
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag real">REAL</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Quero rever a receita que já pesquisamos na internet. Não faça uma nova pesquisa. Me mostre o título, o link da fonte, quando ela foi consultada e quais informações vieram da internet, sem mudar nada.</blockquote>
+      </figure>
+      <div class="block say"><h3>Diga ao avaliador</h3><p>“Essa pesquisa foi feita antes da sessão, pelo Exa, só com termos liberados. Estou mostrando o registro da fonte, não uma busca ao vivo.”</p></div>
+    </div>
+    <div class="stack">
+      <div class="block expected"><h3>Resultado esperado</h3><p>O agente lê o estado e apresenta a receita web registrada: título, link, trecho e data da consulta. A origem aparece como pesquisa web registrada, e as condições da cozinha continuam dependendo de confirmação. Nenhuma ferramenta de pesquisa é chamada.</p></div>
+      <div class="block done"><h3>Cena concluída quando</h3><ul class="checks"><li>O link e a data da consulta da fonte aparecem na conversa.</li><li>O agente separa o que veio da internet do que ainda depende da cozinha.</li><li>Se o Desktop exibir as chamadas, nenhuma é <code>search_culinary_sources</code> ou <code>extract_culinary_source</code>.</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- Cena 3 -->
+<section class="section" id="demo-3" data-qscene data-title="Adaptação e plano" data-seconds="105" aria-labelledby="tq-3">
+  <header>
+    <p class="kicker">Demo rápida · Cena 3 de 5</p>
+    <h2 id="tq-3" tabindex="-1">Adaptação da Maria, fonte preservada e plano de 1 lote com 4 porções</h2>
+    <dl class="meta">
+      <div><dt>Duração</dt><dd><span class="badge b-none">1 min 45 s</span></dd></div>
+      <div><dt>Ferramentas esperadas</dt><dd><span class="tool t-read">get_business_state</span></dd></div>
+      <div><dt>Aprovação</dt><dd><span class="badge b-none">Nenhuma — somente leitura</span></dd></div>
+    </dl>
+  </header>
+  <div class="grid-2">
+    <div class="stack">
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag real">REAL</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Agora me mostre a minha versão adaptada dessa receita ao lado da original. Quero saber o que mudou, de onde veio cada informação e como ficou o plano de produção. É só consulta.</blockquote>
+      </figure>
+      <div class="block say"><h3>Diga ao avaliador</h3><p>“A adaptação não apaga a fonte. A receita original continua intacta, e cada campo diz se veio da web ou da Maria.”</p></div>
+    </div>
+    <div class="stack">
+      <div class="block expected"><h3>Resultado esperado</h3><p>Duas receitas separadas: a original da web, intacta, e a adaptação da Maria, indicando de qual receita deriva. A origem de cada informação aparece por campo, distinguindo o que veio da fonte do que ela informou. O plano vigente tem <strong>1 lote e 4 porções</strong>.</p></div>
+      <div class="block done"><h3>Cena concluída quando</h3><ul class="checks"><li>Original e adaptação aparecem como receitas distintas.</li><li>A adaptação indica a receita de origem e a procedência dos campos.</li><li>O plano apresentado é de 1 lote e 4 porções.</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- Cena 4 -->
+<section class="section" id="demo-4" data-qscene data-title="Viabilidade pendente" data-seconds="90" aria-labelledby="tq-4">
+  <header>
+    <p class="kicker">Demo rápida · Cena 4 de 5</p>
+    <h2 id="tq-4" tabindex="-1">Viabilidade ainda pendente: o modelo não inventa o que falta</h2>
+    <dl class="meta">
+      <div><dt>Duração</dt><dd><span class="badge b-none">1 min 30 s</span></dd></div>
+      <div><dt>Ferramentas esperadas</dt><dd><span class="tool t-read">evaluate_recipe_feasibility</span><span class="tool t-read">get_business_state</span></dd></div>
+      <div><dt>Aprovação</dt><dd><span class="badge b-none">Nenhuma — consulta somente leitura</span></dd></div>
+    </dl>
+  </header>
+  <div class="grid-2">
+    <div class="stack">
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag real">REAL</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Com o que eu já contei da minha cozinha, eu consigo fazer esse prato na quantidade do plano? Se faltar alguma informação, só me diga o que falta. Não registre nada agora e não suponha nada.</blockquote>
+      </figure>
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Se o agente pedir a informação <span class="tag real">REAL</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Obrigada. Hoje eu não vou responder nem registrar nada. Só queria entender o que ainda falta confirmar.</blockquote>
+        <p class="prompt-note">Responder com um fato criaria uma proposta, e a demo rápida não cria propostas.</p>
+      </figure>
+      <div class="block say"><h3>Diga ao avaliador</h3><p>“Pendente é o comportamento correto. Sem fato confirmado, o domínio não deixa o agente concluir que ela consegue preparar o prato.”</p></div>
+    </div>
+    <div class="stack">
+      <div class="block expected"><h3>Resultado esperado</h3><p>A avaliação de viabilidade volta <strong>PENDING</strong>. O agente nomeia, em linguagem simples, as condições que ainda faltam confirmar e pergunta por elas, em vez de completá-las com hipóteses. Ele não declara o prato elegível nem fala em aceite.</p></div>
+      <div class="block done"><h3>Cena concluída quando</h3><ul class="checks"><li>A viabilidade aparece como pendente.</li><li>Pelo menos uma condição faltante foi nomeada.</li><li>Nenhum fato novo foi registrado ou proposto.</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- Cena 5 -->
+<section class="section" id="demo-5" data-qscene data-title="Decisões e aprovação externa" data-seconds="105" aria-labelledby="tq-5">
+  <header>
+    <p class="kicker">Demo rápida · Cena 5 de 5</p>
+    <h2 id="tq-5" tabindex="-1">Proposta do LLM, validação determinística e aprovação humana externa</h2>
+    <dl class="meta">
+      <div><dt>Duração</dt><dd><span class="badge b-none">1 min 45 s</span></dd></div>
+      <div><dt>Ferramentas esperadas</dt><dd><span class="tool t-read">get_business_state</span></dd></div>
+      <div><dt>Aprovação</dt><dd><span class="badge b-none">Nenhuma — somente leitura</span></dd></div>
+      <div><dt>Canal da operadora</dt><dd><span class="badge b-op">Referência visual · sem execução ao vivo</span></dd></div>
+    </dl>
+  </header>
+  <div class="grid-2">
+    <div class="stack">
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag real">REAL</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Para fechar, me diga o que já está decidido no meu atendimento e o que ainda está pendente. Liste as propostas com a situação atual de cada uma, sem criar, repetir ou aprovar nenhuma.</blockquote>
+      </figure>
+      <div class="block say"><h3>Diga ao avaliador</h3><p>“O agente só cria propostas. A aprovação acontece neste canal, fora do modelo: a operadora inspeciona, atesta o hash à mão e o domínio revalida antes de gravar. Hoje não vou executar nenhuma aprovação.”</p></div>
+    </div>
+    <div class="stack">
+      <div class="block expected"><h3>Resultado esperado</h3><p>O agente lista as propostas e a situação de cada uma: <strong>cinco aplicadas</strong> e a adicional com a situação atual. Como propostas expiram em dez minutos, o esperado é que ela esteja expirada. Não há aceite, preço nem cardápio.</p></div>
+      <div class="block done"><h3>Cena concluída quando</h3><ul class="checks"><li>As cinco decisões aplicadas foram listadas.</li><li>A situação da proposta adicional foi lida do estado, sem ser presumida.</li><li>O agente não ofereceu aprovar, repetir ou recriar propostas.</li></ul></div>
+    </div>
+  </div>
+
+  <section class="op-channel" aria-labelledby="t-op-channel">
+    <header>
+      <h3 id="t-op-channel">Canal da pessoa operadora <span>— fora do modelo</span></h3>
+      <span class="badge b-op">Referência técnica · não executar na demo rápida</span>
+    </header>
+    <p class="op-intro">A aprovação roda num <strong>terminal local, em outro processo</strong>. A CLI <strong>não é ferramenta MCP</strong> e não aparece no catálogo do Hermes: o agente cria propostas, mas <strong>não consegue executar a aprovação</strong>.</p>
+
+    <div class="grid-2">
+      <ol class="steps-list">
+        <li>
+          <h3>Listar <code>review list</code></h3>
+          <p>Mostra as propostas e a situação de cada uma.</p>
+          <figure class="cmd-block">
+            <figcaption class="prompt-head"><span class="speaker">Terminal da operadora · exemplo</span></figcaption>
+            <pre><code>uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding review --directory "artifacts/private/local" list</code></pre>
+          </figure>
+        </li>
+        <li>
+          <h3>Inspecionar <code>review inspect</code></h3>
+          <p>Mostra o conteúdo exato da proposta e o hash.</p>
+          <figure class="cmd-block">
+            <figcaption class="prompt-head"><span class="speaker">Terminal da operadora · exemplo</span></figcaption>
+            <pre><code>uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding review --directory "artifacts/private/local" inspect ID_DA_PROPOSTA</code></pre>
+          </figure>
+        </li>
+        <li>
+          <h3>Aprovar <code>review approve</code></h3>
+          <p>Confere hash e validade e exige a <strong>atestação manual</strong>: <code>ATESTO</code> + hash, digitado só se a Dona Maria manifestou aquela decisão.</p>
+          <figure class="cmd-block">
+            <figcaption class="prompt-head"><span class="speaker">Terminal da operadora · exemplo</span></figcaption>
+            <pre><code>uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding review --directory "artifacts/private/local" approve ID_DA_PROPOSTA --hash HASH_DA_INSPECAO</code></pre>
+          </figure>
+        </li>
+      </ol>
+
+      <div class="stack">
+        <div class="block">
+          <h3>Verificado antes de gravar</h3>
+          <p><code>inspect</code> e <code>approve</code> conferem conteúdo exato, hash e validade da proposta. O domínio confere o estado e as regras e grava efeito e auditoria na mesma transação. Se algo falha, nada é aplicado.</p>
+        </div>
+        <div class="block">
+          <h3>Neste atendimento REAL</h3>
+          <div class="op-stats">
+            <div class="op-stat applied"><strong>5</strong><span>propostas aprovadas antes da sessão</span></div>
+            <div class="op-stat open"><strong>1</strong><span>proposta adicional sem aprovação e sem efeito</span></div>
+          </div>
+          <p style="margin-top:12px">Nenhuma aprovação nesta demo. Para executar o fluxo, veja o <a href="#apendice-a">Apêndice A</a>.</p>
+        </div>
+        <div class="block">
+          <h3>Invariantes financeiras</h3>
+          <p><strong>R$ 80</strong> de complementos compartilhados entre todos os pratos. <strong>Taxa didática de 10% sobre o preço de venda</strong>, não sobre o custo.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="callout warn">
+    <span class="ico" aria-hidden="true">!</span>
+    <div>
+      <p><strong>Transição para o slide 12.</strong> A receita REAL não foi aceita nem precificada. CMV, preço e cardápio pertencem ao ensaio <code>SIMULATION</code> de 17/11/2026 e aparecem no slide 12.</p>
+    </div>
+  </div>
+</section>
+
+<nav class="pager" aria-label="Navegação entre cenas">
+  <button type="button" id="q-prev">← Anterior</button>
+  <span class="pager-pos" id="q-pos"></span>
+  <button type="button" id="q-next">Próxima →</button>
+</nav>
+
+<footer class="site-foot">
+  <p>Demo rápida: somente leitura sobre o workspace REAL preparado antes da sessão. Para reproduzir a jornada com propostas e aprovações, use a <a href="#inicio">Jornada completa</a>.</p>
+</footer>
+</main>
+</div>
+
+<!-- ============================ JORNADA COMPLETA ============================ -->
+<div class="layout view" id="view-full" data-view="full">
 <aside class="sidebar">
   <nav aria-label="Etapas do roteiro">
     <h2>Começo</h2>
@@ -383,7 +748,7 @@ html[data-track="real"] [data-only="sim"], html[data-track="sim"] [data-only="re
     <span class="ico" aria-hidden="true">i</span>
     <div>
       <p><strong>Como usar.</strong> Comece pela <a href="#preparo">Etapa 0</a>. Em cada etapa, copie o prompt da trilha escolhida, cole no Desktop e espere a resposta antes do próximo. O agente pode fazer perguntas em ordem diferente: responda o que ele perguntar com dados verdadeiros (REAL) ou com as hipóteses declaradas do ensaio (SIMULATION). Marque a etapa como concluída só quando todos os critérios forem atendidos.</p>
-      <p>Para a fala cronometrada de 5 a 10 minutos, veja também o <a href="../speaker/demo-hermes.md">roteiro de demonstração</a>. As fontes de verdade deste guia são o <a href="../../README.md#executar">README</a>, o <a href="../setup.md">guia de instalação e recuperação</a>, o <a href="../verification-desktop-e2e.md">registro da jornada E2E</a>, as <a href="../../.hermes.md">orientações do Hermes</a> e a <a href="../../skills/dona-maria-cardapio/SKILL.md">skill de atendimento</a>.</p>
+      <p>Esta jornada é a validação técnica completa. Para uma apresentação de 8 minutos, use a <a href="#demo-1">Demo rápida</a> e o <a href="../speaker/demo-hermes.md">roteiro de demonstração</a>. As fontes de verdade deste guia são o <a href="../../README.md#executar">README</a>, o <a href="../setup.md">guia de instalação e recuperação</a>, o <a href="../verification-desktop-e2e.md">registro da jornada E2E</a>, as <a href="../../.hermes.md">orientações do Hermes</a> e a <a href="../../skills/dona-maria-cardapio/SKILL.md">skill de atendimento</a>.</p>
     </div>
   </div>
 </section>
@@ -1456,14 +1821,21 @@ sobra após taxa e ingr. = 0,90 × preço − CMV por porção
   const STORE = "sabor-da-maria.demo-walkthrough.v1";
   const read = () => { try { return JSON.parse(localStorage.getItem(STORE)) || {}; } catch { return {}; } };
   const saved = read();
+  const fullMain = document.getElementById("conteudo");
+  const quickMain = document.getElementById("conteudo-rapido");
+  const scenes = [...quickMain.querySelectorAll("[data-qscene]")];
+  const seconds = (n) => (Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0);
   const state = {
     track: saved.track === "sim" ? "sim" : "real",
     evidence: saved.evidence !== false,
     done: Array.isArray(saved.done) ? saved.done : [],
+    fullAt: typeof saved.fullAt === "string" ? saved.fullAt : "inicio",
+    quickAt: Number.isInteger(saved.quickAt) ? Math.max(0, Math.min(scenes.length - 1, saved.quickAt)) : 0,
+    quickTime: Array.isArray(saved.quickTime) && saved.quickTime.length === scenes.length ? saved.quickTime.map(seconds) : scenes.map(() => 0),
   };
   const persist = () => { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch { /* armazenamento indisponível */ } };
 
-  const sections = [...document.querySelectorAll("main [data-section]")];
+  const sections = [...fullMain.querySelectorAll("[data-section]")];
   const steps = sections.filter((s) => s.hasAttribute("data-step"));
   const navLinks = [...document.querySelectorAll("a[data-nav]")];
   const prev = document.getElementById("prev");
@@ -1497,6 +1869,8 @@ sobra após taxa e ingr. = 0,90 × preço − CMV por porção
     const stepIndex = steps.indexOf(section);
     pagerPos.textContent = stepIndex >= 0 ? "Etapa " + stepIndex + " de " + (steps.length - 1) : label(section);
     document.title = label(section) + " — Roteiro da demo · Sabor da Maria";
+    state.fullAt = section.id;
+    persist();
     if (target && target !== section) {
       target.scrollIntoView({ block: "start" });
       if (focus) { target.setAttribute("tabindex", "-1"); target.focus({ preventScroll: true }); }
@@ -1504,13 +1878,6 @@ sobra após taxa e ingr. = 0,90 × preço − CMV por porção
       window.scrollTo(0, 0);
       if (focus) section.querySelector("h1, h2").focus({ preventScroll: true });
     }
-  }
-
-  function fromHash(focus) {
-    const id = decodeURIComponent(location.hash.slice(1));
-    const target = id ? document.getElementById(id) : null;
-    const section = target ? target.closest("[data-section]") : null;
-    show(section ? sections.indexOf(section) : 0, { focus, target });
   }
 
   function go(index) {
@@ -1580,7 +1947,7 @@ sobra após taxa e ingr. = 0,90 × preço − CMV por porção
     const figure = button.closest("figure");
     const isPrompt = Boolean(figure.querySelector(".prompt-text"));
     const caption = figure.querySelector(".speaker").textContent.replace(/\s+/g, " ").trim();
-    const section = label(button.closest("[data-section]"));
+    const section = label(button.closest("[data-section], [data-qscene]"));
     button.setAttribute("aria-label", (isPrompt ? "Copiar prompt: " : "Copiar comando: ") + caption + " — " + section);
     button.addEventListener("click", async () => {
       const text = textOf(figure);
@@ -1627,20 +1994,179 @@ sobra após taxa e ingr. = 0,90 × preço − CMV por porção
   });
   document.getElementById("show-evidence").addEventListener("change", (e) => setEvidence(e.target.checked));
 
+  /* Demo rápida: cenas, progresso e cronômetro indicativo */
+  const qLinks = [...document.querySelectorAll("a[data-qnav]")];
+  const qPrev = document.getElementById("q-prev");
+  const qNext = document.getElementById("q-next");
+  const qPos = document.getElementById("q-pos");
+  const qBar = document.getElementById("q-progress");
+  const sceneClock = document.getElementById("q-scene-clock");
+  const sceneTarget = document.getElementById("q-scene-target");
+  const totalClock = document.getElementById("q-total-clock");
+  const timerToggle = document.getElementById("q-timer-toggle");
+  const QUICK_TOTAL = scenes.reduce((sum, s) => sum + Number(s.dataset.seconds), 0);
+  let timer = null;
+
+  const clock = (s) => Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+  const spentTotal = () => state.quickTime.reduce((a, b) => a + b, 0);
+
+  function renderClock() {
+    const target = Number(scenes[state.quickAt].dataset.seconds);
+    const spent = state.quickTime[state.quickAt];
+    sceneClock.textContent = clock(spent);
+    sceneTarget.textContent = "/ " + clock(target);
+    sceneClock.classList.toggle("over", spent > target);
+    totalClock.textContent = clock(spentTotal());
+    totalClock.classList.toggle("over", spentTotal() > QUICK_TOTAL);
+  }
+
+  function renderTimerButton() {
+    timerToggle.textContent = timer ? "Pausar" : spentTotal() > 0 ? "Retomar" : "Iniciar";
+    timerToggle.setAttribute("aria-pressed", String(Boolean(timer)));
+  }
+
+  function startTimer() {
+    if (timer) return;
+    timer = setInterval(() => { state.quickTime[state.quickAt] += 1; renderClock(); persist(); }, 1000);
+    renderTimerButton();
+  }
+
+  function pauseTimer() {
+    if (timer) { clearInterval(timer); timer = null; persist(); }
+    renderTimerButton();
+  }
+
+  function showScene(index, { focus = false } = {}) {
+    state.quickAt = Math.max(0, Math.min(scenes.length - 1, index));
+    const scene = scenes[state.quickAt];
+    scenes.forEach((s, i) => { s.hidden = i !== state.quickAt; });
+    qLinks.forEach((a) => {
+      if (a.getAttribute("href") === "#" + scene.id) a.setAttribute("aria-current", "step");
+      else a.removeAttribute("aria-current");
+    });
+    const n = state.quickAt + 1;
+    qPrev.disabled = state.quickAt === 0;
+    qNext.disabled = state.quickAt === scenes.length - 1;
+    qPrev.textContent = state.quickAt === 0 ? "← Anterior" : "← " + label(scenes[state.quickAt - 1]);
+    qNext.textContent = state.quickAt === scenes.length - 1 ? "Fim da demo" : label(scenes[state.quickAt + 1]) + " →";
+    qPos.textContent = "Cena " + n + " de " + scenes.length;
+    qBar.firstElementChild.style.width = (n / scenes.length) * 100 + "%";
+    qBar.setAttribute("aria-valuenow", String(n));
+    qBar.setAttribute("aria-valuetext", "Cena " + n + " de " + scenes.length);
+    document.getElementById("q-progress-text").innerHTML = "<strong>Cena " + n + "</strong> de " + scenes.length;
+    document.title = label(scene) + " — Demo rápida · Sabor da Maria";
+    persist();
+    renderClock();
+    window.scrollTo(0, 0);
+    if (focus) scene.querySelector("h2").focus({ preventScroll: true });
+  }
+
+  function goScene(index) {
+    if (index < 0 || index >= scenes.length) return;
+    const id = scenes[index].id;
+    if (location.hash === "#" + id) showScene(index, { focus: true });
+    else location.hash = id;
+  }
+
+  /* Modos: escolha, demo rápida e jornada completa */
+  const views = {
+    chooser: document.getElementById("view-chooser"),
+    quick: document.getElementById("view-quick"),
+    full: document.getElementById("view-full"),
+  };
+  const modeButtons = [...document.querySelectorAll("button[data-mode]")];
+  const modeParts = [...document.querySelectorAll("[data-for]")];
+  const skip = document.querySelector(".skip");
+  let view = null;
+
+  function setView(name) {
+    if (name !== "quick") pauseTimer();
+    if (view === name) return;
+    view = name;
+    Object.entries(views).forEach(([key, el]) => { el.hidden = key !== name; });
+    modeParts.forEach((el) => { el.hidden = el.dataset.for !== name; });
+    modeButtons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === name)));
+    skip.setAttribute("href", name === "quick" ? "#conteudo-rapido" : name === "full" ? "#conteudo" : "#modos");
+  }
+
+  function fullIndex() {
+    const i = sections.findIndex((s) => s.id === state.fullAt);
+    return i >= 0 ? i : 0;
+  }
+
+  function renderResume() {
+    const doneCount = steps.filter((s) => state.done.includes(s.id)).length;
+    document.getElementById("resume-quick").textContent = state.quickAt > 0 || spentTotal() > 0 ? "Você parou na cena " + (state.quickAt + 1) + " de " + scenes.length + "." : "";
+    document.getElementById("resume-full").textContent = doneCount > 0 || state.fullAt !== "inicio" ? doneCount + " de " + steps.length + " etapas concluídas." : "";
+  }
+
+  function route(focus) {
+    const id = decodeURIComponent(location.hash.slice(1));
+    const target = id ? document.getElementById(id) : null;
+    if (id === "demo" || (target && views.quick.contains(target))) {
+      setView("quick");
+      const scene = target ? target.closest("[data-qscene]") : null;
+      showScene(scene ? scenes.indexOf(scene) : state.quickAt, { focus });
+      return;
+    }
+    if (id === "jornada" || (target && views.full.contains(target))) {
+      setView("full");
+      const section = target ? target.closest("[data-section]") : null;
+      show(section ? sections.indexOf(section) : fullIndex(), { focus, target: section ? target : null });
+      return;
+    }
+    setView("chooser");
+    renderResume();
+    document.title = "Escolha o modo — Roteiro da demo · Sabor da Maria";
+    window.scrollTo(0, 0);
+    if (focus) document.getElementById("t-modos").focus({ preventScroll: true });
+  }
+
+  function openMode(mode) {
+    const id = mode === "quick" ? scenes[state.quickAt].id : sections[fullIndex()].id;
+    if (location.hash === "#" + id) route(true);
+    else location.hash = id;
+  }
+
+  modeButtons.forEach((b) => b.addEventListener("click", () => openMode(b.dataset.mode)));
+  document.querySelectorAll("a[data-mode-link]").forEach((a) => {
+    a.addEventListener("click", (e) => { e.preventDefault(); openMode(a.dataset.modeLink); });
+  });
+  skip.addEventListener("click", (e) => {
+    e.preventDefault();
+    const destination = view === "quick" ? quickMain : view === "full" ? fullMain : document.getElementById("t-modos");
+    destination.focus();
+  });
+
+  timerToggle.addEventListener("click", () => (timer ? pauseTimer() : startTimer()));
+  document.getElementById("q-timer-reset").addEventListener("click", () => {
+    pauseTimer();
+    state.quickTime = scenes.map(() => 0);
+    persist();
+    renderClock();
+    renderTimerButton();
+    notify("Cronômetro zerado.");
+  });
+
   prev.addEventListener("click", () => go(current - 1));
   next.addEventListener("click", () => go(current + 1));
-  window.addEventListener("hashchange", () => fromHash(true));
+  qPrev.addEventListener("click", () => goScene(state.quickAt - 1));
+  qNext.addEventListener("click", () => goScene(state.quickAt + 1));
+  window.addEventListener("hashchange", () => route(true));
   document.addEventListener("keydown", (e) => {
     if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
     if (e.target.closest("input, textarea, select, [contenteditable]")) return;
-    if (e.key === "ArrowRight") { e.preventDefault(); go(current + 1); }
-    if (e.key === "ArrowLeft") { e.preventDefault(); go(current - 1); }
+    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+    const step = e.key === "ArrowRight" ? 1 : -1;
+    if (view === "quick") { e.preventDefault(); goScene(state.quickAt + step); }
+    if (view === "full") { e.preventDefault(); go(current + step); }
   });
 
   setTrack(state.track, false);
   setEvidence(state.evidence);
   renderProgress();
-  fromHash(false);
+  renderTimerButton();
+  route(false);
 })();
 </script>
 </body>

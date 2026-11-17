@@ -262,7 +262,7 @@ O comando repete a verificação e abre `hermes -p <perfil preparado> desktop --
 <a id="guia-html"></a>
 ### 9. Converse como Dona Maria com o guia interativo
 
-Abra [`docs/demo/hermes-desktop-walkthrough.html`](docs/demo/hermes-desktop-walkthrough.html) no navegador, conforme a [dica de abertura](#comece-aqui). Nele, você interpreta a Dona Maria e conversa em linguagem natural, copiando prompts em primeira pessoa, sem IDs, hashes ou comandos. São 13 etapas: despensa, pesquisa Exa, escolha da receita, condições da cozinha, adaptação, plano de produção, viabilidade, compras, interesse, aceite, cenários de preço, seleção do cardápio e conferência final.
+Abra [`docs/demo/hermes-desktop-walkthrough.html`](docs/demo/hermes-desktop-walkthrough.html) no navegador, conforme a [dica de abertura](#comece-aqui). Nele, você interpreta a Dona Maria e conversa em linguagem natural, copiando prompts em primeira pessoa, sem IDs, hashes ou comandos. Para este percurso, use o modo **Jornada completa — 14 etapas**. Depois da preparação, são 13 etapas de conversa: despensa, pesquisa Exa, escolha da receita, condições da cozinha, adaptação, plano de produção, viabilidade, compras, interesse, aceite, cenários de preço, seleção do cardápio e conferência final.
 
 Cada etapa explica o objetivo, o que o agente faz, as ferramentas MCP envolvidas, o resultado esperado e como reconhecer que terminou. O seletor **REAL / SIMULATION** separa os prompts para os seus dados dos prompts usados no ensaio. Os apêndices trazem o fluxo de aprovação e a recuperação dos erros observados.
 
@@ -308,7 +308,7 @@ Para retomar, feche a interface normalmente, repita o comando `desktop` do passo
 
 Não é necessário provocar todos os erros para concluir uma jornada. Para avaliação técnica, teste também a falta real de um equipamento, uma quantidade ambígua e uma mudança de premissa. Os resultados esperados são perguntas, bloqueios ou revalidação, nunca preenchimento inventado.
 
-O [guia interativo](docs/demo/hermes-desktop-walkthrough.html) conduz essa jornada etapa por etapa. O [guia de recuperação](docs/setup.md#recuperacao), o [roteiro de 5–10 minutos](docs/speaker/demo-hermes.md) e a [apresentação técnica](docs/speaker/README.md) complementam este percurso. Testes automatizados com fixtures sintéticas ficam em [Verifique a implementação](#validar); não substituem esta avaliação.
+O [guia interativo](docs/demo/hermes-desktop-walkthrough.html) tem dois modos. A **Jornada completa — 14 etapas** conduz essa jornada etapa por etapa, com propostas e aprovações locais. A **Demo rápida — 8 minutos** é somente leitura e serve para apresentações: consulta um atendimento REAL já preparado, sem novas propostas nem aprovações, e não substitui a jornada completa. O [guia de recuperação](docs/setup.md#recuperacao), o [roteiro da demo rápida](docs/speaker/demo-hermes.md) e a [apresentação técnica](docs/speaker/README.md) complementam este percurso. Testes automatizados com fixtures sintéticas ficam em [Verifique a implementação](#validar); não substituem esta avaliação.
 
 <a id="desafio"></a>
 ## 🎯 O desafio e a solução
