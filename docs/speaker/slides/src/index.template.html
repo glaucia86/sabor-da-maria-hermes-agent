@@ -31,9 +31,10 @@
   </div>
  </div>
  <aside class="notes">
-Olá, Lucas e Hildebrando! Obrigada pelo tempo de vocês. Este é o Sabor da Maria, que desenvolvi para o desafio de Senior AI Engineer.
-
-Primeiro vou mostrar o problema e as decisões de engenharia. Depois, a arquitetura e a jornada do agente. Em seguida, teremos dez minutos para a demonstração ao vivo e, no final, comento as melhorias e os próximos passos.
+<p>Olá, Lucas e Hildebrando! Obrigada pelo tempo de vocês.</p>
+<p>Hoje vou apresentar o Sabor da Maria, a solução que desenvolvi para o desafio de Senior AI Engineer do iFood.</p>
+<p>Vou começar pelo problema e pelas decisões de engenharia. Depois mostro a arquitetura e os fluxos da solução.</p>
+<p>Em seguida, teremos a demonstração prática. Para encerrar, apresento as limitações, os próximos passos e abro espaço para perguntas.</p>
  </aside>
 </section>
 
@@ -67,13 +68,15 @@ Primeiro vou mostrar o problema e as decisões de engenharia. Depois, a arquitet
   </div>
  </div>
  <aside class="notes">
-A Dona Maria está abrindo seu primeiro delivery. Ela tem uma planilha com 37 ingredientes: uma aba informa o estoque; a outra, os preços que pagou.
-
-O desafio traz duas restrições financeiras: oitenta reais para comprar complementos e uma taxa de dez por cento sobre a venda.
-
-A missão do Hermes customizado é ajudar em quatro momentos: pesquisar receitas reais e ouvir a opinião dela; descobrir se tem equipamentos, técnicas e condições para cozinhar; avaliar o que falta dentro do orçamento; e calcular o custo do prato e cenários de preço.
-
-O ponto mais importante é o segundo: gostar de uma receita não significa conseguir prepará-la.
+<p>O desafio apresenta a Dona Maria, que está abrindo seu primeiro delivery.</p>
+<p>Ela fornece uma planilha com duas abas: uma mostra o estoque e a outra registra as compras e os preços pagos. Ao todo, são 37 ingredientes.</p>
+<p>Temos também R$ 80 para comprar complementos e uma taxa de plataforma de 10% sobre o preço de venda.</p>
+<p>O Hermes Agent precisa ajudá-la em quatro etapas.</p>
+<p>Primeiro, pesquisar receitas reais na internet e ouvir a opinião dela.</p>
+<p>Depois, descobrir se ela tem equipamentos, técnicas e condições para preparar o prato. Para mim, esse é o coração do desafio.</p>
+<p>Em seguida, comparar ingredientes, identificar o que falta e verificar o orçamento.</p>
+<p>Por último, após o aceite de um prato, calcular o CMV e apresentar cenários de preço.</p>
+<p>Mas a escolha final continua sendo da Dona Maria.</p>
  </aside>
 </section>
 
@@ -96,13 +99,14 @@ O ponto mais importante é o segundo: gostar de uma receita não significa conse
   </ul>
  </div>
  <aside class="notes">
-O problema se resume a três perguntas: o que ela consegue cozinhar, se tem condições reais de produzir e quanto pode cobrar sem perder dinheiro.
-
-O risco não é abstrato. O agente pode recomendar um prato que exige forno quando ela não tem forno, tratar os oitenta reais como orçamento para cada receita ou calcular a taxa sobre o custo, em vez da venda.
-
-E existe o risco específico do modelo: errar uma conta ou interpretar um simples “parece bom” como aceite definitivo.
-
-Por isso, não bastava criar um recomendador de receitas. Eu precisava construir um fluxo em que essas decisões fossem verificadas antes de virar compromisso para o negócio.
+<p>Por trás do enunciado existem três perguntas: o que ela consegue produzir, se tem condições reais de preparar e quanto deve cobrar.</p>
+<p>Uma resposta errada pode trazer prejuízo.</p>
+<p>Imagine recomendar uma receita que exige forno quando ela não tem esse equipamento.</p>
+<p>Ou tratar os R$ 80 como orçamento individual de cada prato, em vez de um limite compartilhado.</p>
+<p>Na precificação, aplicar a taxa sobre o custo, e não sobre a venda, também pode gerar um preço abaixo do mínimo.</p>
+<p>Com LLMs há outros riscos: um cálculo errado, um fato esquecido ou até um “parece bom” interpretado como aprovação.</p>
+<p>Por isso, não quis construir apenas um recomendador.</p>
+<p>Separei a conversa do Hermes das regras determinísticas em Python. E mantive a aprovação humana fora do controle do modelo.</p>
  </aside>
 </section>
 
@@ -120,15 +124,15 @@ Por isso, não bastava criar um recomendador de receitas. Eu precisava construir
   <p class="takeaway">{{icon flask-conical size-7 text-mint}}Regra no código, não no prompt: um teste prova a regra sem chamar um LLM.</p>
  </div>
  <aside class="notes">
-A solução parte de uma separação de responsabilidades. O Hermes cuida da conversa: pesquisa, pergunta sobre a cozinha e explica as alternativas para a Dona Maria.
-
-Mas o modelo não é a autoridade sobre o negócio. Ele usa ferramentas MCP para consultar um serviço Python, que verifica viabilidade, orçamento e precificação com regras testáveis.
-
-O SQLite persiste os fatos e as decisões, então uma nova sessão não depende da memória automática do agente.
-
-E a Dona Maria continua decidindo. Quando ela manifesta uma escolha, o Hermes registra uma proposta; uma pessoa operadora revisa e atesta essa manifestação num terminal separado.
-
-Em resumo: o modelo conversa, o código valida e a decisão é humana.
+<p>Aqui está uma das principais decisões de arquitetura: separar o que o modelo pode fazer do que a aplicação precisa garantir.</p>
+<p>O Hermes conduz a conversa com a Dona Maria, pesquisa receitas e faz perguntas sobre a cozinha.</p>
+<p>Para orientar esse atendimento, configurei um arquivo de contexto, uma skill e dois plugins: um para a política de ferramentas e outro para a pesquisa mediada.</p>
+<p>Mas as regras de negócio não ficam no prompt.</p>
+<p>O Hermes acessa, por MCP via stdio, um serviço Python com seis ferramentas de atendimento. É ali que verifico viabilidade, orçamento e precificação.</p>
+<p>Uso Pydantic para validar dados, Decimal nos cálculos financeiros e SQLite para persistir fatos, receitas e decisões.</p>
+<p>Assim, o negócio não depende da memória automática do agente.</p>
+<p>E a Dona Maria continua decidindo. O Hermes propõe, mas um operador humano atesta a manifestação dela por um canal separado.</p>
+<p>Em resumo: o modelo conversa, o Python valida e a decisão é humana.</p>
  </aside>
 </section>
 
@@ -154,17 +158,14 @@ Em resumo: o modelo conversa, o código valida e a decisão é humana.
   </div>
  </div>
  <aside class="notes">
-Para chegar a essa solução, comparei caminhos mais simples com seus riscos.
-
-Deixar o LLM fazer as contas pelo prompt seria rápido, mas uma regra esquecida poderia gerar prejuízo. Por isso, os cálculos e as validações estão em Python, com testes.
-
-Também desativei a memória automática do Hermes para o estado de negócio ficar no SQLite. Nos valores financeiros, usei Decimal e arredondamento para cima, em centavos, para não ficar abaixo do preço mínimo.
-
-Outra escolha foi separar proposta de aprovação: o modelo não pode confirmar sozinho o que a Dona Maria decidiu.
-
-Na web, a pesquisa usa termos previamente liberados, reduzindo exposição de dados e riscos de conteúdo malicioso.
-
-Por fim, optei por MCP local e SQLite. Não havia motivo para introduzir infraestrutura distribuída neste desafio; os limites dessa escolha entram nos próximos passos.
+<p>Para chegar a essa solução, avaliei alguns caminhos e os riscos de cada um.</p>
+<p>O mais simples seria deixar o LLM fazer as contas. Mas uma regra esquecida ou um arredondamento errado pode trazer prejuízo.</p>
+<p>Por isso, coloquei as validações em Python, com testes automatizados.</p>
+<p>Também desliguei a memória automática do Hermes e passei a guardar o estado do negócio no SQLite.</p>
+<p>Nos cálculos financeiros, usei Decimal e arredondamento para cima, em centavos, para não cobrar abaixo do preço mínimo.</p>
+<p>Outra escolha foi separar proposta de aprovação. O agente pode sugerir, mas não confirma a própria decisão.</p>
+<p>Na pesquisa, uso apenas termos públicos autorizados para reduzir riscos de prompt injection e exposição da despensa.</p>
+<p>Por fim, mantive tudo local. Infraestrutura distribuída não era necessária para o escopo do desafio, embora essa escolha tenha limitações.</p>
  </aside>
 </section>
 
@@ -176,15 +177,15 @@ Por fim, optei por MCP local e SQLite. Não havia motivo para introduzir infraes
   <figure class="board"><img class="diagram" src="assets/diagrams/arquitetura.svg" alt="Arquitetura: Hermes conduz a conversa, Python/MCP valida as regras e SQLite persiste o estado; o operador aprova decisões fora do modelo."></figure>
  </div>
  <aside class="notes">
-Este desenho mostra como distribuí essas responsabilidades.
-
-À esquerda, a Dona Maria conversa com o Hermes. O arquivo de contexto e a skill orientam o atendimento; o plugin de política limita as ferramentas que ele pode chamar. A pesquisa na web acontece por um plugin separado, com termos autorizados.
-
-Para consultar estoque, avaliar receitas ou calcular preços, o Hermes chama seis ferramentas de atendimento por MCP via stdio. O MCP é a interface do mesmo serviço Python local, onde Pydantic valida os dados e Decimal apoia os cálculos. O SQLite guarda estado e histórico.
-
-Na parte inferior está outro caminho: o operador humano importa a planilha pelo setup-real e revisa propostas pela CLI, fora do alcance do modelo. A seta vermelha tracejada representa uma manifestação feita na conversa, não uma conexão técnica direta com o operador.
-
-Assim, conversa, validação, persistência e atestação ficam separadas.
+<p>Este é o desenho da solução. A ideia principal foi separar bem as responsabilidades.</p>
+<p>A Dona Maria conversa com o Hermes, orientado pelo arquivo de contexto e pela skill.</p>
+<p>Dentro dele, o plugin de política restringe as ferramentas disponíveis. E a pesquisa na web acontece por um plugin separado, com termos autorizados.</p>
+<p>Quando precisa consultar estoque, avaliar receitas ou calcular preços, o Hermes usa seis ferramentas MCP, por stdio.</p>
+<p>O MCP e as regras de negócio fazem parte do mesmo serviço Python local. Nele, Pydantic valida dados e Decimal apoia os cálculos. O SQLite guarda o estado e o histórico.</p>
+<p>Na parte inferior, temos o canal do operador humano, fora do alcance do modelo.</p>
+<p>É por esse canal que a planilha é importada e que as decisões manifestadas pela Dona Maria são revisadas e atestadas.</p>
+<p>A seta tracejada representa o fluxo lógico dessa manifestação, não uma conexão técnica direta entre pessoas.</p>
+<p>Ou seja: o Hermes conversa, o Python valida, o SQLite guarda e a aprovação humana acontece separadamente.</p>
  </aside>
 </section>
 
@@ -201,13 +202,16 @@ Assim, conversa, validação, persistência e atestação ficam separadas.
   </div>
  </div>
  <aside class="notes">
-Agora, olhando a jornada, tudo começa com a planilha. O operador a importa, e o sistema cruza duas informações diferentes: o estoque determina a quantidade disponível; a quantidade comprada e o preço pago determinam o custo unitário.
-
-Se um preço ou uma conversão estiver ausente, o sistema registra a pendência, não inventa zero. O snapshot fica no SQLite.
-
-Durante a conversa, o Hermes consulta esses dados e pesquisa receitas com os termos públicos liberados. Ele recupera o conteúdo a partir do identificador do resultado e mantém a referência da fonte.
-
-A Dona Maria também pode sugerir uma receita própria. Nesse momento, o agente apresenta candidatas e pede opinião. Interesse ainda não é aceite: é o começo da avaliação de viabilidade.
+<p>Agora vou mostrar como a solução funciona na prática, começando pela despensa da Dona Maria.</p>
+<p>Primeiro, o operador importa a planilha com o comando setup-real.</p>
+<p>O sistema cruza as duas abas para identificar quais ingredientes estão disponíveis, suas quantidades e o custo unitário.</p>
+<p>Se faltar um preço ou uma conversão de medida, ele registra a pendência. Não assume um valor qualquer.</p>
+<p>Essas informações ficam no SQLite.</p>
+<p>A partir daí, o Hermes consulta o inventário e pesquisa receitas reais na internet, usando somente termos autorizados e mantendo a referência das fontes.</p>
+<p>A Dona Maria também pode sugerir uma receita própria.</p>
+<p>Com essas opções, o Hermes pergunta o que ela achou.</p>
+<p>Mas aqui está um detalhe importante: gostar de uma receita ainda não significa conseguir prepará-la.</p>
+<p>E é isso que verificamos no próximo fluxo.</p>
  </aside>
 </section>
 
@@ -224,15 +228,16 @@ A Dona Maria também pode sugerir uma receita própria. Nesse momento, o agente 
   </div>
  </div>
  <aside class="notes">
-Este é o coração do desafio: descobrir o que a Dona Maria realmente consegue preparar, antes de recomendar uma compra ou aceitar um prato.
-
-Cada receita tem requisitos de equipamentos, técnica, tempo, energia, armazenamento e ingredientes. O serviço compara esses requisitos com os fatos confirmados. Se algo é desconhecido, o agente precisa perguntar. Se existe um impedimento, o plano tem que mudar.
-
-Por exemplo, ela pode dizer que tem forno, mas apenas uma assadeira. Essa informação vira proposta, passa pela revisão local e depois a viabilidade é reavaliada.
-
-Em seguida, o planejamento soma os ingredientes que faltam para todos os pratos, incluindo pacotes inteiros e frete. Os oitenta reais são um orçamento compartilhado, não um limite por receita.
-
-Só quando as pendências são resolvidas o prato pode seguir para o aceite.
+<p>Agora chegamos ao que considero o coração do desafio: descobrir se a Dona Maria realmente consegue preparar uma receita antes de recomendar compras.</p>
+<p>O sistema avalia não apenas os ingredientes, mas também equipamentos, técnicas e condições da cozinha, como tempo, gás e espaço para armazenamento.</p>
+<p>Se alguma informação ainda não foi confirmada, o Hermes precisa perguntar em vez de presumir.</p>
+<p>Por exemplo, ela pode dizer que tem forno, mas apenas uma assadeira.</p>
+<p>Essa informação vira proposta, passa pela atestação humana e então o sistema reavalia a viabilidade.</p>
+<p>Se existir um impedimento, precisamos adaptar o planejamento ou considerar outra receita.</p>
+<p>Depois, o serviço verifica os ingredientes que faltam e calcula as compras, incluindo embalagens inteiras e frete.</p>
+<p>Os R$ 80 são compartilhados entre todos os pratos.</p>
+<p>Só quando a receita é viável e o planejamento cabe no orçamento é que ela pode seguir para a decisão da Dona Maria.</p>
+<p>E é esse processo de aprovação que mostro no próximo slide.</p>
  </aside>
 </section>
 
@@ -246,15 +251,17 @@ Só quando as pendências são resolvidas o prato pode seguir para o aceite.
    <span class="chip">fatos da cozinha</span><span class="chip">receitas</span><span class="chip">cotações</span><span class="chip">aceite do prato</span><span class="chip">escolha do preço</span></p>
  </div>
  <aside class="notes">
-Aqui está o mecanismo que impede o agente de aprovar as próprias decisões.
-
-Quando a Dona Maria manifesta uma escolha, o Hermes chama propose_user_change. O serviço grava uma proposta pendente, com resumo e hash. Isso ainda não altera a decisão de negócio.
-
-Num terminal separado, o operador humano consulta a proposta, verifica o conteúdo e atesta apenas se corresponde ao que ela disse. Ele não escolhe no lugar dela.
-
-Antes de aplicar, o serviço revalida o prazo de dez minutos, a revisão do estado e as regras do negócio. Se houver divergência, recusa a operação. Se estiver tudo certo, o efeito e a auditoria são gravados na mesma transação.
-
-Essa separação vale para fatos da cozinha, receitas, cotações, aceite e escolha do preço.
+<p>Agora chegamos a uma das decisões mais importantes da arquitetura: impedir que o agente aprove as próprias propostas.</p>
+<p>Isso vale para fatos sobre a cozinha, aceite de receitas e escolha de preços.</p>
+<p>Quando a Dona Maria manifesta uma decisão, o Hermes registra uma proposta pendente. Isso não significa que ela já foi aplicada.</p>
+<p>Nesse momento, entra o operador humano.</p>
+<p>Em uma CLI, num terminal separado, ele verifica se a proposta corresponde ao que a Dona Maria decidiu e atesta essa manifestação. O operador não escolhe por ela.</p>
+<p>A aprovação acontece fora das ferramentas disponíveis para o modelo.</p>
+<p>Antes de aplicar a alteração, o serviço verifica o prazo de dez minutos, a revisão do estado e as regras de negócio.</p>
+<p>Se algo mudou ou não está válido, ele bloqueia a operação.</p>
+<p>Se tudo estiver correto, a decisão e a auditoria são registradas juntas no SQLite.</p>
+<p>Depois, o Hermes pode consultar o estado atualizado e informar o resultado.</p>
+<p>Ou seja: o agente propõe e explica. Quem decide é a Dona Maria.</p>
  </aside>
 </section>
 
@@ -271,17 +278,16 @@ Essa separação vale para fatos da cozinha, receitas, cotações, aceite e esco
   </div>
  </div>
  <aside class="notes">
-Depois do aceite válido, chegamos à precificação.
-
-O serviço calcula o CMV por porção a partir das quantidades consumidas e do custo unitário de cada ingrediente. Uma distinção importante: comprar um pacote inteiro entra no orçamento de compras, mas o custo do prato considera só a parte utilizada.
-
-Como a plataforma retém dez por cento da venda, o preço mínimo é o CMV dividido por zero vírgula noventa.
-
-Por exemplo, se o CMV é dez reais, o piso arredondado para cima é onze reais e doze centavos. O sistema também apresenta cenários de margem de dez, vinte e trinta por cento.
-
-Eu chamo o resultado de sobra após ingredientes e taxa, não lucro líquido, porque ainda faltam custos como embalagem, energia e trabalho.
-
-A Dona Maria escolhe; a confirmação passa pela mesma aprovação local.
+<p>Depois que a Dona Maria aceita um prato, chegamos à precificação.</p>
+<p>Primeiro, o serviço calcula o CMV, que significa Custo da Mercadoria Vendida. Aqui, consideramos o custo dos ingredientes usados em cada porção.</p>
+<p>Existe uma diferença importante.</p>
+<p>Se ela compra um pacote inteiro, o valor total entra no orçamento de compras. Mas o CMV considera apenas a quantidade consumida no prato.</p>
+<p>Também precisamos considerar a taxa de 10% cobrada sobre o preço de venda.</p>
+<p>Por exemplo, com CMV de R$ 10, o piso é R$ 11,12, arredondado para cima.</p>
+<p>Nesse preço, a sobra depois da taxa e dos ingredientes é de aproximadamente um centavo. Não é R$ 1,12 de lucro.</p>
+<p>A partir daí, o sistema mostra três cenários, com margens de 10%, 20% e 30%.</p>
+<p>Esses valores ainda não representam lucro líquido: faltam despesas como embalagem, gás e mão de obra.</p>
+<p>A Dona Maria escolhe um cenário ou outro preço acima do piso. E essa decisão passa pela aprovação humana.</p>
  </aside>
 </section>
 
@@ -299,9 +305,10 @@ A Dona Maria escolhe; a confirmação passa pela mesma aprovação local.
   </ol>
  </div>
  <aside class="notes">
-Agora vamos à demonstração. Vou usar o Hermes Desktop para conversar com a Dona Maria e um terminal separado para revisar as decisões.
-
-A ideia é percorrer a despensa, a pesquisa de receitas, as perguntas sobre viabilidade, o orçamento e a precificação. Se faltar alguma informação, espero que o sistema pergunte ou bloqueie, em vez de inventar uma resposta.
+<p>Agora vou mostrar a solução funcionando no Hermes Desktop, usando os dados da planilha original.</p>
+<p>As decisões são atestadas por um operador humano, numa CLI em terminal separado.</p>
+<p>Essa interface foi uma escolha para o protótipo. Em produção, eu a substituiria por uma experiência mais amigável, mantendo a aprovação fora do alcance do modelo.</p>
+<p>Vamos acompanhar a jornada: consulta à despensa, pesquisa de receitas, perguntas sobre a cozinha, orçamento, aceite e precificação.</p>
  </aside>
 </section>
 
@@ -319,15 +326,15 @@ A ideia é percorrer a despensa, a pesquisa de receitas, as perguntas sobre viab
   </div>
  </div>
  <aside class="notes">
-Depois da jornada, ficam claras algumas oportunidades de melhoria.
-
-A pesquisa hoje é restrita a termos liberados e um resultado por busca; eu ampliaria as candidatas sem abrir mão dos controles. A aprovação por terminal é verificável, mas poderia virar uma experiência mais fluida na interface, ainda fora do alcance do modelo.
-
-Também acrescentaria embalagem, energia e mão de obra para estimar lucro de forma mais completa.
-
-Na qualidade do agente, a matriz S19 reúne dezoito casos integrados no recorte assistido por CLI. Eles não equivalem a uma comparação controlada entre modelos nem homologam o Desktop. O próximo passo é repetir avaliações por modelo, medindo qualidade, latência e custo.
-
-E eu evoluiria a compreensão de preferências semânticas, sempre com confirmação.
+<p>Depois de implementar essa jornada, identifiquei algumas oportunidades de evolução.</p>
+<p>Na pesquisa, hoje trabalhamos com termos autorizados e uma candidata por busca. Eu ampliaria para duas ou três opções, mantendo os controles.</p>
+<p>A aprovação também poderia sair do terminal e ganhar uma interface mais amigável, sem dar ao modelo permissão para aprovar.</p>
+<p>Na precificação, incluiria embalagem, gás, energia e mão de obra para estimar o resultado do negócio com mais precisão.</p>
+<p>Na avaliação do agente, já existe uma matriz com 18 casos integrados em execução assistida por CLI.</p>
+<p>Mas isso ainda não é uma comparação controlada entre modelos, nem uma homologação do Desktop.</p>
+<p>O próximo passo seria executar evals por modelo, comparando qualidade, latência e custo.</p>
+<p>Também evoluiria a interpretação de preferências. Se a Dona Maria disser que evita fritura, o agente poderia relacionar isso a pratos empanados e confirmar a preferência.</p>
+<p>São melhorias para transformar o protótipo em uma experiência mais útil e simples de operar.</p>
  </aside>
 </section>
 
@@ -347,15 +354,15 @@ E eu evoluiria a compreensão de preferências semânticas, sempre com confirma�
   <div class="roadmap-summary"><div><span>Base atual</span><strong>Protótipo local · operação assistida</strong></div>{{icon arrow-right}}<div><span>Direção de evolução</span><strong>Serviço integrado ao delivery</strong></div></div>
  </div>
  <aside class="notes">
-Para transformar o protótipo em produto, eu priorizaria cinco etapas.
-
-Primeiro, identidade e autorização: hoje a atestação é local e não autentica fortemente a cozinheira.
-
-Depois, suporte a vários restaurantes, com isolamento dos dados e um serviço remoto — o que também justificaria reavaliar o SQLite.
-
-Na sequência, observabilidade da jornada, das ferramentas e dos custos de modelo; execução dos evals conversacionais com Hermes no CI; e, por último, integração com a operação de delivery para publicar o cardápio aprovado.
-
-O ponto é evoluir a infraestrutura quando houver necessidade, sem perder as garantias que já estão no domínio.
+<p>Pensando em transformar o protótipo em produto, eu seguiria cinco etapas.</p>
+<p>A primeira é identidade e autorização. Precisamos autenticar a Dona Maria e quem atesta suas decisões.</p>
+<p>Depois, eu prepararia a solução para vários restaurantes.</p>
+<p>Minha proposta seria uma plataforma multi-tenant: cada estabelecimento teria um consultor personalizado, com seus próprios dados e restrições, mas compartilhando a mesma arquitetura e governança.</p>
+<p>Nesse cenário, avaliaria MCP remoto, isolamento por restaurante e PostgreSQL, conforme a necessidade de escala e concorrência.</p>
+<p>A terceira etapa seria observabilidade, para acompanhar ferramentas, falhas, qualidade e custo.</p>
+<p>A quarta seria integrar os evals de conversa com Hermes ao pipeline de CI.</p>
+<p>E a quinta, conectar a solução à operação do delivery para publicar cardápios e preços aprovados.</p>
+<p>A evolução seria gradual, preservando as regras de negócio e os controles de segurança.</p>
  </aside>
 </section>
 
@@ -372,9 +379,11 @@ O ponto é evoluir a infraestrutura quando houver necessidade, sem perder as gar
   </div>
  </div>
  <aside class="notes">
-Obrigada, Lucas e Hildebrando. O código e a documentação estão no repositório, incluindo o passo a passo para executar localmente.
-
-Deixei material de apoio sobre segurança, persistência, testes e trade-offs para aprofundarmos nas perguntas. Fico à disposição.
+<p>Bom, pessoal, essa foi a solução que desenvolvi para o desafio Sabor da Maria.</p>
+<p>Lucas e Hildebrando, muito obrigada pelo tempo e pela oportunidade de apresentar o projeto.</p>
+<p>O repositório está público, com o código, as decisões de arquitetura e as instruções para executar a aplicação.</p>
+<p>Também deixei slides técnicos complementares sobre segurança, persistência e testes, caso queiram aprofundar algum ponto.</p>
+<p>Agora fico à disposição para as perguntas.</p>
  </aside>
 </section>
 
@@ -387,7 +396,10 @@ Deixei material de apoio sobre segurança, persistência, testes e trade-offs pa
    <span class="chip">A1 · Invariantes</span><span class="chip">A2 · Persistência</span><span class="chip">A3 · Segurança</span><span class="chip">A4 · Verificação</span><span class="chip">A5 · Trade-offs</span>
   </div>
  </div>
- <aside class="notes">Use estes slides só se a pergunta pedir. Volte para Agradecimentos ao terminar.</aside>
+ <aside class="notes">
+<p>Os próximos slides ficam disponíveis apenas se vocês quiserem aprofundar algum ponto técnico.</p>
+<p>Organizei o material em invariantes, persistência, segurança, verificação e trade-offs.</p>
+ </aside>
 </section>
 
 <section>
@@ -409,11 +421,12 @@ Deixei material de apoio sobre segurança, persistência, testes e trade-offs pa
   </ul>
  </div>
  <aside class="notes">
-O orçamento é agregado: não dá para aprovar dois pratos olhando oitenta reais para cada um.
-A taxa é a regra didática do desafio, não uma afirmação sobre o contrato real do iFood.
-Informação ausente nunca vira zero. Desconhecido exige pergunta, impeditivo bloqueia o aceite.
-Se uma premissa muda — escala, rendimento, receita —, as decisões que dependem dela são invalidadas e precisam ser reavaliadas.
-O modo de simulação é fixado por banco; o modelo não consegue transformar uma hipótese em dado real pela conversa.
+<p>Aqui estão algumas regras que a conversa não pode contornar.</p>
+<p>Os R$ 80 são um orçamento único para todos os pratos. Não podemos tratar esse valor como se estivesse disponível novamente para cada receita.</p>
+<p>A taxa de 10% também incide sobre o preço de venda. É uma regra do desafio, não uma afirmação sobre contratos reais do iFood.</p>
+<p>Quando falta um preço ou uma medida, o sistema não inventa zero. Informação desconhecida gera pergunta. Um impeditivo bloqueia o aceite.</p>
+<p>E, se mudar alguma premissa, como a receita ou o rendimento, as decisões dependentes precisam ser reavaliadas.</p>
+<p>Por último, separo dados reais e de simulação em bancos diferentes. O modelo não transforma uma hipótese em fato real só porque alguém pediu na conversa.</p>
  </aside>
 </section>
 
@@ -429,11 +442,13 @@ O modo de simulação é fixado por banco; o modelo não consegue transformar um
   <p class="mt-8 text-[21px] text-muted">O snapshot importado é imutável. Correções viram versões e overlays, preservando a origem de cada dado.</p>
  </div>
  <aside class="notes">
-O workspace agrupa as decisões que compartilham orçamento e estoque.
-Cada alteração informa a revisão que ela espera; se o estado mudou, ela é recusada. A transação SQLite garante que efeito e auditoria entram juntos.
-O registro idempotente associa a operação ao conteúdo e à resposta: repetir devolve o mesmo resultado, e conteúdo diferente com o mesmo identificador é conflito.
-A planilha importada nunca é reescrita; esclarecimentos de embalagem ou medida viram camadas por cima, com origem.
-SQLite atende bem o escopo local; com vários operadores ou serviço remoto eu trocaria, como está nos próximos passos.
+<p>O SQLite guarda as decisões que fazem parte do mesmo planejamento. Esse conjunto é o que chamamos de workspace.</p>
+<p>Cada alteração indica a revisão de estado que espera encontrar.</p>
+<p>Se outra decisão mudou o estado antes, a operação é recusada. Isso evita aplicar uma proposta desatualizada.</p>
+<p>Também uso transações: a alteração e seu registro de auditoria são gravados juntos.</p>
+<p>E existe idempotência. Se a mesma operação for repetida com o mesmo conteúdo, o sistema devolve o resultado já registrado. Se o identificador vier com conteúdo diferente, trata como conflito.</p>
+<p>A planilha original não é reescrita. Correções e esclarecimentos ficam em camadas separadas, preservando a origem.</p>
+<p>SQLite atende ao protótipo local. Para vários operadores e acesso remoto, eu reavaliaria o armazenamento.</p>
  </aside>
 </section>
 
@@ -449,11 +464,14 @@ SQLite atende bem o escopo local; com vários operadores ou serviço remoto eu t
   </div>
  </div>
  <aside class="notes">
-Um achado relevante foi o reparo de nomes no host: uma chamada proibida podia ser transformada numa consulta permitida. Esconder a ferramenta não bastava, então a política relaciona a intenção original ao nome efetivamente executado e recusa quando diverge.
-No servidor, o catálogo também é fechado e o modelo não troca de banco ou workspace por argumento.
-A pesquisa nunca recebe URL ou consulta livre e tem limites de rede e de volume.
-A planilha tem limites de tamanho e expansão e é tratada como dado.
-Limite honesto: um perfil não é sandbox do sistema operacional; em produção eu separaria identidades e permissões de processo.
+<p>Aqui a ideia foi reduzir o que o modelo consegue fazer e validar tudo no ponto em que uma ação teria efeito.</p>
+<p>No Hermes, configurei uma lista fechada de ferramentas permitidas.</p>
+<p>Identifiquei também um risco no reparo de nomes de ferramentas pelo host. Uma chamada originalmente proibida podia acabar direcionada para uma ferramenta permitida.</p>
+<p>Por isso, o plugin compara a chamada original com a que será executada e bloqueia divergências.</p>
+<p>No serviço Python, o banco e o workspace são fixados pelo operador, e a aprovação não está disponível como ferramenta do modelo.</p>
+<p>A pesquisa não aceita consultas ou URLs livres. E a importação da planilha impõe limites de tamanho e trata as células como dados.</p>
+<p>Existe uma limitação importante: um perfil isolado do Hermes não equivale a uma sandbox do sistema operacional.</p>
+<p>Em produção, eu reforçaria também as identidades e as permissões de cada processo.</p>
  </aside>
 </section>
 
@@ -475,12 +493,14 @@ Limite honesto: um perfil não é sandbox do sistema operacional; em produção 
   <p class="mt-6 text-[20px] text-muted">Nos evals, a resposta do modelo não basta: a verificação olha as ferramentas chamadas e o estado gravado.</p>
  </div>
  <aside class="notes">
-Eu separo três tipos de prova.
-Os testes determinísticos cobrem regras, limites, persistência e concorrência, com fixtures sintéticas e banco temporário; o Hypothesis gera sequências de alterações.
-Os testes de integração sobem o servidor MCP de verdade, via stdio.
-Os evals do agente são roteiros de jornada; neles eu confiro as ferramentas chamadas e o estado no banco, não só o texto da resposta.
-S19 concluiu 18 casos no recorte CLI assistido, com revisão explicitamente delegada. Os 12 roteiros anteriores, as tentativas com falha e as versões executadas permanecem históricos; não são 18 novas execuções da mesma versão. Desktop continua NOT_RUN.
-A CI roda o núcleo em três sistemas operacionais, mas não instala o Hermes nem um modelo. Por isso a demonstração ao vivo continua importante.
+<p>Para avaliar a solução, separei as evidências por camada.</p>
+<p>Primeiro, os testes determinísticos em Python verificam regras de negócio, persistência e concorrência. O Hypothesis também gera variações de operações para explorar casos extremos.</p>
+<p>Depois, os testes de integração exercitam o servidor MCP real por stdio.</p>
+<p>Já os evals do agente analisam jornadas. Não verifico apenas a resposta escrita: também confiro as ferramentas chamadas e o estado persistido.</p>
+<p>Na matriz S19, são 18 casos do fluxo assistido por CLI, com a revisão humana delegada explicitamente.</p>
+<p>Isso não significa 18 execuções novas da mesma versão, nem validação completa do Hermes Desktop.</p>
+<p>A CI executa o núcleo em Windows, Ubuntu e macOS, mas não instala o Hermes nem um modelo real.</p>
+<p>Por isso, ainda precisamos validar a jornada completa no Desktop, com a planilha original.</p>
  </aside>
 </section>
 
@@ -501,9 +521,13 @@ A CI roda o núcleo em três sistemas operacionais, mas não instala o Hermes ne
   </div>
  </div>
  <aside class="notes">
-Não adicionei backend distribuído, ORM ou outro frontend porque o problema local não exigia.
-Os custos são explícitos: o fluxo assistido é mais lento, a pesquisa é restrita e a integração depende de uma versão do host.
-Eu trocaria o SQLite quando concorrência, isolamento por usuário ou acesso remoto justificassem — não por antecipação.
+<p>Escolhi uma arquitetura local porque o desafio não exigia um backend distribuído, um ORM adicional ou outra interface.</p>
+<p>Isso trouxe simplicidade e facilitou testar as regras independentemente do LLM.</p>
+<p>Mas os custos dessas decisões são claros.</p>
+<p>A aprovação por terminal exige mais passos. A pesquisa com termos autorizados tem menos flexibilidade. E a integração depende da versão do Hermes e de seus hooks.</p>
+<p>O SQLite facilita a execução local, mas não resolve sozinho as necessidades de uma plataforma multiusuário.</p>
+<p>Eu só migraria para outra infraestrutura quando os requisitos de concorrência, isolamento e acesso remoto justificassem.</p>
+<p>A ideia é evoluir sem abrir mão dos contratos e controles que já estão funcionando.</p>
  </aside>
 </section>
 
