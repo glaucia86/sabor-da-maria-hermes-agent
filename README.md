@@ -15,173 +15,267 @@
 <a href="https://www.sqlite.org/"><img alt="SQLite" src="https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white"></a>
 </p>
 <p><a href="LICENSE"><img alt="Licença MIT" src="https://img.shields.io/badge/Licen%C3%A7a-MIT-0F766E"></a></p>
-<p><a href="#desafio">Conheça o desafio</a> · <a href="#executar">Execute o projeto</a> · <a href="#validar">Valide o código</a> · <a href="#sobre-mim">Sobre mim</a></p>
+<p><a href="#comece-aqui">Comece por aqui</a> · <a href="#quick-start">Quick Start</a> · <a href="docs/demo/hermes-desktop-walkthrough.html">Guia da Dona Maria</a> · <a href="#arquitetura">Arquitetura</a> · <a href="#validar">Evidências</a> · <a href="#sobre-mim">Sobre mim</a></p>
 </div>
 
 ---
 
+<a id="comece-aqui"></a>
+## 🧭 Comece por aqui — Guia para avaliadores
+
+O Sabor da Maria é uma consultora de cardápio e preço construída sobre o Hermes Agent. Você clona o repositório, prepara um atendimento com a **planilha original do desafio** e conversa com a consultora no Hermes Desktop **no papel da Dona Maria**. Nenhuma decisão vale antes de uma aprovação humana, feita por você em um terminal separado.
+
+| Quero… | Comece em | Você vai precisar |
+| --- | --- | --- |
+| **1. Instalar e executar o projeto** | [Quick Start](#quick-start) e [passo a passo](#executar) | [Dependências essenciais](#dependencias-essenciais) e um terminal na raiz do checkout |
+| **2. Testar como Dona Maria no Hermes Desktop** | [Guia interativo com prompts copiáveis](docs/demo/hermes-desktop-walkthrough.html) | Atendimento preparado até o passo 8 e um segundo terminal para as aprovações |
+| **3. Conhecer a arquitetura e as decisões técnicas** | [Desafio e solução](#desafio), [fluxo do agente](#experiencia), [arquitetura](#arquitetura) e [da planilha ao preço](#precificacao) | Somente leitura |
+| **4. Consultar testes, evidências e limitações** | [Verifique a implementação](#validar) e [limitações conhecidas](#limitacoes) | uv, se quiser rodar a suíte |
+
+> [!TIP]
+> O guia interativo é uma página HTML estática, sem backend nem dependências externas. No GitHub, o link mostra apenas o código-fonte: depois de clonar, abra o arquivo local no navegador com `start docs\demo\hermes-desktop-walkthrough.html` (Windows), `open docs/demo/hermes-desktop-walkthrough.html` (macOS) ou `xdg-open docs/demo/hermes-desktop-walkthrough.html` (Linux).
+
+### O que é reproduzível, o que é evidência e o que falta
+
+| | Significado | Onde conferir |
+| --- | --- | --- |
+| **REAL — percurso reproduzível** | Caminho oficial: planilha original, seu modelo, pesquisa Exa ao vivo, Desktop e aprovação local. A preparação até `check` foi conferida no Windows em 17/11/2026 com a planilha original. A conversa completa no perfil REAL ainda precisa ser executada pelo avaliador. | [Quick Start](#quick-start) e [evidências](#validar) |
+| **SIMULATION — evidência assistida** | Jornada completa no Desktop em 17/11/2026, com planilha sintética, dados hipotéticos e intervenções operacionais registradas. O preço de R$ 2,03 do arroz é resultado desse ensaio, não um resultado esperado do REAL. O onboarding público não reproduz esse perfil integralmente. | [Registro da jornada E2E](docs/verification-desktop-e2e.md) |
+| **Limitações conhecidas** | Hermes e Desktop sem teste em macOS e Linux, revisão de receita adaptada sujeita a recusa, ramo de compras com cotação não exercitado no Desktop e outras. | [Limitações conhecidas](#limitacoes) |
+
 ## 📑 Sumário
 
-- [O desafio e a solução](#desafio)
-- [Execute localmente com sua planilha e seu modelo](#executar)
-  - [Pré-requisitos e versão do Hermes](#requisitos)
-  - [Instalação e planilha real](#instalacao-local)
-  - [Perfil, pesquisa e modelo](#configuracao-local)
-  - [Desktop, aprovação e retomada](#desktop-local)
+- [Comece por aqui — Guia para avaliadores](#comece-aqui)
+- [Quick Start](#quick-start)
+- [Execute o percurso REAL passo a passo](#executar)
+  - [Clone, dependências e planilha](#requisitos)
+  - [Atendimento REAL, pesquisa e modelo](#setup-real)
+  - [Verificações e Desktop](#verificar-local)
+  - [Conversa como Dona Maria, aprovações e persistência](#guia-html)
 - [Teste a jornada completa](#jornada-real)
+- [O desafio e a solução](#desafio)
 - [Acompanhe o fluxo do agente](#experiencia)
 - [Entenda a arquitetura](#arquitetura)
 - [Da planilha ao preço](#precificacao)
 - [Verifique a implementação](#validar)
+  - [Limitações conhecidas](#limitacoes)
 - [Resolva problemas de execução](#problemas)
 - [Segurança e limites](#seguranca)
 - [Explore o repositório](#estrutura)
 - [Sobre mim](#sobre-mim)
 
-<a id="desafio"></a>
-## 🧭 O desafio e a solução
+<a id="quick-start"></a>
+## ⚡ Quick Start
 
-Dona Maria está abrindo seu primeiro delivery. Ela conhece a despensa e quanto pagou pelos ingredientes, mas precisa decidir **o que consegue produzir e quanto cobrar**. O desafio pede customizar o Hermes Agent para pesquisar receitas reais, descobrir restrições na conversa e acompanhá-la até a escolha do preço.
+<a id="dependencias-essenciais"></a>
+### Dependências essenciais
 
-O Sabor da Maria combina **Hermes para conversar e pesquisar** com **Python/MCP para validar condições, orçamento e cálculos**. A entrada é `despensa_dona_maria.xlsx`, com as abas `Despensa` e `Precos`. O planejamento considera **R$ 80,00 para complementos** e **taxa de 10% sobre a venda**, conforme o enunciado.
-
-**O centro da solução é a elicitação:** gostar de uma receita não significa conseguir prepará-la. Antes do aceite, a consultora precisa esclarecer equipamentos, habilidades, tempo, gás/energia, espaço e ingredientes na quantidade planejada. Uma condição desconhecida gera uma pergunta; uma condição impeditiva exige rever o plano.
-
-| Requisito do desafio | Como foi implementado | Onde conferir |
+| Dependência | Para que serve | Como conferir |
 | --- | --- | --- |
-| Pesquisar receitas reais e pedir feedback | Pesquisa e extração mediadas, fontes registradas e distinção entre interesse e aceite | [Pesquisa real e controles](evals/s19-results.json) |
-| Descobrir restrições antes do aceite | Perguntas orientadas à receita e validação de condições na escala do plano | [Skill de atendimento](skills/dona-maria-cardapio/SKILL.md), [testes de aceite](tests/unit/test_acceptance.py) |
-| Comparar despensa e faltantes dentro do orçamento | Estoque e compras agregados entre pratos; pacotes, encargos e confirmações de ofertas | [Testes do plano compartilhado](tests/unit/test_shared_plan.py) |
-| Explicar CMV, propor cenários e deixar a escolha com Dona Maria | Custos por origem, três margens e preço personalizado; cálculo e escolha separados | [Testes financeiros](tests/unit/test_pricing.py), [aprovação local](tests/unit/test_local_approval.py) |
-| Entregar Hermes customizado e decisões justificadas | Orientações, skill, plugins, MCP local e configuração reproduzível | [Arquitetura](#arquitetura), [guia de instalação](docs/setup.md) |
+| [Git](https://git-scm.com/downloads) | Clonar o repositório e receber a planilha original | `git --version` |
+| [uv](https://docs.astral.sh/uv/getting-started/installation/) | Instalar as dependências fixadas em `uv.lock`, sem ativar virtualenv | `uv --version` |
+| Python 3.13 | Runtime da aplicação. O uv baixa uma versão gerenciada se ela não estiver instalada | `uv run --locked --no-sync python --version`, após o passo 2 |
+| [Hermes Agent 0.23.1](docs/setup.md#dependencias), commit `3b421578588243f920886e6fe79a6faa87ea026e`, com Desktop | Host do agente. O plugin de pesquisa recusa outra versão | `hermes --version` |
+| Modelo com tool calling | Conduz a conversa e chama as ferramentas. Você escolhe e autentica o provedor no seu Hermes | Passo 6 (`model`) |
+| Acesso à internet | Instalação, modelo remoto e pesquisa Exa anônima, sem chave de API | Passo 7 (`check-research`) |
+| Segundo terminal | Canal local de aprovação humana, fora do catálogo do modelo | Passo 10 (`review list`) |
 
-> [!IMPORTANT]
-> Há testes determinísticos e registros de jornadas assistidas com Hermes e pesquisa real. Essas evidências têm versões e limites próprios: não representam homologação automática de toda alteração posterior. O planejamento não efetua compras, pagamentos ou consumo de estoque físico. Consulte o [estado das verificações](#validar).
+### Instruções por sistema operacional
+
+| Sistema | Shell | Instalação de Git, uv e Hermes | O que foi testado neste projeto |
+| --- | --- | --- | --- |
+| Windows | PowerShell 7 ou Windows PowerShell 5.1 | [docs/setup.md — Windows](docs/setup.md#windows-powershell) | Preparação REAL com a planilha original e jornada Desktop em `SIMULATION` |
+| macOS | zsh | [docs/setup.md — macOS](docs/setup.md#macos-zsh) | Somente a CI histórica do núcleo/MCP, em versão anterior. Hermes, onboarding e Desktop **não testados** |
+| Linux | bash | [docs/setup.md — Linux](docs/setup.md#linux-bash) | Somente a CI histórica do núcleo/MCP, em versão anterior. Hermes, onboarding e Desktop **não testados** |
+
+### Sequência
+
+Os comandos do projeto são iguais em PowerShell, bash e zsh. Execute **um bloco por vez**, na raiz do checkout: os passos 5 e 6 são interativos. Saídas esperadas e cuidados estão no [passo a passo](#executar).
+
+1. **Clone o repositório**
+
+   ```sh
+   git clone https://github.com/glaucia86/sabor-da-maria-hermes-agent.git
+   cd sabor-da-maria-hermes-agent
+   ```
+
+2. **Instale as dependências**
+
+   ```sh
+   uv sync --locked --python 3.13
+   ```
+
+3. **Confira a planilha original**, que não será alterada
+
+   ```sh
+   uv run --locked --no-sync python -c "import hashlib; print(hashlib.sha256(open('doc-specs/despensa_dona_maria.xlsx', 'rb').read()).hexdigest())"
+   ```
+
+4. **Prepare o atendimento REAL**, que copia a planilha para `artifacts/private/local/`
+
+   ```sh
+   uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding setup-real --inventory "doc-specs/despensa_dona_maria.xlsx" --directory "artifacts/private/local"
+   ```
+
+5. **Configure o perfil e a pesquisa Exa** (interativo: termos públicos e `LIBERAR PESQUISA`)
+
+   ```sh
+   uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding configure --directory "artifacts/private/local"
+   ```
+
+6. **Selecione e autentique o modelo** (interativo)
+
+   ```sh
+   uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding model --directory "artifacts/private/local"
+   ```
+
+7. **Verifique o MCP, o perfil e a pesquisa**
+
+   ```sh
+   uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding check --directory "artifacts/private/local"
+   uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding verify-profile --directory "artifacts/private/local"
+   uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding check-research --directory "artifacts/private/local"
+   ```
+
+8. **Abra o Hermes Desktop**
+
+   ```sh
+   uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding desktop --directory "artifacts/private/local"
+   ```
+
+9. **Converse como Dona Maria**, seguindo os prompts do [guia interativo](docs/demo/hermes-desktop-walkthrough.html).
+10. **Revise as aprovações** no segundo terminal, com `review list`, `inspect` e `approve` ([passo 10](#revisao-local)).
+11. **Confira a persistência** no estado do atendimento e retome sem reimportar ([passo 11](#persistencia)).
 
 <a id="preparacao"></a>
 <a id="executar"></a>
-## 🚀 Execute localmente com sua planilha e seu modelo
+## 🚀 Execute o percurso REAL passo a passo
 
-Este é o percurso completo para o avaliador: **XLSX real → seu modelo no Hermes → pesquisa web → conversa no Desktop → aprovação local → cardápio e preço**. Não usa dados de demonstração, respostas gravadas ou credenciais da autora. Tenha dois canais: o Desktop para conversar e um terminal para revisar propostas.
+Este é o percurso oficial e reproduzível: **planilha original → seu modelo no Hermes → pesquisa web → conversa no Desktop → aprovação local → cardápio e preço**. Não usa respostas gravadas nem credenciais da autora. Mantenha dois canais abertos: o Desktop, para conversar, e um terminal, para revisar propostas.
 
 > [!IMPORTANT]
-> O plugin de pesquisa suporta **Hermes 0.23.1, commit `3b421578588243f920886e6fe79a6faa87ea026e`**. O lock Python não fixa o Hermes. Outra versão é recusada pelo plugin até validação de compatibilidade; instalar simplesmente a versão mais recente não garante funcionamento. Uma [jornada E2E assistida no Desktop](docs/verification-desktop-e2e.md) foi concluída em um workspace `SIMULATION`; a jornada com a planilha original no perfil REAL permanece a validar pelo avaliador. Veja [verificações](#validar).
+> O plugin de pesquisa suporta **Hermes 0.23.1, commit `3b421578588243f920886e6fe79a6faa87ea026e`**. O lock Python não fixa o Hermes. Outra versão é recusada pelo plugin até validação de compatibilidade; instalar simplesmente a versão mais recente não garante funcionamento. Siga a [instalação do seu sistema](docs/setup.md#dependencias) e não substitua uma instalação pessoal para seguir o tutorial. Custos e autenticação do modelo dependem do provedor escolhido; **o modelo e o provedor de pesquisa são configurações diferentes**.
 
 <a id="requisitos"></a>
-### 1. Confira os pré-requisitos
-
-| Requisito | Para que serve / como obter |
-| --- | --- |
-| [Git](https://git-scm.com/downloads) | Clonar este repositório. |
-| [uv](https://docs.astral.sh/uv/getting-started/installation/) | Instalar Python 3.13 e as dependências fixadas no lock. Não precisa ativar uma virtualenv. |
-| [Hermes com Desktop](https://hermes-agent.nousresearch.com/docs/user-guide/desktop) | Host do agente; deve estar disponível como `hermes` no terminal e usar a versão acima. |
-| Modelo com chamadas de ferramentas | Você escolhe o provedor/modelo e autentica no seu Hermes. Pode ser remoto ou local quando suportado pelo host; nem todo modelo foi testado. |
-| Planilha real e acesso à internet | A planilha é sua entrada; a internet é usada na instalação e pesquisa de receitas. |
-
-No terminal, confira `git --version`, `uv --version` e `hermes --version`. Caso ainda não tenha Hermes, use a [instalação da versão compatível](docs/setup.md#dependencias). Não substitua uma instalação pessoal para seguir o tutorial. Custos e autenticação do modelo dependem do provedor escolhido; **o modelo e o provedor de pesquisa são configurações diferentes**.
-
-<a id="instalacao-local"></a>
-### 2. Clone e instale o ambiente da aplicação
-
-No PowerShell, bash ou zsh:
+### 1. Clone o repositório
 
 ```sh
 git clone https://github.com/glaucia86/sabor-da-maria-hermes-agent.git
 cd sabor-da-maria-hermes-agent
+```
+
+Confira antes `git --version`, `uv --version` e `hermes --version`. Todos os comandos seguintes partem desta pasta.
+
+<a id="instalacao-local"></a>
+### 2. Instale as dependências da aplicação
+
+```sh
 uv sync --locked --python 3.13
 ```
 
-**Esperado:** ambiente `.venv` criado e dependências instaladas. Todos os comandos seguintes partem desta pasta. O runtime Python do Hermes é separado; não instale as dependências da aplicação nele. Não é necessário Docker.
+**Esperado:** ambiente `.venv` criado e dependências instaladas pelo lock. O runtime Python do Hermes é separado; não instale as dependências da aplicação nele. Não é necessário Docker.
 
-### 3. Coloque sua planilha no diretório privado
+<a id="planilha"></a>
+### 3. Prepare a planilha original
+
+A entrada padrão é a planilha original do desafio, versionada em [`doc-specs/despensa_dona_maria.xlsx`](doc-specs/despensa_dona_maria.xlsx). O projeto **não altera esse arquivo**: o passo 4 o lê, copia para `artifacts/private/local/inventory.xlsx`, fora do Git, e trabalha somente sobre a cópia. Confira a integridade do original:
 
 ```sh
-uv run --locked --no-sync python -c "from pathlib import Path; Path('artifacts/private/input').mkdir(parents=True, exist_ok=True)"
+uv run --locked --no-sync python -c "import hashlib; print(hashlib.sha256(open('doc-specs/despensa_dona_maria.xlsx', 'rb').read()).hexdigest())"
 ```
 
-Copie `despensa_dona_maria.xlsx`, recebido pelo canal do desafio, para `artifacts/private/input/`. **O arquivo original não acompanha o repositório.** Você também pode usar outra planilha real com estas abas e cabeçalhos exatos:
+**Esperado:** `56df15d6fd2da64901534b48124ab1da43428849e019607577ead1211db3c8d2`. Um valor diferente indica arquivo alterado; restaure a versão do repositório com `git restore doc-specs/despensa_dona_maria.xlsx` antes de continuar.
+
+Para avaliar com outra planilha real, copie-a para `artifacts/private/input/`, que também fica fora do Git, informe esse caminho no passo 4 e use um `--directory` novo. Ela precisa ter estas abas e cabeçalhos exatos:
 
 | Aba | Cabeçalhos, na ordem |
 | --- | --- |
 | `Despensa` | `Ingrediente`, `Quantidade em estoque`, `Unidade` |
 | `Precos` | `Ingrediente`, `Quantidade comprada`, `Unidade`, `Preço total pago (R$)` |
 
-Confira que o arquivo está protegido do versionamento:
+O importador preserva a origem por célula e aponta dados ausentes ou ambíguos. Não preencha lacunas com valores arbitrários. Os formatos de embalagem são explicados em [Da planilha ao preço](#precificacao).
 
-```sh
-git check-ignore artifacts/private/input/despensa_dona_maria.xlsx
-```
-
-**Esperado:** o comando imprime esse caminho. O importador lê o arquivo, preserva o original e aponta dados ausentes ou ambíguos. Não preencha lacunas com valores arbitrários. Os formatos de embalagem são explicados em [Da planilha ao preço](#precificacao).
-
+<a id="setup-real"></a>
 ### 4. Prepare o atendimento REAL
 
 ```sh
-uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding setup-real --inventory "artifacts/private/input/despensa_dona_maria.xlsx" --directory "artifacts/private/local"
-uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding check --directory "artifacts/private/local"
+uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding setup-real --inventory "doc-specs/despensa_dona_maria.xlsx" --directory "artifacts/private/local"
 ```
 
-**Esperado:** `context_mode: REAL`, inventário importado com custos/diagnósticos, orçamento inicial de `80.00`, `mcp: PASS` e zero decisões humanas aprovadas. O primeiro comando cria a cópia da planilha, SQLite, backups das migrações e manifesto local. O segundo confere as seis ferramentas MCP e a recusa de uma ferramenta proibida, sem usar LLM.
+**Esperado:** `context_mode: REAL`, 37 itens importados da planilha original, total histórico `663.39`, diagnósticos de custo e nenhuma decisão humana. O comando cria a cópia da planilha, o SQLite, os backups das migrações e o manifesto local. Confira que a cópia operacional está protegida do versionamento:
 
-Use **o mesmo `--directory` em todas as etapas**. Repetir `setup-real` com o mesmo arquivo preserva o atendimento; outro arquivo ou contexto exige outra pasta. Não edite o manifesto ou reutilize um banco de simulação. Os identificadores são vinculados automaticamente; você não precisa copiá-los para a conversa.
+```sh
+git check-ignore artifacts/private/local/inventory.xlsx
+```
+
+**Esperado:** o comando imprime esse caminho.
+
+Use **o mesmo `--directory` em todas as etapas**. Repetir `setup-real` com o mesmo arquivo preserva o atendimento; outro arquivo ou contexto exige outra pasta. Não edite o manifesto nem reutilize um banco de simulação. Os identificadores são vinculados automaticamente; você não precisa copiá-los para a conversa.
 
 <a id="configuracao-local"></a>
-### 5. Prepare a pesquisa e o perfil do projeto
+### 5. Configure o perfil e a pesquisa Exa
 
-O percurso guiado usa o **Exa pelo endpoint anônimo**, sem chave de API de pesquisa e sem fallback automático. O provedor `web-exa` acompanha o Hermes; não há componente opcional a instalar nem `EXA_API_KEY` a configurar. O endpoint anônimo tem cota e disponibilidade externas: uma falha deixa a pesquisa pendente, sem trocar de provedor. Não é necessário instalar um serviço de gateway para seguir este guia.
+O percurso usa o **Exa pelo endpoint anônimo**, sem chave de API e sem fallback automático. O provedor `web-exa` acompanha o Hermes; não há componente opcional a instalar nem `EXA_API_KEY` a configurar. O endpoint anônimo tem cota e disponibilidade externas: uma falha deixa a pesquisa pendente, sem trocar de provedor. Não é necessário instalar um serviço de gateway para seguir este guia.
 
 ```sh
 uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding configure --directory "artifacts/private/local"
 ```
 
-Informe ingredientes/pratos públicos separados por vírgulas, por exemplo `arroz, feijão, frango`. Confira a lista exibida e digite `LIBERAR PESQUISA` somente se concordar. Apenas esses termos podem compor consultas de receitas ou ofertas; quantidades, preços históricos e a planilha inteira não são enviados pelo plugin. Para ampliar os termos posteriormente, siga a [reconfiguração de pesquisa](docs/setup.md#pesquisa).
+Informe ingredientes ou pratos públicos separados por vírgulas, por exemplo `arroz, feijão, frango`. Para seguir o guia interativo, inclua o que pretende pesquisar. Confira a lista exibida e digite `LIBERAR PESQUISA` somente se concordar. Apenas esses termos podem compor consultas de receitas ou ofertas; quantidades, preços históricos e a planilha inteira não são enviados pelo plugin. Para ampliar os termos depois, siga a [reconfiguração de pesquisa](docs/setup.md#pesquisa).
 
-**Esperado:** `configured: true`, nome de perfil `sabor-real-…` e `research: CONFIGURED_NOT_EXERCISED`. O comando cria um perfil vazio e vincula MCP, política, pesquisa e skill. Não copia credenciais pessoais. O nome é mostrado para você conferir no Desktop; não precisa digitá-lo nos comandos deste projeto.
+**Esperado:** `configured: true`, perfil `sabor-real-…` e `research: CONFIGURED_NOT_EXERCISED`. O comando cria um perfil vazio e vincula MCP, política, pesquisa e skill, sem copiar credenciais pessoais. O nome do perfil serve para conferência no Desktop; os comandos do projeto o resolvem sozinhos.
 
-### 6. Escolha seu modelo e autentique
+### 6. Selecione e autentique o modelo
 
 ```sh
 uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding model --directory "artifacts/private/local"
 ```
 
-No seletor do **seu Hermes**, escolha provedor e modelo com suporte a ferramentas, e conclua a autenticação solicitada. Para modelo local, informe a configuração de conexão suportada pelo Hermes e mantenha seu servidor disponível. Nenhum modelo da autora é imposto pelo projeto; não cole chaves no chat, na planilha ou no repositório.
+No seletor do **seu Hermes**, escolha provedor e modelo com suporte a ferramentas e conclua a autenticação. Para modelo local, informe a conexão suportada pelo Hermes e mantenha seu servidor disponível. Nenhum modelo da autora é imposto; não cole chaves no chat, na planilha ou no repositório.
 
-**Esperado:** seleção salva no perfil exclusivo. Para trocar de modelo depois, repita este comando, verifique o perfil e inicie uma nova conversa. A qualidade da elicitação pode variar por modelo; registre qual você avaliou.
+**Esperado:** seleção salva no perfil exclusivo. Para trocar de modelo, repita este comando, verifique o perfil e inicie uma nova conversa. A qualidade da elicitação pode variar por modelo; registre qual você avaliou.
 
-### 7. Verifique a preparação
+<a id="verificar-local"></a>
+### 7. Verifique o MCP, o perfil e a pesquisa
 
 ```sh
+uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding check --directory "artifacts/private/local"
 uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding verify-profile --directory "artifacts/private/local"
-```
-
-**Esperado:** configuração, arquivos dos plugins, descoberta da skill e conexão MCP em `PASS`, além de `model_configured: true`. `credentials: NOT_CHECKED` e `host_dispatch_and_conversation: NOT_RUN` são intencionais: o diagnóstico não envia uma mensagem ao modelo nem comprova a pesquisa. Essa prova acontece na próxima etapa.
-
-Opcionalmente, confirme a pesquisa ao vivo antes de abrir o Desktop:
-
-```sh
 uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding check-research --directory "artifacts/private/local"
 ```
 
-**Esperado:** `research: LIVE_SEARCH_AND_EXTRACTION_PASS`, `provider: exa`, `authentication: ANONYMOUS` e `business_writes: false`. O comando busca `receita <primeiro termo liberado>` e extrai o primeiro resultado no runtime do perfil, sem gravar fontes, propostas ou decisões. Não usa o modelo.
+**Esperado:**
+
+- `check`: `mcp: PASS`, `context_mode: REAL` e zero decisões humanas. Confere as seis ferramentas MCP e a recusa de uma ferramenta proibida, sem usar LLM.
+- `verify-profile`: configuração, plugins, skill e conexão MCP em `PASS`, além de `model_configured: true`. `credentials: NOT_CHECKED` e `host_dispatch_and_conversation: NOT_RUN` são intencionais: o diagnóstico não envia mensagem ao modelo.
+- `check-research`: `research: LIVE_SEARCH_AND_EXTRACTION_PASS`, `provider: exa`, `authentication: ANONYMOUS` e `business_writes: false`. Busca `receita <primeiro termo liberado>` e extrai o primeiro resultado, sem gravar fontes, propostas ou decisões nem usar o modelo.
 
 <a id="desktop-local"></a>
-### 8. Abra o Desktop e inicie o atendimento
+### 8. Abra o Hermes Desktop
 
 ```sh
 uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding desktop --directory "artifacts/private/local"
 ```
 
-O comando repete a verificação e abre `hermes -p <perfil preparado> desktop --cwd <contexto preparado>`. Em uma instalação por código-fonte, o primeiro lançamento pode preparar os componentes do Desktop. Confira na interface o perfil `sabor-real-…` mostrado pelo diagnóstico e mantenha o diretório de conversa preparado; não selecione o checkout como projeto.
+O comando repete a verificação e abre `hermes -p <perfil preparado> desktop --cwd <contexto preparado>`. Em uma instalação por código-fonte, o primeiro lançamento pode preparar os componentes do Desktop. Confira na interface o perfil `sabor-real-…` e mantenha o diretório de conversa preparado; não selecione o checkout como projeto. Na inspeção técnica do host, confira seis ferramentas MCP e duas de pesquisa; se faltar alguma, resolva a configuração antes de avaliar.
 
-Inicie uma conversa, por exemplo:
+<a id="guia-html"></a>
+### 9. Converse como Dona Maria com o guia interativo
+
+Abra [`docs/demo/hermes-desktop-walkthrough.html`](docs/demo/hermes-desktop-walkthrough.html) no navegador, conforme a [dica de abertura](#comece-aqui). Nele, você interpreta a Dona Maria e conversa em linguagem natural, copiando prompts em primeira pessoa, sem IDs, hashes ou comandos. São 13 etapas: despensa, pesquisa Exa, escolha da receita, condições da cozinha, adaptação, plano de produção, viabilidade, compras, interesse, aceite, cenários de preço, seleção do cardápio e conferência final.
+
+Cada etapa explica o objetivo, o que o agente faz, as ferramentas MCP envolvidas, o resultado esperado e como reconhecer que terminou. O seletor **REAL / SIMULATION** separa os prompts para os seus dados dos prompts usados no ensaio. Os apêndices trazem o fluxo de aprovação e a recuperação dos erros observados.
+
+Sem o guia, comece por exemplo com:
 
 > Quero planejar meu cardápio de lançamento. Consulte minha despensa e pesquise receitas reais que aproveitem os ingredientes. Tenho R$ 80 para complementos. Antes de aceitar um prato, me ajude a conferir se consigo prepará-lo.
 
-**Esperado:** consulta da despensa importada, pesquisa com fontes e perguntas sobre preferências e condições reais. Informe seus equipamentos, habilidades e limitações; não confirme um cenário fictício só para avançar. Na inspeção técnica do host, confira seis ferramentas MCP e duas de pesquisa. Se uma delas não estiver disponível, resolva a configuração antes de considerar o desafio completo.
+**Esperado:** consulta da despensa importada, pesquisa com fontes e perguntas sobre preferências e condições reais. Informe seus equipamentos, habilidades e limitações verdadeiros; não confirme um cenário fictício só para avançar.
 
-### 9. Revise as propostas no segundo terminal
+<a id="revisao-local"></a>
+### 10. Revise as aprovações no segundo terminal
 
-Quando o agente criar uma proposta, abra outro terminal na raiz do repositório:
+Quando o agente criar uma proposta, use outro terminal na raiz do repositório:
 
 ```sh
 uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding review --directory "artifacts/private/local" list
@@ -189,13 +283,16 @@ uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding review --direc
 uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding review --directory "artifacts/private/local" approve ID_DA_PROPOSTA --hash HASH_DA_INSPECAO
 ```
 
-Substitua `ID_DA_PROPOSTA` pelo identificador retornado por `list` e `HASH_DA_INSPECAO` pelo hash de `inspect`. Leia o resumo. Somente se ele corresponder ao que você realmente informou/decidiu, digite **`ATESTO ` seguido do hash** no terminal. Para recusar, use `reject ID_DA_PROPOSTA --hash HASH_DA_INSPECAO` no lugar de `approve`.
+Substitua `ID_DA_PROPOSTA` pelo identificador retornado por `list` e `HASH_DA_INSPECAO` pelo hash de `inspect`. Leia o resumo. Somente se ele corresponder ao que você realmente informou ou decidiu, digite **`ATESTO ` seguido do hash** no terminal. Para recusar, use `reject ID_DA_PROPOSTA --hash HASH_DA_INSPECAO` no lugar de `approve`.
 
-Esse procedimento se repete nas mudanças que dependem de confirmação: receita, fatos, plano, aceite e escolha do preço. Volte ao Desktop e peça para consultar o estado atualizado. O agente não pode aprovar por você. Se você representar cozinheira e operador, deixe esses dois papéis explícitos. Propostas expiram em dez minutos; conteúdo ou estado alterado exige nova revisão.
+Esse procedimento se repete nas mudanças que dependem de confirmação: receita, fatos, plano, interesse, aceite e escolha do preço. Aprove uma proposta por vez, espere `"ok": true` e só então volte ao Desktop e peça para consultar o estado atualizado. O agente não pode aprovar por você. Se você representar cozinheira e operadora, deixe os dois papéis explícitos. Propostas expiram em dez minutos; conteúdo ou estado alterado exige nova revisão. O [Apêndice A do guia](docs/demo/hermes-desktop-walkthrough.html#apendice-a) detalha o que conferir em cada proposta.
 
-### 10. Retome sem reimportar
+<a id="persistencia"></a>
+### 11. Confira a persistência e retome sem reimportar
 
-Feche a interface normalmente. Para continuar, repita o comando `desktop` da etapa 8, confira o mesmo perfil e retome a sessão ou abra outra conversa pedindo o estado atual do cardápio. As decisões persistem no SQLite, independentemente do histórico do LLM. **Não execute outra importação para retomar.**
+Ao final, peça à consultora o que ficou salvo: prato, preço escolhido, sobra após taxa e ingredientes, pendências e saldo. No segundo terminal, `review list` não deve mostrar proposta pendente. O estoque físico não é baixado e nada é comprado.
+
+Para retomar, feche a interface normalmente, repita o comando `desktop` do passo 8, confira o mesmo perfil e retome a sessão ou abra outra conversa pedindo o estado atual do cardápio. As decisões persistem no SQLite, independentemente do histórico do LLM. **Não execute outra importação para retomar.** A planilha original continua com o mesmo hash do passo 3.
 
 <a id="jornada-real"></a>
 ## 🧑‍🍳 Teste a jornada completa
@@ -211,7 +308,27 @@ Feche a interface normalmente. Para continuar, repita o comando `desktop` da eta
 
 Não é necessário provocar todos os erros para concluir uma jornada. Para avaliação técnica, teste também a falta real de um equipamento, uma quantidade ambígua e uma mudança de premissa. Os resultados esperados são perguntas, bloqueios ou revalidação, nunca preenchimento inventado.
 
-O [guia de recuperação](docs/setup.md), o [roteiro de 5–10 minutos](docs/speaker/demo-hermes.md) e a [apresentação técnica](docs/speaker/README.md) complementam este percurso. Testes automatizados com fixtures sintéticas ficam em [Verifique a implementação](#validar); não substituem esta avaliação com seus dados.
+O [guia interativo](docs/demo/hermes-desktop-walkthrough.html) conduz essa jornada etapa por etapa. O [guia de recuperação](docs/setup.md#recuperacao), o [roteiro de 5–10 minutos](docs/speaker/demo-hermes.md) e a [apresentação técnica](docs/speaker/README.md) complementam este percurso. Testes automatizados com fixtures sintéticas ficam em [Verifique a implementação](#validar); não substituem esta avaliação.
+
+<a id="desafio"></a>
+## 🎯 O desafio e a solução
+
+Dona Maria está abrindo seu primeiro delivery. Ela conhece a despensa e quanto pagou pelos ingredientes, mas precisa decidir **o que consegue produzir e quanto cobrar**. O desafio pede customizar o Hermes Agent para pesquisar receitas reais, descobrir restrições na conversa e acompanhá-la até a escolha do preço.
+
+O Sabor da Maria combina **Hermes para conversar e pesquisar** com **Python/MCP para validar condições, orçamento e cálculos**. A entrada é a planilha original [`doc-specs/despensa_dona_maria.xlsx`](doc-specs/despensa_dona_maria.xlsx), com as abas `Despensa` e `Precos`. O planejamento considera **R$ 80,00 para complementos** e **taxa de 10% sobre a venda**, conforme o enunciado.
+
+**O centro da solução é a elicitação:** gostar de uma receita não significa conseguir prepará-la. Antes do aceite, a consultora precisa esclarecer equipamentos, habilidades, tempo, gás/energia, espaço e ingredientes na quantidade planejada. Uma condição desconhecida gera uma pergunta; uma condição impeditiva exige rever o plano.
+
+| Requisito do desafio | Como foi implementado | Onde conferir |
+| --- | --- | --- |
+| Pesquisar receitas reais e pedir feedback | Pesquisa e extração mediadas, fontes registradas e distinção entre interesse e aceite | [Pesquisa real e controles](evals/s19-results.json) |
+| Descobrir restrições antes do aceite | Perguntas orientadas à receita e validação de condições na escala do plano | [Skill de atendimento](skills/dona-maria-cardapio/SKILL.md), [testes de aceite](tests/unit/test_acceptance.py) |
+| Comparar despensa e faltantes dentro do orçamento | Estoque e compras agregados entre pratos; pacotes, encargos e confirmações de ofertas | [Testes do plano compartilhado](tests/unit/test_shared_plan.py) |
+| Explicar CMV, propor cenários e deixar a escolha com Dona Maria | Custos por origem, três margens e preço personalizado; cálculo e escolha separados | [Testes financeiros](tests/unit/test_pricing.py), [aprovação local](tests/unit/test_local_approval.py) |
+| Entregar Hermes customizado e decisões justificadas | Orientações, skill, plugins, MCP local e configuração reproduzível | [Arquitetura](#arquitetura), [guia de instalação](docs/setup.md) |
+
+> [!IMPORTANT]
+> Há testes determinísticos e registros de jornadas assistidas com Hermes e pesquisa real. Essas evidências têm versões e limites próprios: não representam homologação automática de toda alteração posterior. O planejamento não efetua compras, pagamentos ou consumo de estoque físico. Consulte o [estado das verificações](#validar).
 
 <a id="experiencia"></a>
 ## 💬 Acompanhe o fluxo do agente
@@ -443,21 +560,23 @@ uv run --locked --no-sync ruff format --check src tests/conftest.py tests/unit t
 > uv run --locked --no-sync python -X utf8 -B -m pytest tests/unit tests/integration -q -p no:cacheprovider --basetemp artifacts/private/pytest-local-1
 > ```
 
-Os testes usam fixtures sintéticas e SQLite temporário. Cobrem importação, custos, condições desconhecidas ou bloqueadas, orçamento agregado, aprovação, concorrência, rollback, replay, invalidação e retomada. Integrações exercitam MCP stdio real; testes com Hypothesis exploram sequências de alterações. O [teste do anexo original](docs/setup.md#teste-do-original) é ignorado quando o arquivo privado está ausente.
+Os testes usam fixtures sintéticas e SQLite temporário. Cobrem importação, custos, condições desconhecidas ou bloqueadas, orçamento agregado, aprovação, concorrência, rollback, replay, invalidação e retomada. Integrações exercitam MCP stdio real; testes com Hypothesis exploram sequências de alterações. O [teste da planilha original](docs/setup.md#teste-do-original) lê `doc-specs/despensa_dona_maria.xlsx`, agora versionado, e só é ignorado se o arquivo estiver ausente.
 
 ### O que as evidências demonstram
 
 | Evidência registrada | Alcance e limite |
 | --- | --- |
+| Preparação REAL com a planilha original, 17/11/2026 | No Windows, em diretório novo: `setup-real` com `doc-specs/despensa_dona_maria.xlsx` importou 37 itens (total histórico `663.39`) e `check` retornou `mcp: PASS`, `context_mode: REAL`, zero decisões e saldo `80.00`. O SHA-256 do original não mudou e é idêntico ao da cópia em `artifacts/private/`. O teste da planilha original passou isoladamente (1 aprovado). Perfil, modelo, pesquisa ao vivo e Desktop não foram executados nessa conferência. |
+| Lint e formatação, 17/11/2026 | `ruff check` e `ruff format --check` nos caminhos da seção acima: PASS, 86 arquivos formatados. |
 | [Jornada E2E assistida no Desktop](docs/verification-desktop-e2e.md) | Workspace `SIMULATION` com planilha sintética: pesquisa Exa, receita web, adaptação hipotética, viabilidade `ELIGIBLE`, compras `CONFIRMED`, aceite e preço M30 persistidos. Separa as ações do Hermes das intervenções operacionais; não usa a planilha original nem o perfil REAL. |
-| [Percurso local REAL e Desktop](docs/speaker/verification-local-real.md) | Regressão: 804 testes aprovados e dois ignorados; 15 testes do onboarding passaram após o refinamento final do guard de versão. Diagramas, links e slides conferidos. Lint geral tem quatro imports preexistentes não usados; Desktop com modelo autenticado e planilha original ainda não foi homologado. |
+| [Percurso local REAL e Desktop](docs/speaker/verification-local-real.md) | Última regressão completa registrada, em 16/11/2026: 804 testes aprovados e dois ignorados (planilha original então ausente e symlink indisponível no Windows); 15 testes do onboarding passaram após o refinamento final do guard de versão. As mudanças posteriores de pesquisa têm [77 testes direcionados](docs/verification-hermes-research.md); a suíte completa não foi repetida depois delas. Os quatro avisos de lint registrados naquela data já não aparecem. Desktop com modelo autenticado e planilha original ainda não foi homologado. |
 | [Verificação integrada histórica](docs/verification.md) e [12 evals originais](evals/s11-results.json) | Jornada assistida, pesquisa real, decisões e retomada em dados sintéticos. Assertions críticas originais passaram; revisão humana apontou clareza insuficiente em EV-07 e EV-09. As respostas reais corrigidas passaram na revisão delegada em S19; a avaliação humana original permanece registrada, sem alegar nova entrevista humana de usabilidade. |
 | [Pesquisa mediada — handoff S17](doc-specs/implementation-slices.md) | Registro de pesquisa/extração reais de receitas e ofertas, recusas no host e encerramento da revisão humana no perfil testado. O relatório separado S17 não acompanha este checkout; seu handoff histórico foi preservado. Não homologa automaticamente outro perfil ou versão. |
 | [Onboarding e apresentação](docs/speaker/verification-s20.md) | Registro anterior de 795 testes aprovados e dois ignorados, preflight e MCP conferidos. Perfil novo sem modelo; não houve conversa LLM nessa etapa. Os skips foram anexo original ausente e symlink indisponível no Windows. |
-| [CI](.github/workflows/ci.yml) | Configura checks de núcleo/MCP em Windows, Ubuntu e macOS. Não instala o Hermes nem testa a conversa. Sucesso histórico não comprova a execução de uma alteração posterior. |
+| [CI](.github/workflows/ci.yml) | Configura checks de núcleo/MCP em Windows, Ubuntu e macOS. A última execução remota registrada, de 14/11/2026, passou nos três sistemas em uma versão anterior ([verificação integrada](docs/verification.md)). Não instala o Hermes nem testa a conversa. Sucesso histórico não comprova a execução de uma alteração posterior. |
 | [Agent Evals](evals/README.md) e [matriz S19](evals/s19-results.json) | 18 casos integrados concluídos no recorte CLI assistido, com versões executadas, falhas e revisão automatizada explicitamente delegada preservadas. Os 12 roteiros anteriores permanecem históricos. Não são 18 novas execuções da mesma versão nem homologação Desktop. |
 
-**Estado da versão documentada:** o percurso REAL prepara banco, perfil, pesquisa e abertura do Desktop e é o caminho oficial reproduzível. A jornada completa no Desktop foi concluída de forma assistida em `SIMULATION`, com intervenções operacionais registradas; com a planilha original no perfil REAL, ela ainda precisa ser validada. Resultados históricos e `NOT_RUN` mantêm seu alcance. Consulte o [registro desta revisão](docs/speaker/verification-local-real.md) para distinguir os testes atuais das evidências anteriores.
+**Estado da versão documentada:** o percurso REAL prepara banco, perfil, pesquisa e abertura do Desktop e é o caminho oficial reproduzível; com a planilha original, a preparação foi conferida até `check`. A jornada completa no Desktop foi concluída de forma assistida em `SIMULATION`, com intervenções operacionais registradas; no perfil REAL com a planilha original, ela ainda precisa ser validada. Resultados históricos e `NOT_RUN` mantêm seu alcance. O [registro de 16/11](docs/speaker/verification-local-real.md) antecede a inclusão da planilha no repositório.
 
 A avaliação completa precisa conferir conversa acessível, pesquisa real, decisões, retomada e estado persistido na mesma versão/perfil. **Desktop é o canal escolhido para a avaliação; os resultados históricos em CLI não o homologam.** A demonstração é feita ao vivo; slides e roteiro não substituem um ensaio concluído.
 
@@ -468,6 +587,21 @@ versões executadas. A [verificação integrada](docs/verification.md) registra 
 reprodução em ambiente limpo, a jornada com complemento pesquisado e a matriz
 dos 22 critérios. A CI histórica de núcleo/MCP passou em Windows, Linux e macOS;
 Desktop e vídeo não foram testados naquela execução.
+
+<a id="limitacoes"></a>
+### Limitações conhecidas
+
+- **Jornada REAL no Desktop:** a conversa completa com a planilha original no perfil REAL não foi executada; a jornada `SIMULATION` não a homologa.
+- **Sistemas operacionais:** instalação do Hermes, onboarding e Desktop foram executados somente no Windows. Em macOS e Linux há apenas a CI histórica do núcleo/MCP, em versão anterior. WSL não comprova Windows nativo.
+- **Instalação limpa:** não houve reprodução em outra máquina nesta versão.
+- **Versão do host:** somente Hermes 0.23.1 no commit indicado; outra versão é recusada pelo plugin de pesquisa.
+- **Pesquisa:** o endpoint anônimo do Exa tem cota e disponibilidade externas; não há fallback.
+- **Modelo:** só `openai/gpt-6.1-sol` foi observado no Desktop. A qualidade da elicitação pode variar com outro modelo.
+- **Revisão de receita adaptada:** no ensaio, duas propostas do Hermes foram recusadas com `SOURCE_NOT_LINKED`, e a correção exigiu propostas preparadas pela operação fora da conversa. Veja a [recuperação no guia](docs/demo/hermes-desktop-walkthrough.html#rec-source-not-linked).
+- **Compras com cotação** e **retomada em nova sessão** não foram exercitadas no Desktop; o complemento pesquisado tem evidência somente no recorte CLI.
+- **SIMULATION com pesquisa:** o onboarding não configura pesquisa nesse modo; o perfil do ensaio foi completado manualmente.
+- **Aprovação humana:** atesta a manifestação sobre um conteúdo exato, mas não autentica fortemente a identidade da cozinheira.
+- **Suíte completa:** não foi repetida depois das últimas mudanças de pesquisa e documentação; veja as datas na tabela acima.
 
 ### Teste básico opcional sem modelo
 
@@ -499,7 +633,7 @@ Para recuperação, compatibilidade e importação manual, consulte o [guia oper
 - Aprovação local confere conteúdo exato, prazo e estado. Uma identidade `USER` enviada pelo modelo não autentica consentimento. O perfil restringe capacidades, mas não é sandbox contra código executado na mesma conta do sistema.
 - Consultas usam conexões somente leitura; alterações usam SQL parametrizado e transações com auditoria. Projeções de atendimento omitem caminhos, payloads privados e exceções internas; logs técnicos ficam no contexto do operador.
 - O importador recusa arquivos fora da raiz autorizada, XLSX acima de 5 MiB, expansão ZIP acima de 50 MiB e mais de 20.000 linhas, sem aceitar snapshot parcial.
-- Bancos, planilha original, credenciais, logs privados e transcrições pessoais ficam fora do Git. Importações e migrações são operações locais do operador.
+- A planilha original do desafio é versionada em `doc-specs/` e só é lida; sua cópia operacional, bancos, credenciais, logs privados e transcrições pessoais ficam em `artifacts/private/` ou no diretório do Hermes, fora do Git. Importações e migrações são operações locais do operador.
 - Confirmações registram premissas informadas, sem comprovar capacidade física, segurança alimentar ou operação de delivery. A solução não compra, paga ou consome estoque físico.
 
 <a id="estrutura"></a>
@@ -509,6 +643,7 @@ Para recuperação, compatibilidade e importação manual, consulte o [guia oper
 .hermes.md                         Papel, comunicação e limites do atendimento
 AGENTS.md                          Convenções de engenharia
 config/                           Exemplos de configuração sem segredos
+doc-specs/despensa_dona_maria.xlsx Planilha original do desafio, entrada padrão
 skills/dona-maria-cardapio/         Procedimentos da consultora
 src/dona_maria/                    Domínio, persistência, MCP e plugins Hermes
 src/dona_maria/onboarding.py        Preparação REAL, perfil, modelo e Desktop
@@ -516,6 +651,7 @@ scripts/demo.py                    Onboarding portátil e demo sintética
 tests/unit/ e tests/integration/   Regras e integrações com dados sintéticos
 evals/                            Roteiros e evidências de avaliação do agente
 docs/setup.md                      Instalação, perfis, aprovação e recuperação
+docs/demo/                         Guia interativo para testar como Dona Maria
 docs/speaker/                      Slides, guia técnico e roteiro de demo
 pyproject.toml e uv.lock           Dependências e ferramentas da aplicação
 ```

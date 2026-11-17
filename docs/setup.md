@@ -1,17 +1,22 @@
 # Instalação, compatibilidade e recuperação
 
-Para a primeira execução, siga as [dez etapas do README](../README.md#executar).
-Elas usam sua planilha real, seu modelo e o Hermes Desktop. Este guia reúne
-compatibilidade, recuperação e operação manual; não é um segundo tutorial concorrente.
+Para a primeira execução, siga o [Quick Start](../README.md#quick-start) e o
+[passo a passo do README](../README.md#executar). Eles usam a planilha original
+versionada em `doc-specs/`, seu modelo e o Hermes Desktop. Este guia reúne
+instalação por sistema operacional, compatibilidade, recuperação e operação
+manual; não é um segundo tutorial concorrente.
 
 - [Versão e instalação do Hermes](#dependencias)
+  - [Windows — PowerShell](#windows-powershell)
+  - [macOS — zsh](#macos-zsh)
+  - [Linux — bash](#linux-bash)
 - [Comandos e arquivos locais](#comandos)
 - [Pesquisa real e termos públicos](#pesquisa)
 - [Aprovação local](#aprovacao-local)
 - [Retomada e recuperação](#recuperacao)
 - [Importação manual](#despensa)
 - [Simulação opcional](#demo-portatil)
-- [Conferência do anexo original](#teste-do-original)
+- [Conferência da planilha original](#teste-do-original)
 
 <a id="dependencias"></a>
 ## Versão e instalação do Hermes
@@ -28,27 +33,89 @@ usam a opção de commit do instalador por código-fonte; são destinados a uma
 use uma instalação isolada/conta de teste ou valide a compatibilidade separadamente.
 O perfil isola dados e configuração, mas não isola a versão nem dependências do host.
 
+Python 3.13 não precisa ser instalado à parte: `uv sync --locked --python 3.13`
+usa um Python 3.13 existente ou baixa uma versão gerenciada pelo uv. Os comandos
+`uv run …` do projeto são iguais nos três sistemas; as diferenças estão na
+instalação das ferramentas e nos detalhes abaixo.
+
+| Sistema | O que foi executado neste projeto |
+| --- | --- |
+| Windows | Onboarding REAL com a planilha original até `check`, jornada Desktop em `SIMULATION`, testes e CI histórica do núcleo/MCP. |
+| macOS | Somente a CI histórica do núcleo/MCP (runner arm64, versão anterior). Instalação do Hermes, onboarding e Desktop não testados. |
+| Linux | Somente a CI histórica do núcleo/MCP (runner x64, versão anterior). Instalação do Hermes, onboarding e Desktop não testados. |
+
+<a id="windows-powershell"></a>
 ### Windows — PowerShell
 
-Instale [Git](https://git-scm.com/downloads) e
-[uv](https://docs.astral.sh/uv/getting-started/installation/). Em uma pasta de
-trabalho local, baixe o instalador oficial e execute-o com o commit compatível:
+1. Instale o Git ([download](https://git-scm.com/downloads) ou `winget install --id Git.Git -e`)
+   e o uv pelo [instalador oficial](https://docs.astral.sh/uv/getting-started/installation/):
 
-```powershell
-Invoke-WebRequest https://hermes-agent.nousresearch.com/install.ps1 -OutFile install-hermes.ps1
-& ./install-hermes.ps1 -Commit 3b421578588243f920886e6fe79a6faa87ea026e
-```
+   ```powershell
+   powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+   ```
 
-### Linux/macOS — bash ou zsh
+2. Em uma pasta de trabalho local, baixe o instalador oficial do Hermes e
+   execute-o com o commit compatível:
 
-Instale Git e uv conforme seu sistema. Para uma instalação nova do Hermes:
+   ```powershell
+   Invoke-WebRequest https://hermes-agent.nousresearch.com/install.ps1 -OutFile install-hermes.ps1
+   & ./install-hermes.ps1 -Commit 3b421578588243f920886e6fe79a6faa87ea026e
+   ```
 
-```sh
-curl -fsSL https://hermes-agent.nousresearch.com/install.sh -o install-hermes.sh
-bash install-hermes.sh --commit 3b421578588243f920886e6fe79a6faa87ea026e
-```
+3. Reabra o terminal e confira `git --version`, `uv --version` e `hermes --version`.
 
-Reabra o terminal e confira `hermes --version`. A instalação Desktop por pacote
+- Os comandos do README funcionam em PowerShell 7 e no Windows PowerShell 5.1.
+  A exceção são argumentos JSON passados ao `hermes config set`: o 5.1 remove
+  as aspas internas. Veja [argumentos JSON no PowerShell](#json-powershell).
+- Para abrir o guia interativo: `start docs\demo\hermes-desktop-walkthrough.html`.
+- Se o pytest recusar a pasta temporária padrão (`WinError 5`), use
+  `--basetemp` conforme a [nota do README](../README.md#validar).
+
+<a id="macos-zsh"></a>
+### macOS — zsh
+
+1. Instale o Git com `xcode-select --install` (Command Line Tools) ou
+   `brew install git`, e o uv com `curl -LsSf https://astral.sh/uv/install.sh | sh`
+   ou `brew install uv`.
+2. Para uma instalação nova do Hermes:
+
+   ```sh
+   curl -fsSL https://hermes-agent.nousresearch.com/install.sh -o install-hermes.sh
+   bash install-hermes.sh --commit 3b421578588243f920886e6fe79a6faa87ea026e
+   ```
+
+3. Abra um novo terminal e confira `git --version`, `uv --version` e `hermes --version`.
+
+- A [documentação do Desktop](https://hermes-agent.nousresearch.com/docs/user-guide/desktop)
+  indica suporte a macOS com Apple Silicon. Este projeto não testou o Desktop no macOS.
+- Por padrão, o zsh interativo não trata `#` como comentário: cole os comandos
+  sem linhas de comentário.
+- Para abrir o guia interativo: `open docs/demo/hermes-desktop-walkthrough.html`.
+- Para o fluxo opcional `scripts/demo.py`, use `python3` se `python` não existir.
+
+<a id="linux-bash"></a>
+### Linux — bash
+
+1. Instale o Git pelo gerenciador da sua distribuição (por exemplo,
+   `sudo apt install git` no Debian/Ubuntu) e o uv com
+   `curl -LsSf https://astral.sh/uv/install.sh | sh`.
+2. Para uma instalação nova do Hermes:
+
+   ```sh
+   curl -fsSL https://hermes-agent.nousresearch.com/install.sh -o install-hermes.sh
+   bash install-hermes.sh --commit 3b421578588243f920886e6fe79a6faa87ea026e
+   ```
+
+3. Abra um novo terminal e confira `git --version`, `uv --version` e `hermes --version`.
+
+- O Desktop exige uma sessão gráfica. A documentação oficial lista Linux entre
+  as plataformas suportadas; este projeto não o testou no Linux.
+- Para abrir o guia interativo: `xdg-open docs/demo/hermes-desktop-walkthrough.html`.
+- Para o fluxo opcional `scripts/demo.py`, use `python3` se `python` não existir.
+
+Os instaladores oficiais aceitam o commit (`-Commit` no PowerShell, `--commit`
+no bash). O `install.sh` atende Linux e macOS; no Windows, use `install.ps1`.
+A instalação Desktop por pacote
 pode usar outro backend: confira também a identidade do backend efetivo da sessão.
 Não atualize automaticamente uma instalação homologada antes da demonstração.
 Windows, Linux, macOS e WSL possuem caminhos e requisitos próprios; a matriz
@@ -122,6 +189,9 @@ hermes -p NOME_DO_PERFIL config set plugins.isolation host
 hermes -p NOME_DO_PERFIL config set agent.disabled_toolsets '["desktop_ui"]'
 ```
 
+No Windows PowerShell 5.1, escreva o segundo valor como `'[\"desktop_ui\"]'`
+(veja [argumentos JSON no PowerShell](#json-powershell)).
+
 Recarregue os plugins ou reinicie normalmente o gateway desse perfil e abra
 uma nova conversa. Execute `check-research` e `verify-profile` antes do
 atendimento; `verify-profile` consulta `plugins.list` no gateway que abre a
@@ -162,11 +232,25 @@ Para **revisar os termos de um atendimento existente**, encerre a sessão e edit
 somente os valores/entradas de `research.json` no seu diretório privado. O arquivo
 é um objeto JSON com chaves como `termo-1` e valores como `arroz`; não altere outros
 arquivos. A edição local representa sua autorização explícita dos novos termos.
-Use o perfil exibido por `configure` neste comando (PowerShell ou shell):
+Use o perfil exibido por `configure` neste comando (bash, zsh ou PowerShell 7):
 
 ```sh
 hermes -p NOME_DO_PERFIL config set plugins.entries.dona-maria-mediated-research.settings.public_terms '{"termo-1":"arroz","termo-2":"feijão"}'
 ```
+
+<a id="json-powershell"></a>
+**Argumentos JSON no PowerShell.** O PowerShell 7 repassa o JSON entre aspas
+simples sem alteração. O Windows PowerShell 5.1 remove as aspas duplas internas
+ao chamar um executável e o valor chega como `{termo-1:arroz}`. Nele, escape
+cada aspa interna:
+
+```powershell
+hermes -p NOME_DO_PERFIL config set plugins.entries.dona-maria-mediated-research.settings.public_terms '{\"termo-1\":\"arroz\",\"termo-2\":\"feijão\"}'
+```
+
+O comportamento das duas versões foi conferido com um executável Python que
+imprime o argumento recebido; o `hermes` recebe argumentos pelo mesmo mecanismo.
+No PowerShell 7, a forma escapada chegaria com as barras invertidas.
 
 O objeto precisa ser **idêntico ao de `research.json`**. Depois execute
 `verify-profile` e abra uma nova sessão via `desktop`. Divergência é recusada;
@@ -182,7 +266,8 @@ esperado é seis ferramentas MCP mais `search_culinary_sources` e
 <a id="aprovacao-local"></a>
 ## Aprovação local
 
-Siga a [etapa 9 do README](../README.md#desktop-local): liste, inspecione e aprove
+Siga o [passo 10 do README](../README.md#revisao-local) e o
+[Apêndice A do guia interativo](demo/hermes-desktop-walkthrough.html#apendice-a): liste, inspecione e aprove
 somente após conferir o resumo. O ID da proposta e seu hash são referências
 do terminal do operador, não dados que a cozinheira precisa memorizar.
 `approve` exige a digitação de `ATESTO <hash>`. Não automatize essa entrada.
@@ -238,13 +323,16 @@ O contrato de leitura não autentica consentimento humano.
 ## Importação manual para diagnóstico
 
 O percurso recomendado é `setup-real`, que inclui as migrações necessárias.
-Para operadores que precisam somente importar um XLSX em uma pasta nova:
+Para operadores que precisam somente importar um XLSX em uma pasta nova, copie
+antes a planilha original para a entrada privada e crie a pasta do banco; o
+original em `doc-specs/` fica intacto:
 
 ```sh
+uv run --locked --no-sync python -c "import pathlib, shutil; pathlib.Path('artifacts/private/manual').mkdir(parents=True, exist_ok=True); pathlib.Path('artifacts/private/input').mkdir(parents=True, exist_ok=True); shutil.copy2('doc-specs/despensa_dona_maria.xlsx', 'artifacts/private/input/')"
 uv run --locked --no-sync python -X utf8 -m dona_maria.bootstrap --database artifacts/private/manual/workspace.sqlite3 --inventory artifacts/private/input/despensa_dona_maria.xlsx --allowed-directory artifacts/private/input --context-mode REAL
 ```
 
-Crie `artifacts/private/manual` antes de executar. Esse comando isolado não cria
+Esse comando isolado não cria
 perfil, plugins ou manifesto do onboarding; não misture os dois percursos.
 Migrações explícitas são oferecidas pela CLI `dona_maria.approval_cli` com backup
 novo (`migrate` e depois `migrate-research`). Os contratos são os mesmos usados
@@ -260,7 +348,7 @@ uv run --locked --no-sync python -X utf8 scripts/demo.py check
 ```
 
 Esse fluxo histórico cria somente arroz em `artifacts/private/demo-s20`, modo
-`SIMULATION`, sem pesquisa. Não usa sua planilha e não é o percurso completo
+`SIMULATION`, sem pesquisa. Não usa a planilha original e não é o percurso completo
 do avaliador. Os comandos `configure`, `model`, `chat` e `review` desse modo
 continuam disponíveis para diagnóstico assistido; não promovem a base a REAL.
 Em sistemas sem `python`, use `python3` no primeiro comando.
@@ -289,11 +377,19 @@ orientações e os plugins, prepare outro atendimento e repita o preflight;
 configuração e bytes conferidos antes da integração são evidências históricas.
 
 <a id="teste-do-original"></a>
-## Conferência do anexo original
+## Conferência da planilha original
 
-A suíte pública usa fixtures temporárias para permanecer reproduzível e não
-distribuir o anexo. O teste opcional em `tests/unit/test_inventory_import.py`
-procura `doc-specs/despensa_dona_maria.xlsx`; se ausente, fica ignorado. Essa
-localização histórica é exclusiva do teste opcional, não do atendimento REAL.
-O funcionamento de `setup-real` não depende dessa fixture ou de `doc-specs/`.
-Conferir uma planilha transcrita não equivale a conferir o binário original.
+A planilha original do desafio é versionada em `doc-specs/despensa_dona_maria.xlsx`
+e é a entrada padrão do README. SHA-256 esperado:
+`56df15d6fd2da64901534b48124ab1da43428849e019607577ead1211db3c8d2`.
+`setup-real` só a lê; a cópia operacional fica em `<--directory>/inventory.xlsx`,
+dentro de `artifacts/private/`, fora do Git. O código não depende de `doc-specs/`:
+qualquer XLSX com as abas e cabeçalhos do README pode ser informado em
+`--inventory`.
+
+Os demais testes usam fixtures temporárias. O teste em
+`tests/unit/test_inventory_import.py` lê a planilha original sem alterá-la:
+confere 37 itens, custos por compra, origem por célula e o hash antes e depois.
+Ele só é ignorado se o arquivo estiver ausente. Em 17/11/2026, executado
+isoladamente no Windows, passou (1 aprovado). Conferir uma planilha transcrita
+não equivale a conferir o binário original.

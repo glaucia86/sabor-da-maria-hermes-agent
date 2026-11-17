@@ -1,0 +1,1647 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Roteiro da demonstração no Hermes Desktop — Sabor da Maria</title>
+<meta name="description" content="Guia interativo para conduzir a demonstração do Sabor da Maria no Hermes Desktop, com prompts copiáveis, revisão humana e recuperação de erros.">
+<style>
+@font-face {
+  font-family: "Manrope";
+  src: url("../speaker/slides/assets/fonts/Manrope-Variable.ttf") format("truetype");
+  font-style: normal; font-weight: 200 800; font-display: swap;
+}
+:root {
+  --night: #111315; --panel: #1b1e21; --panel-2: #22262a; --line: #383d42;
+  --ink: #f5f2eb; --muted: #b4b8bc; --soft: #969ca2; --mint: #e6dccb; --amber: #d9b487;
+  --coral: #ff756d; --ifood: #ed3346; --paper: #faf8f2; --paper-ink: #1c2223;
+  --read-bg: #16203a; --read-line: #3d5c9c; --read-ink: #c3d4f7;
+  --write-bg: #2a2114; --write-line: #8a6a2f; --write-ink: #f0d29b;
+  --research-bg: #231a35; --research-line: #6d52aa; --research-ink: #dacbfb;
+  --calc-bg: #2f1b1d; --calc-line: #a64c4a; --calc-ink: #ffbdb7;
+  --real-bg: #11302a; --real-line: #2f8f7a; --real-ink: #a6e8d5;
+  --sim-bg: #33250f; --sim-line: #b7862f; --sim-ink: #f6d593;
+  --sans: "Manrope", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "Cascadia Code", Consolas, ui-monospace, "SFMono-Regular", monospace;
+  --radius: 10px;
+}
+*, ::before, ::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { scroll-padding-top: 96px; }
+body {
+  margin: 0; font-family: var(--sans); font-size: 16.5px; line-height: 1.6; font-weight: 450;
+  color: var(--ink); -webkit-font-smoothing: antialiased;
+  background: radial-gradient(ellipse at 100% 0, #2c1c20 0, transparent 45%), var(--night);
+  background-attachment: fixed;
+}
+a { color: var(--ink); text-decoration: underline; text-decoration-color: #6a6f75; text-underline-offset: 3px; }
+a:hover { color: var(--coral); text-decoration-color: var(--coral); }
+:focus-visible { outline: 3px solid var(--coral); outline-offset: 3px; border-radius: 4px; }
+code, pre, kbd { font-family: var(--mono); }
+code { font-size: .88em; background: #262a2e; border: 1px solid #33383d; padding: 1px 6px; border-radius: 5px; overflow-wrap: anywhere; }
+kbd { font-size: .82em; padding: 1px 6px; border: 1px solid #555b61; border-bottom-width: 2px; border-radius: 5px; background: #23272b; }
+h1, h2, h3, h4 { line-height: 1.15; letter-spacing: -.03em; margin: 0; text-wrap: balance; }
+p { margin: 0 0 .8em; }
+ul, ol { margin: 0; padding-left: 1.25em; }
+li + li { margin-top: .35em; }
+table { width: 100%; border-collapse: collapse; font-size: .94em; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+th { color: var(--muted); font-size: .78em; font-weight: 750; letter-spacing: .1em; text-transform: uppercase; }
+tbody tr:nth-child(even) { background: rgb(255 255 255 / .018); }
+.sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.skip { position: absolute; left: 16px; top: -60px; z-index: 50; background: var(--coral); color: #1b0f0f; padding: 10px 16px; border-radius: 6px; font-weight: 750; text-decoration: none; }
+.skip:focus { top: 12px; }
+
+/* Topo */
+.topbar {
+  position: sticky; top: 0; z-index: 20; display: grid; grid-template-columns: 290px 1fr auto; align-items: center; gap: 24px;
+  padding: 14px 28px; background: rgb(17 19 21 / .94); border-bottom: 1px solid var(--line); backdrop-filter: blur(8px);
+}
+.brand { display: flex; flex-direction: column; text-decoration: none; }
+.brand strong { font-size: 22px; font-weight: 800; letter-spacing: -.05em; line-height: 1; }
+.brand strong span { color: var(--coral); }
+.brand small { margin-top: 4px; color: var(--soft); font-size: 10.5px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+.progress-wrap { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.progress-text { white-space: nowrap; font-size: 13px; color: var(--muted); }
+.progress-text strong { color: var(--ink); }
+.progress { flex: 1; height: 8px; min-width: 120px; border-radius: 99px; background: #2a2e33; overflow: hidden; }
+.progress > span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--ifood), var(--coral)); border-radius: inherit; transition: width .3s ease; }
+.track-switch { display: flex; align-items: center; gap: 10px; margin: 0; padding: 0; border: 0; }
+.track-switch legend { float: left; margin-right: 6px; font-size: 11px; font-weight: 750; letter-spacing: .14em; text-transform: uppercase; color: var(--soft); }
+.track-switch .opts { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.track-switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.track-switch label { padding: 7px 13px; font-size: 13px; font-weight: 700; color: var(--muted); cursor: pointer; }
+.track-switch label + input + label { border-left: 1px solid var(--line); }
+.track-switch input:checked + label.l-real { background: var(--real-bg); color: var(--real-ink); }
+.track-switch input:checked + label.l-sim { background: var(--sim-bg); color: var(--sim-ink); }
+.track-switch input:focus-visible + label { outline: 3px solid var(--coral); outline-offset: -3px; }
+
+/* Layout */
+.layout { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 0; align-items: start; }
+.sidebar { position: sticky; top: 69px; max-height: calc(100vh - 69px); overflow-y: auto; padding: 22px 18px 32px 28px; border-right: 1px solid var(--line); }
+.sidebar h2 { margin: 18px 0 8px; font-size: 10.5px; font-weight: 750; letter-spacing: .16em; text-transform: uppercase; color: var(--soft); }
+.sidebar h2:first-child { margin-top: 0; }
+.sidebar ol { list-style: none; padding: 0; margin: 0; }
+.sidebar li + li { margin-top: 2px; }
+.sidebar a { display: grid; grid-template-columns: 30px 1fr 18px; align-items: center; gap: 6px; padding: 7px 10px; border-radius: 7px; text-decoration: none; color: var(--muted); font-size: 14px; line-height: 1.3; border-left: 3px solid transparent; }
+.sidebar a:hover { background: #1d2124; color: var(--ink); }
+.sidebar a[aria-current="step"] { background: #241a1d; color: #fff; border-left-color: var(--coral); }
+.sidebar .num { font-family: var(--mono); font-size: 12px; color: var(--soft); }
+.sidebar a[aria-current="step"] .num { color: var(--coral); }
+.sidebar .state { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid #4a5056; }
+.sidebar a.is-done .state { border-color: var(--real-line); background: var(--real-line); position: relative; }
+.sidebar a.is-done .state::after { content: ""; position: absolute; left: 4.5px; top: 1.5px; width: 4px; height: 8px; border: solid #0d1f1a; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.sidebar .approval-dot { color: var(--write-ink); font-size: 11px; }
+.side-actions { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); display: grid; gap: 10px; font-size: 13px; color: var(--soft); }
+main { min-width: 0; padding: 34px 44px 40px; max-width: 1160px; }
+
+/* Secções */
+.section { animation: enter .35s ease-out both; }
+.kicker { display: flex; align-items: center; gap: 11px; margin: 0 0 12px; color: var(--muted); font-size: 12px; font-weight: 750; letter-spacing: .15em; text-transform: uppercase; }
+.kicker::before { content: ""; width: 24px; height: 3px; background: var(--ifood); flex: none; }
+.section > header h1 { font-size: 46px; font-weight: 800; letter-spacing: -.055em; }
+.section > header h1 span, .accent { color: var(--coral); }
+.section > header h2 { font-size: 34px; font-weight: 750; letter-spacing: -.045em; }
+.section > header h1:focus, .section > header h2:focus { outline: none; }
+.section > header h1:focus-visible, .section > header h2:focus-visible { outline: 3px solid var(--coral); outline-offset: 6px; }
+.lead { margin-top: 14px; max-width: 840px; font-size: 18.5px; color: var(--muted); }
+.lead strong { color: var(--ink); font-weight: 650; }
+.meta { display: flex; flex-wrap: wrap; gap: 10px 26px; margin: 20px 0 0; padding: 14px 18px; border: 1px solid var(--line); border-radius: var(--radius); background: #16191c; }
+.meta > div { display: flex; flex-direction: column; gap: 6px; }
+.meta dt { font-size: 10.5px; font-weight: 750; letter-spacing: .14em; text-transform: uppercase; color: var(--soft); }
+.meta dd { margin: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.tool, .cmd, .badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 6px; font-size: 12.5px; font-weight: 650; border: 1px solid; white-space: nowrap; }
+.tool { font-family: var(--mono); font-weight: 500; }
+.t-read { background: var(--read-bg); border-color: var(--read-line); color: var(--read-ink); }
+.t-write { background: var(--write-bg); border-color: var(--write-line); color: var(--write-ink); }
+.t-research { background: var(--research-bg); border-color: var(--research-line); color: var(--research-ink); }
+.t-calc { background: var(--calc-bg); border-color: var(--calc-line); color: var(--calc-ink); }
+.cmd { font-family: var(--mono); font-weight: 500; background: transparent; border-style: dashed; border-color: #6c6355; color: var(--mint); }
+.b-approve { background: var(--write-bg); border-color: var(--write-line); color: var(--write-ink); }
+.b-none { background: transparent; border-color: #4a5056; color: var(--muted); }
+.b-real { background: var(--real-bg); border-color: var(--real-line); color: var(--real-ink); }
+.b-sim { background: var(--sim-bg); border-color: var(--sim-line); color: var(--sim-ink); }
+
+.grid-2 { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 22px; margin-top: 24px; }
+.stack { display: grid; gap: 18px; align-content: start; }
+.block { padding: 18px 20px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+.block h3 { margin-bottom: 10px; font-size: 13px; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.block p:last-child { margin-bottom: 0; }
+.block.objective { border-top: 3px solid #7c7065; }
+.block.expected { border-top: 3px solid var(--read-line); }
+.block.done { border-top: 3px solid var(--real-line); }
+.checks { list-style: none; padding: 0; }
+.checks li { position: relative; padding-left: 26px; }
+.checks li::before { content: ""; position: absolute; left: 0; top: .32em; width: 15px; height: 15px; border: 1.5px solid var(--real-line); border-radius: 4px; }
+.cards-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-top: 26px; }
+.cards-3 .block h3 { color: var(--ink); text-transform: none; letter-spacing: -.01em; font-size: 18px; }
+
+/* Prompts */
+.prompt { margin: 0; border-radius: var(--radius); background: var(--paper); color: var(--paper-ink); border-left: 5px solid var(--ifood); box-shadow: 0 14px 30px #0006; }
+.prompt + .prompt { margin-top: 14px; }
+.prompt.operator { border-left-color: var(--research-line); }
+.prompt-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 10px 14px 0 18px; }
+.speaker { font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #575951; }
+.speaker .tag { margin-left: 8px; padding: 2px 7px; border-radius: 4px; font-size: 10px; letter-spacing: .08em; }
+.tag.real { background: #d4efe6; color: #0e4a3c; }
+.tag.sim { background: #f6e2bb; color: #5b3d05; }
+.tag.both { background: #e4e1d8; color: #3b3d38; }
+.tag.op { background: #e5dcf7; color: #3c2a70; }
+.prompt-text { margin: 0; padding: 8px 18px 16px; font-size: 17.5px; line-height: 1.55; font-weight: 520; quotes: none; }
+.prompt-note { margin: 0; padding: 0 18px 14px; font-size: 13px; color: #5b5d57; }
+.slot { background: #f3dfbf; color: #5a3900; border-bottom: 2px dashed #b7862f; padding: 0 3px; border-radius: 3px; }
+button { font: inherit; }
+.copy { display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 7px; border: 1px solid #c9c4b8; background: #fff; color: #23272a; font-size: 13px; font-weight: 700; cursor: pointer; }
+.copy:hover { border-color: var(--ifood); color: #a3132a; }
+.copy.is-copied { background: #d4efe6; border-color: #2f8f7a; color: #0e4a3c; }
+.copy svg { width: 15px; height: 15px; }
+.no-js .copy { display: none; }
+.cmd-block { margin: 0; border: 1px solid var(--line); border-radius: var(--radius); background: #0c0e10; overflow: hidden; }
+.cmd-block + .cmd-block { margin-top: 12px; }
+.cmd-block .prompt-head { padding: 9px 12px 9px 16px; background: #181b1e; border-bottom: 1px solid var(--line); }
+.cmd-block .speaker { color: var(--soft); }
+.cmd-block .copy { background: #23272b; color: var(--ink); border-color: #4a5056; }
+.cmd-block .copy:hover { color: var(--coral); border-color: var(--coral); }
+.cmd-block .copy.is-copied { background: var(--real-bg); color: var(--real-ink); border-color: var(--real-line); }
+.cmd-block pre { margin: 0; padding: 14px 16px; font-size: 13.5px; line-height: 1.55; color: #e9e6df; white-space: pre-wrap; overflow-wrap: anywhere; }
+.cmd-block pre code { padding: 0; border: 0; background: none; font-size: inherit; }
+.cmd-expect { margin: 0; padding: 10px 16px 12px; border-top: 1px dashed #30353a; font-size: 14px; color: var(--muted); }
+.cmd-expect strong { color: var(--ink); }
+
+/* Avisos e evidências */
+.callout { display: grid; grid-template-columns: 34px 1fr; gap: 12px; padding: 16px 18px; border-radius: var(--radius); border: 1px solid; margin-top: 18px; }
+.callout .ico { width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center; font-weight: 800; }
+.callout p:last-child { margin-bottom: 0; }
+.callout.operator { background: #1f1a2b; border-color: var(--research-line); }
+.callout.operator .ico { background: #34285a; color: var(--research-ink); }
+.callout.warn { background: #2b1c1d; border-color: var(--calc-line); }
+.callout.warn .ico { background: #4a2629; color: var(--calc-ink); }
+.callout.info { background: #16202b; border-color: var(--read-line); }
+.callout.info .ico { background: #22324d; color: var(--read-ink); }
+.callout strong { color: #fff; }
+.evidence { padding: 16px 18px; border-radius: var(--radius); background: #1f1910; border: 1px solid var(--sim-line); }
+.evidence h3 { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--sim-ink); }
+.evidence p, .evidence li { color: #e8dcc6; }
+.evidence p:last-child { margin-bottom: 0; }
+.evidence table th { color: var(--sim-ink); }
+.evidence table td, .evidence table th { border-color: #4b3b1d; padding: 8px 10px; }
+.evidence .fine { font-size: 13px; color: #c9b892; }
+.hide-sim .evidence { display: none; }
+
+/* Fluxo e tabelas */
+.table-wrap { margin-top: 18px; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: #171a1d; }
+.table-wrap table td:first-child { font-weight: 650; color: var(--ink); white-space: nowrap; }
+.steps-list { counter-reset: s; list-style: none; padding: 0; display: grid; gap: 14px; margin-top: 14px; }
+.steps-list > li { counter-increment: s; position: relative; padding: 16px 18px 16px 64px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+.steps-list > li + li { margin-top: 0; }
+.steps-list > li::before { content: counter(s); position: absolute; left: 18px; top: 14px; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; background: #342329; color: #ff8c83; font-family: var(--mono); font-size: 14px; font-weight: 700; }
+.steps-list h3 { font-size: 18px; margin-bottom: 8px; }
+.rec { padding: 20px 22px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); margin-top: 18px; }
+.rec h3 { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 21px; margin-bottom: 12px; }
+.rec h3 code { font-size: 15px; color: var(--calc-ink); background: var(--calc-bg); border-color: var(--calc-line); }
+.rec dl { display: grid; grid-template-columns: 170px 1fr; gap: 10px 18px; margin: 0 0 4px; }
+.rec dt { font-size: 12px; font-weight: 750; letter-spacing: .1em; text-transform: uppercase; color: var(--soft); padding-top: 3px; }
+.rec dd { margin: 0; }
+.rec .prompt { margin-top: 14px; }
+.legend { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: 14px; font-size: 14px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 8px; }
+
+/* Rodapé de etapa e paginação */
+.step-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--line); }
+.done-toggle { display: inline-flex; align-items: center; gap: 10px; font-weight: 650; cursor: pointer; }
+.done-toggle input { width: 20px; height: 20px; accent-color: var(--real-line); cursor: pointer; }
+.pager { display: none; align-items: center; justify-content: space-between; gap: 16px; margin-top: 30px; padding: 16px 0 0; }
+.js .pager { display: flex; }
+.pager button, .btn { display: inline-flex; align-items: center; gap: 8px; padding: 11px 18px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--ink); font-weight: 700; font-size: 14.5px; cursor: pointer; max-width: 44%; }
+.pager button:hover:not(:disabled), .btn:hover { border-color: var(--coral); color: var(--coral); }
+.pager button:disabled { opacity: .4; cursor: not-allowed; }
+.pager #next { background: var(--ifood); border-color: var(--ifood); color: #fff; }
+.pager #next:hover:not(:disabled) { background: #d42a3c; color: #fff; }
+.pager-pos { color: var(--soft); font-size: 13px; text-align: center; }
+.btn.small { padding: 7px 12px; font-size: 13px; }
+.toast { position: fixed; right: 24px; bottom: 24px; z-index: 40; max-width: 420px; padding: 12px 16px; border-radius: 9px; background: #23272b; border: 1px solid var(--real-line); color: var(--ink); font-size: 14px; box-shadow: 0 16px 40px #000a; transform: translateY(20px); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
+.toast.show { opacity: 1; transform: none; }
+.toast.warn { border-color: var(--sim-line); }
+.toast.err { border-color: var(--calc-line); }
+.site-foot { margin-top: 46px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 13px; color: var(--soft); }
+noscript p { padding: 12px 16px; border: 1px solid var(--sim-line); border-radius: 8px; background: var(--sim-bg); color: var(--sim-ink); }
+
+html[data-track="real"] [data-only="sim"], html[data-track="sim"] [data-only="real"] { display: none !important; }
+
+@keyframes enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (max-width: 1240px) { .grid-2 { grid-template-columns: 1fr; } .cards-3 { grid-template-columns: 1fr; } }
+@media (max-width: 980px) {
+  .topbar { grid-template-columns: 1fr; gap: 10px; position: static; }
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { position: static; max-height: none; border-right: 0; border-bottom: 1px solid var(--line); }
+  main { padding: 24px 20px; }
+  .rec dl { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { *, ::before, ::after { animation: none !important; transition: none !important; } }
+@media print {
+  body { background: #fff; color: #111; }
+  .topbar, .sidebar, .pager, .copy, .step-foot, .skip, .toast { display: none !important; }
+  .layout { display: block; }
+  .section[hidden] { display: block !important; }
+  .section { break-before: page; }
+}
+</style>
+</head>
+<body class="no-js">
+<a class="skip" href="#conteudo">Pular para o conteúdo</a>
+
+<header class="topbar">
+  <a class="brand" href="#inicio" data-nav-link>
+    <strong>Sabor da <span>Maria.</span></strong>
+    <small>Roteiro da demo · Hermes Desktop</small>
+  </a>
+  <div class="progress-wrap">
+    <span class="progress-text" id="progress-text"><strong>0</strong> de 14 etapas concluídas</span>
+    <div class="progress" id="progress" role="progressbar" aria-label="Etapas do roteiro concluídas" aria-valuemin="0" aria-valuemax="14" aria-valuenow="0" aria-valuetext="0 de 14 etapas concluídas"><span></span></div>
+  </div>
+  <fieldset class="track-switch">
+    <legend>Trilha</legend>
+    <span class="opts">
+      <input type="radio" name="track" id="track-real" value="real" checked>
+      <label class="l-real" for="track-real">REAL</label>
+      <input type="radio" name="track" id="track-sim" value="sim">
+      <label class="l-sim" for="track-sim">SIMULATION</label>
+    </span>
+  </fieldset>
+</header>
+
+<div class="layout">
+<aside class="sidebar">
+  <nav aria-label="Etapas do roteiro">
+    <h2>Começo</h2>
+    <ol>
+      <li><a href="#inicio" data-nav><span class="num">··</span><span>Visão geral</span><span class="state" aria-hidden="true" hidden></span></a></li>
+      <li><a href="#preparo" data-nav><span class="num">00</span><span>Preparar o atendimento</span><span class="state" aria-hidden="true"></span></a></li>
+    </ol>
+    <h2>Conversa com o Hermes</h2>
+    <ol>
+      <li><a href="#etapa-1" data-nav><span class="num">01</span><span>Despensa</span><span class="state" aria-hidden="true"></span></a></li>
+      <li><a href="#etapa-2" data-nav><span class="num">02</span><span>Pesquisa web via Exa</span><span class="state" aria-hidden="true"></span></a></li>
+      <li><a href="#etapa-3" data-nav><span class="num">03</span><span>Escolha da receita <span class="approval-dot" aria-hidden="true">●</span><span class="sr-only">, exige aprovação local</span></span><span class="state" aria-hidden="true"></span></a></li>
+      <li><a href="#etapa-4" data-nav><span class="num">04</span><span>Condições da cozinha <span class="approval-dot" aria-hidden="true">●</span><span class="sr-only">, exige aprovação local</span></span><span class="state" aria-hidden="true"></span></a></li>
+      <li><a href="#etapa-5" data-nav><span class="num">05</span><span>Adaptação da receita <span class="approval-dot" aria-hidden="true">●</span><span class="sr-only">, exige aprovação local</span></span><span class="state" aria-hidden="true"></span></a></li>
+      <li><a href="#etapa-6" data-nav><span class="num">06</span><span>Plano de produção <span class="approval-dot" aria-hidden="true">●</span><span class="sr-only">, exige aprovação local</span></span><span class="state" aria-hidden="true"></span></a></li>
+      <li><a href="#etapa-7" data-nav><span class="num">07</span><span>Viabilidade</span><span class="state" aria-hidden="true"></span></a></li>
+      <li><a href="#etapa-8" data-nav><span class="num">08</span><span>Compras e orçamento</span><span class="state" aria-hidden="true"></span></a></li>
+      <li><a href="#etapa-9" data-nav><span class="num">09</span><span>Interesse <span class="approval-dot" aria-hidden="true">●</span><span class="sr-only">, exige aprovação local</span></span><span class="state" aria-hidden="true"></span></a></li>
+      <li><a href="#etapa-10" data-nav><span class="num">10</span><span>Aceite humano <span class="approval-dot" aria-hidden="true">●</span><span class="sr-only">, exige aprovação local</span></span><span class="state" aria-hidden="true"></span></a></li>
+      <li><a href="#etapa-11" data-nav><span class="num">11</span><span>Cenários de preço</span><span class="state" aria-hidden="true"></span></a></li>
+      <li><a href="#etapa-12" data-nav><span class="num">12</span><span>Seleção do cardápio <span class="approval-dot" aria-hidden="true">●</span><span class="sr-only">, exige aprovação local</span></span><span class="state" aria-hidden="true"></span></a></li>
+      <li><a href="#etapa-13" data-nav><span class="num">13</span><span>Conferência final</span><span class="state" aria-hidden="true"></span></a></li>
+    </ol>
+    <h2>Apêndices</h2>
+    <ol>
+      <li><a href="#apendice-a" data-nav><span class="num">A</span><span>Revisão e aprovação humana</span><span class="state" aria-hidden="true" hidden></span></a></li>
+      <li><a href="#apendice-b" data-nav><span class="num">B</span><span>Recuperação de erros</span><span class="state" aria-hidden="true" hidden></span></a></li>
+      <li><a href="#apendice-c" data-nav><span class="num">C</span><span>REAL × SIMULATION</span><span class="state" aria-hidden="true" hidden></span></a></li>
+    </ol>
+  </nav>
+  <div class="side-actions">
+    <label class="done-toggle"><input type="checkbox" id="show-evidence" checked> Mostrar evidências da SIMULATION</label>
+    <button type="button" class="btn small" id="reset-progress">Reiniciar progresso</button>
+    <p>Atalhos: <kbd>←</kbd> etapa anterior · <kbd>→</kbd> próxima.</p>
+    <p>● = a etapa gera proposta que exige aprovação local.</p>
+  </div>
+</aside>
+
+<main id="conteudo" tabindex="-1">
+<noscript><p>Sem JavaScript, todas as etapas aparecem em sequência, os dois tipos de prompt ficam visíveis e a cópia automática fica indisponível. Selecione o texto e copie manualmente.</p></noscript>
+
+<!-- ============================ VISÃO GERAL ============================ -->
+<section class="section" id="inicio" data-section data-title="Visão geral" aria-labelledby="t-inicio">
+  <header>
+    <p class="kicker">Guia interativo · Hermes Desktop</p>
+    <h1 id="t-inicio" tabindex="-1">Conversar. Validar. <span>Decidir.</span></h1>
+    <p class="lead">Neste roteiro, <strong>você interpreta a Dona Maria</strong> e conversa em linguagem natural com a consultora no Hermes Desktop. Cada etapa traz um prompt pronto para copiar, o que o agente faz por trás, quais ferramentas entram em cena, o resultado esperado e como reconhecer que a etapa terminou corretamente.</p>
+  </header>
+
+  <div class="cards-3">
+    <div class="block">
+      <h3>Duas janelas, dois papéis</h3>
+      <p><strong>Desktop:</strong> Dona Maria conversa e manifesta decisões.</p>
+      <p><strong>Terminal:</strong> a pessoa operadora revisa e atesta cada proposta, fora do modelo (<a href="#apendice-a">Apêndice A</a>).</p>
+      <p>Se você exercer os dois papéis, diga isso em voz alta ao avaliador a cada troca.</p>
+    </div>
+    <div class="block">
+      <h3>Duas trilhas, nunca misturadas</h3>
+      <p><span class="badge b-real">REAL</span> reproduzível pelo onboarding oficial, com a planilha original do desafio, o seu modelo e os dados verdadeiros da sua cozinha.</p>
+      <p><span class="badge b-sim">SIMULATION</span> evidência do ensaio assistido de 17/11/2026, com planilha sintética e dados hipotéticos. Não é reproduzível integralmente pelo onboarding público (<a href="#apendice-c">Apêndice C</a>).</p>
+      <p>Use o seletor <strong>Trilha</strong> no topo para ver os prompts de cada uma.</p>
+    </div>
+    <div class="block">
+      <h3>O que o agente não contorna</h3>
+      <ul>
+        <li>Decisão só vale após proposta e aprovação local.</li>
+        <li>Complementos cabem em R$ 80 somando todos os pratos.</li>
+        <li>Taxa didática de 10% sobre a venda.</li>
+        <li>Preço ou quantidade ausente é lacuna, nunca zero.</li>
+        <li>Selecionar o cardápio não compra nem baixa estoque.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="block" style="margin-top:22px">
+    <h3>Legenda das ferramentas</h3>
+    <div class="legend">
+      <span><span class="tool t-read">consulta</span> lê estado, despensa, viabilidade ou compras; não grava</span>
+      <span><span class="tool t-write">propose_user_change</span> grava só uma proposta pendente</span>
+      <span><span class="cmd">comando interno</span> decisão tipada dentro da proposta</span>
+      <span><span class="tool t-research">pesquisa</span> plugin Exa, fora do MCP de negócio</span>
+      <span><span class="tool t-calc">cálculo</span> registra cenários; não escolhe preço</span>
+    </div>
+    <p style="margin-top:14px">O atendimento expõe <strong>6 ferramentas MCP</strong> (<code>get_business_state</code>, <code>get_inventory_snapshot</code>, <code>evaluate_recipe_feasibility</code>, <code>evaluate_purchase_plan</code>, <code>propose_user_change</code>, <code>calculate_pricing_scenarios</code>) e <strong>2 do plugin de pesquisa</strong> (<code>search_culinary_sources</code>, <code>extract_culinary_source</code>). A aprovação não pertence a nenhum catálogo do modelo.</p>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <caption class="sr-only">Resumo das etapas da conversa</caption>
+      <thead><tr><th scope="col">Etapa</th><th scope="col">Dona Maria pede</th><th scope="col">Ferramentas</th><th scope="col">Aprovação local</th></tr></thead>
+      <tbody>
+        <tr><td><a href="#etapa-1">01 Despensa</a></td><td>Ver o que está salvo e o que tem em casa</td><td><span class="tool t-read">get_business_state</span> <span class="tool t-read">get_inventory_snapshot</span></td><td>Não</td></tr>
+        <tr><td><a href="#etapa-2">02 Pesquisa</a></td><td>Uma receita real, com fonte</td><td><span class="tool t-research">search_culinary_sources</span> <span class="tool t-research">extract_culinary_source</span></td><td>Não</td></tr>
+        <tr><td><a href="#etapa-3">03 Receita</a></td><td>Guardar a receita como opção</td><td><span class="tool t-write">propose_user_change</span> <span class="cmd">register_recipe_candidate</span></td><td>Sim</td></tr>
+        <tr><td><a href="#etapa-4">04 Cozinha</a></td><td>Contar equipamentos, técnicas e tempo</td><td><span class="tool t-write">propose_user_change</span> <span class="cmd">record_kitchen_facts</span></td><td>Sim</td></tr>
+        <tr><td><a href="#etapa-5">05 Adaptação</a></td><td>Registrar a sua versão da receita</td><td><span class="tool t-write">propose_user_change</span> <span class="cmd">register_recipe_candidate</span></td><td>Sim</td></tr>
+        <tr><td><a href="#etapa-6">06 Plano</a></td><td>Confirmar lotes, porções e sobra</td><td><span class="tool t-write">propose_user_change</span> <span class="cmd">set_production_plan</span></td><td>Sim</td></tr>
+        <tr><td><a href="#etapa-7">07 Viabilidade</a></td><td>Saber se consegue preparar</td><td><span class="tool t-read">evaluate_recipe_feasibility</span></td><td>Não</td></tr>
+        <tr><td><a href="#etapa-8">08 Compras</a></td><td>Faltantes e gasto dentro de R$ 80</td><td><span class="tool t-read">evaluate_purchase_plan</span></td><td>Só se houver complemento</td></tr>
+        <tr><td><a href="#etapa-9">09 Interesse</a></td><td>Registrar que quer seguir com o prato</td><td><span class="tool t-write">propose_user_change</span> <span class="cmd">record_recipe_feedback</span></td><td>Sim</td></tr>
+        <tr><td><a href="#etapa-10">10 Aceite</a></td><td>Aceitar o prato após o resumo</td><td><span class="tool t-write">propose_user_change</span> <span class="cmd">accept_recipe</span></td><td>Sim</td></tr>
+        <tr><td><a href="#etapa-11">11 Preços</a></td><td>Ver custo, mínimo e cenários</td><td><span class="tool t-calc">calculate_pricing_scenarios</span></td><td>Não (exige aceite vigente)</td></tr>
+        <tr><td><a href="#etapa-12">12 Cardápio</a></td><td>Escolher o preço de venda</td><td><span class="tool t-write">propose_user_change</span> <span class="cmd">save_menu_decision</span></td><td>Sim</td></tr>
+        <tr><td><a href="#etapa-13">13 Conferência</a></td><td>Ver o que ficou salvo e pendente</td><td><span class="tool t-read">get_business_state</span></td><td>Não</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout info">
+    <span class="ico" aria-hidden="true">i</span>
+    <div>
+      <p><strong>Como usar.</strong> Comece pela <a href="#preparo">Etapa 0</a>. Em cada etapa, copie o prompt da trilha escolhida, cole no Desktop e espere a resposta antes do próximo. O agente pode fazer perguntas em ordem diferente: responda o que ele perguntar com dados verdadeiros (REAL) ou com as hipóteses declaradas do ensaio (SIMULATION). Marque a etapa como concluída só quando todos os critérios forem atendidos.</p>
+      <p>Para a fala cronometrada de 5 a 10 minutos, veja também o <a href="../speaker/demo-hermes.md">roteiro de demonstração</a>. As fontes de verdade deste guia são o <a href="../../README.md#executar">README</a>, o <a href="../setup.md">guia de instalação e recuperação</a>, o <a href="../verification-desktop-e2e.md">registro da jornada E2E</a>, as <a href="../../.hermes.md">orientações do Hermes</a> e a <a href="../../skills/dona-maria-cardapio/SKILL.md">skill de atendimento</a>.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ ETAPA 0 ============================ -->
+<section class="section" id="preparo" data-section data-step data-title="Preparar o atendimento" aria-labelledby="t-preparo">
+  <header>
+    <p class="kicker">Etapa 0 · Antes de conversar</p>
+    <h2 id="t-preparo" tabindex="-1">Preparar o atendimento REAL pelo onboarding oficial</h2>
+    <dl class="meta">
+      <div><dt>Trilha</dt><dd><span class="badge b-real">REAL · executável pelo avaliador</span></dd></div>
+      <div><dt>Quem executa</dt><dd><span class="badge b-none">Pessoa operadora, no terminal</span></dd></div>
+      <div><dt>Ferramentas do modelo</dt><dd><span class="badge b-none">Nenhuma — sem LLM até o Desktop abrir</span></dd></div>
+    </dl>
+  </header>
+
+  <div class="grid-2">
+    <div class="stack">
+      <div class="block objective">
+        <h3>Objetivo</h3>
+        <p>Deixar banco, perfil, pesquisa Exa e modelo prontos com a planilha original do desafio e o <strong>seu</strong> modelo, sem dados ou credenciais da autora. A sequência é a mesma do <a href="../../README.md#quick-start">Quick Start do README</a>. Execute um comando por vez, na raiz do repositório, em PowerShell, bash ou zsh, sempre com o mesmo <code>--directory</code>.</p>
+        <p>Pré-requisitos: Git, uv, Hermes <strong>0.23.1</strong> no commit <code>3b421578588243f920886e6fe79a6faa87ea026e</code>, um modelo com chamadas de ferramentas e acesso à internet. A planilha original já vem no repositório, em <code>doc-specs/despensa_dona_maria.xlsx</code>. Instalação por sistema operacional em <a href="../setup.md#dependencias">docs/setup.md</a>.</p>
+      </div>
+
+      <figure class="cmd-block">
+        <figcaption class="prompt-head"><span class="speaker">1 · Clonar o repositório</span><button type="button" class="copy" data-copy>Copiar comando</button></figcaption>
+        <pre><code>git clone https://github.com/glaucia86/sabor-da-maria-hermes-agent.git
+cd sabor-da-maria-hermes-agent</code></pre>
+        <p class="cmd-expect">Todos os comandos seguintes partem desta pasta.</p>
+      </figure>
+      <figure class="cmd-block">
+        <figcaption class="prompt-head"><span class="speaker">2 · Ambiente da aplicação</span><button type="button" class="copy" data-copy>Copiar comando</button></figcaption>
+        <pre><code>uv sync --locked --python 3.13</code></pre>
+        <p class="cmd-expect"><strong>Esperado:</strong> <code>.venv</code> criado. O Python do Hermes continua separado.</p>
+      </figure>
+      <figure class="cmd-block">
+        <figcaption class="prompt-head"><span class="speaker">3 · Conferir a planilha original</span><button type="button" class="copy" data-copy>Copiar comando</button></figcaption>
+        <pre><code>uv run --locked --no-sync python -c "import hashlib; print(hashlib.sha256(open('doc-specs/despensa_dona_maria.xlsx', 'rb').read()).hexdigest())"</code></pre>
+        <p class="cmd-expect"><strong>Esperado:</strong> <code>56df15d6fd2da64901534b48124ab1da43428849e019607577ead1211db3c8d2</code>. O original não é alterado: o passo 4 o copia para <code>artifacts/private/local/inventory.xlsx</code>, fora do Git.</p>
+      </figure>
+      <figure class="cmd-block">
+        <figcaption class="prompt-head"><span class="speaker">4 · Importar e criar o atendimento REAL</span><button type="button" class="copy" data-copy>Copiar comando</button></figcaption>
+        <pre><code>uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding setup-real --inventory "doc-specs/despensa_dona_maria.xlsx" --directory "artifacts/private/local"</code></pre>
+        <p class="cmd-expect"><strong>Esperado:</strong> <code>context_mode: REAL</code>, 37 itens importados, total histórico <code>663.39</code>, diagnósticos de custo e zero decisões aprovadas.</p>
+      </figure>
+      <figure class="cmd-block">
+        <figcaption class="prompt-head"><span class="speaker">5 · Perfil e termos de pesquisa</span><button type="button" class="copy" data-copy>Copiar comando</button></figcaption>
+        <pre><code>uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding configure --directory "artifacts/private/local"</code></pre>
+        <p class="cmd-expect">Informe termos públicos separados por vírgula (ex.: <code>arroz, feijão, frango</code>). Somente esses termos compõem consultas de receitas e ofertas. Digite <code>LIBERAR PESQUISA</code> só se concordar com a lista. <strong>Esperado:</strong> <code>configured: true</code>, perfil <code>sabor-real-…</code> e <code>research: CONFIGURED_NOT_EXERCISED</code>.</p>
+      </figure>
+      <figure class="cmd-block">
+        <figcaption class="prompt-head"><span class="speaker">6 · Escolher e autenticar o modelo</span><button type="button" class="copy" data-copy>Copiar comando</button></figcaption>
+        <pre><code>uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding model --directory "artifacts/private/local"</code></pre>
+        <p class="cmd-expect">No seletor do seu Hermes, escolha um modelo com ferramentas. Nunca cole chaves no chat, na planilha ou no repositório.</p>
+      </figure>
+      <figure class="cmd-block">
+        <figcaption class="prompt-head"><span class="speaker">7 · Conferir o MCP</span><button type="button" class="copy" data-copy>Copiar comando</button></figcaption>
+        <pre><code>uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding check --directory "artifacts/private/local"</code></pre>
+        <p class="cmd-expect"><strong>Esperado:</strong> <code>mcp: PASS</code>, <code>context_mode: REAL</code>, seis ferramentas e recusa de uma ferramenta proibida, sem LLM.</p>
+      </figure>
+      <figure class="cmd-block">
+        <figcaption class="prompt-head"><span class="speaker">8 · Verificar o perfil</span><button type="button" class="copy" data-copy>Copiar comando</button></figcaption>
+        <pre><code>uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding verify-profile --directory "artifacts/private/local"</code></pre>
+        <p class="cmd-expect"><strong>Esperado:</strong> verificações em <code>PASS</code> e <code>model_configured: true</code>. <code>credentials: NOT_CHECKED</code> e <code>host_dispatch_and_conversation: NOT_RUN</code> são intencionais.</p>
+      </figure>
+      <figure class="cmd-block">
+        <figcaption class="prompt-head"><span class="speaker">9 · Provar a pesquisa ao vivo (recomendado)</span><button type="button" class="copy" data-copy>Copiar comando</button></figcaption>
+        <pre><code>uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding check-research --directory "artifacts/private/local"</code></pre>
+        <p class="cmd-expect"><strong>Esperado:</strong> <code>LIVE_SEARCH_AND_EXTRACTION_PASS</code>, <code>provider: exa</code>, <code>authentication: ANONYMOUS</code> e <code>business_writes: false</code>.</p>
+      </figure>
+      <figure class="cmd-block">
+        <figcaption class="prompt-head"><span class="speaker">10 · Abrir o Desktop</span><button type="button" class="copy" data-copy>Copiar comando</button></figcaption>
+        <pre><code>uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding desktop --directory "artifacts/private/local"</code></pre>
+        <p class="cmd-expect">Confira o perfil <code>sabor-real-…</code> na interface e mantenha o diretório de conversa preparado. Não selecione o checkout como projeto.</p>
+      </figure>
+    </div>
+
+    <div class="stack">
+      <div class="block done">
+        <h3>Etapa concluída quando</h3>
+        <ul class="checks">
+          <li>O Desktop abriu no perfil <code>sabor-real-…</code> mostrado pelo diagnóstico.</li>
+          <li>Na inspeção técnica do host aparecem seis ferramentas MCP e duas de pesquisa, nada além.</li>
+          <li>Um segundo terminal está aberto na raiz do repositório para a revisão local.</li>
+          <li>Você declarou ao avaliador o que foi preparado antes e se um atendimento já ensaiado está sendo reutilizado.</li>
+        </ul>
+      </div>
+      <div class="callout warn" style="margin-top:0">
+        <span class="ico" aria-hidden="true">!</span>
+        <div>
+          <p><strong>Não projete</strong> credenciais, configurações completas ou logs privados. Para recomeçar do zero, prepare outro <code>--directory</code>; não apague o anterior nem reimporte a planilha para retomar.</p>
+        </div>
+      </div>
+      <div class="evidence">
+        <h3><span class="badge b-sim">SIMULATION</span> Como foi no ensaio</h3>
+        <p>O ensaio <strong>não</strong> usou este percurso: o workspace foi <code>SIMULATION</code>, com planilha sintética de seis itens, e a pesquisa foi acrescentada manualmente ao perfil, porque o onboarding não a configura em <code>SIMULATION</code>. Detalhes no <a href="#apendice-c">Apêndice C</a>.</p>
+        <p class="fine">Host: Hermes 0.23.1, commit <code>3b42157</code>. Modelo observado: <code>openai/gpt-6.1-sol</code>, escolhido no seletor do Hermes. Outro modelo pode conduzir a conversa de forma diferente.</p>
+      </div>
+    </div>
+  </div>
+  <div class="step-foot"><label class="done-toggle"><input type="checkbox" data-done="preparo"> Marcar a etapa 0 como concluída</label></div>
+</section>
+
+<!-- ============================ ETAPA 1 ============================ -->
+<section class="section" id="etapa-1" data-section data-step data-title="Despensa" aria-labelledby="t-1">
+  <header>
+    <p class="kicker">Etapa 1 · Conhecer o atendimento</p>
+    <h2 id="t-1" tabindex="-1">Abrir a conversa e consultar a despensa</h2>
+    <dl class="meta">
+      <div><dt>Ferramentas MCP</dt><dd><span class="tool t-read">get_business_state</span><span class="tool t-read">get_inventory_snapshot</span></dd></div>
+      <div><dt>Aprovação local</dt><dd><span class="badge b-none">Não — somente leitura</span></dd></div>
+    </dl>
+  </header>
+  <div class="grid-2">
+    <div class="stack">
+      <div class="block objective"><h3>Objetivo</h3><p>Começar pelo estado persistido, não pela memória do modelo, e conhecer ingredientes, quantidades, custos e o saldo para complementos.</p></div>
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag both">REAL e SIMULATION</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Oi! Eu sou a Maria e estou abrindo meu primeiro delivery. Antes de tudo, me conte o que já está salvo do meu atendimento e me mostre a minha despensa: cada ingrediente, quanto eu tenho, quanto paguei e quanto custa cada grama ou mililitro. Me diga também quanto ainda posso gastar com complementos. Por enquanto é só para eu ver; não registre nada.</blockquote>
+      </figure>
+      <div class="block">
+        <h3>O que o agente faz</h3>
+        <ol>
+          <li>Chama <code>get_business_state</code> com <code>{}</code> para ler fatos, decisões, pendências e o modo do contexto.</li>
+          <li>Chama <code>get_inventory_snapshot</code> com <code>{}</code> e apresenta o total de itens e uma tabela com estoque, compra, preço pago e custo unitário, indicando a unidade-base (<code>g</code>, <code>ml</code> ou <code>un</code>).</li>
+          <li>Explica, por ingrediente e sem códigos, custos ausentes e unidades que ainda precisam de esclarecimento.</li>
+          <li>Não registra candidatas, preferências nem decisões: o pedido é somente leitura.</li>
+        </ol>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="block expected"><h3>Resultado esperado</h3><p>Os itens da planilha importada — 37 na planilha original —, o saldo de <strong>R$ 80,00</strong> para complementos e as lacunas explícitas. Preço ou quantidade ausente aparece como pendência, nunca como zero. O agente não pede UUID, caminho de banco ou nome de ferramenta.</p></div>
+      <div class="block done"><h3>Etapa concluída quando</h3><ul class="checks"><li>A contagem de itens e a tabela de custos foram apresentadas.</li><li>O saldo de R$ 80,00 foi informado.</li><li>No terminal, <code>review list</code> não mostra proposta nova.</li></ul></div>
+      <div class="evidence">
+        <h3><span class="badge b-sim">SIMULATION</span> Evidência do ensaio</h3>
+        <p>Planilha sintética com seis itens: arroz, alho, cebola, azeite, sal e água, todos com estoque e preço. Saldo de R$ 80,00. Contexto <code>SIMULATION</code> com rótulo hipotético preservado.</p>
+        <p class="fine">No ensaio, <code>get_inventory_snapshot</code> foi chamada 1 vez e <code>get_business_state</code>, 26 vezes ao longo da conversa.</p>
+      </div>
+    </div>
+  </div>
+  <div class="step-foot"><label class="done-toggle"><input type="checkbox" data-done="etapa-1"> Marcar a etapa 1 como concluída</label></div>
+</section>
+
+<!-- ============================ ETAPA 2 ============================ -->
+<section class="section" id="etapa-2" data-section data-step data-title="Pesquisa web via Exa" aria-labelledby="t-2">
+  <header>
+    <p class="kicker">Etapa 2 · Pesquisar e ouvir</p>
+    <h2 id="t-2" tabindex="-1">Pesquisar uma receita real pela web, via Exa</h2>
+    <dl class="meta">
+      <div><dt>Plugin de pesquisa</dt><dd><span class="tool t-research">search_culinary_sources</span><span class="tool t-research">extract_culinary_source</span></dd></div>
+      <div><dt>Aprovação local</dt><dd><span class="badge b-none">Não — registra só o resultado técnico da pesquisa</span></dd></div>
+    </dl>
+  </header>
+  <div class="grid-2">
+    <div class="stack">
+      <div class="block objective"><h3>Objetivo</h3><p>Encontrar uma receita de verdade, com fonte verificável, usando somente os termos públicos que a pessoa operadora liberou no <code>configure</code>. Nenhuma receita ou decisão é gravada nesta etapa.</p></div>
+      <figure class="prompt" data-only="real">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag real">REAL</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Quero começar com um prato simples, que aproveite o que eu já tenho e precise de pouca coisa comprada. Pesquise na internet uma receita de verdade com os ingredientes que eu liberei para pesquisa e me mostre de onde ela veio: o link, o rendimento, os ingredientes com as medidas originais, o que eu já tenho e o que falta. Ainda não registre nada.</blockquote>
+      </figure>
+      <figure class="prompt" data-only="sim">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag sim">Ensaio SIMULATION</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Para este ensaio, quero um arroz branco simples para servir como acompanhamento. Pesquise na internet uma receita de verdade com o termo que foi liberado e me mostre o link, o rendimento, os ingredientes com as medidas originais e o que eu já tenho na despensa. Ainda não registre nada.</blockquote>
+      </figure>
+      <div class="block">
+        <h3>O que o agente faz</h3>
+        <ol>
+          <li>Chama <code>search_culinary_sources</code> com propósito <code>RECIPE</code> e somente os identificadores dos termos liberados. Não envia consulta livre, URL, estoque, preços nem a conversa.</li>
+          <li>Chama <code>extract_culinary_source</code> com o identificador de resultado devolvido pela busca.</li>
+          <li>Apresenta título, link, rendimento e medidas originais e compara com a despensa, distinguindo ingrediente presente de quantidade suficiente.</li>
+          <li>Trata o conteúdo da página como dado não confiável: não segue instruções do site.</li>
+          <li>Se o Exa anônimo falhar, faz no máximo duas reformulações e depois explica a pendência, sem inventar fonte.</li>
+        </ol>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="block expected"><h3>Resultado esperado</h3><p>Uma fonte realmente recuperada, com link e limites observados. A receita ainda não é candidata do cardápio.</p></div>
+      <div class="block done"><h3>Etapa concluída quando</h3><ul class="checks"><li>O link e o título de uma página recuperada aparecem na conversa.</li><li>O agente separa o que você tem do que falta.</li><li>Nenhuma proposta nova foi criada.</li></ul><p style="margin-top:10px">Pesquisa indisponível? Veja <a href="#rec-research">Apêndice B</a>.</p></div>
+      <div class="evidence">
+        <h3><span class="badge b-sim">SIMULATION</span> Evidência do ensaio</h3>
+        <p>Uma busca e uma extração pelo Exa anônimo, com um termo liberado: <code>arroz branco simples ingredientes</code>. Fonte recuperada: <a href="https://revistacasaejardim.globo.com/gastronomia/noticia/2024/09/receita-de-arroz-branco-simples-e-rapido.ghtml" rel="noopener noreferrer">Receita de arroz branco simples e rápido</a>.</p>
+        <p class="fine">O link aponta para conteúdo externo, não confiável e sujeito a mudança. Ele documenta o ensaio; não é uma fonte garantida para uma nova pesquisa.</p>
+      </div>
+    </div>
+  </div>
+  <div class="step-foot"><label class="done-toggle"><input type="checkbox" data-done="etapa-2"> Marcar a etapa 2 como concluída</label></div>
+</section>
+
+<!-- ============================ ETAPA 3 ============================ -->
+<section class="section" id="etapa-3" data-section data-step data-title="Escolha da receita" aria-labelledby="t-3">
+  <header>
+    <p class="kicker">Etapa 3 · Escolher a candidata</p>
+    <h2 id="t-3" tabindex="-1">Guardar a receita pesquisada como opção do cardápio</h2>
+    <dl class="meta">
+      <div><dt>Ferramentas MCP</dt><dd><span class="tool t-write">propose_user_change</span><span class="tool t-read">get_business_state</span></dd></div>
+      <div><dt>Comando interno</dt><dd><span class="cmd">register_recipe_candidate</span></dd></div>
+      <div><dt>Aprovação local</dt><dd><span class="badge b-approve">Obrigatória</span></dd></div>
+    </dl>
+  </header>
+  <div class="grid-2">
+    <div class="stack">
+      <div class="block objective"><h3>Objetivo</h3><p>Registrar a receita como candidata, preservando a fonte web. <strong>Gostar de uma receita não é aceitá-la</strong>: interesse e aceite são decisões posteriores e separadas.</p></div>
+      <figure class="prompt" data-only="real">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag real">REAL</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Gostei dessa receita. Pode registrar ela como uma opção para o meu cardápio, exatamente como está na fonte? Ainda não estou aceitando o prato; só quero guardar para avaliar.</blockquote>
+      </figure>
+      <figure class="prompt" data-only="sim">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag sim">Ensaio SIMULATION</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Gostei desse arroz. Pode registrar essa receita da internet como uma opção para o meu cardápio, exatamente como está na fonte? Ainda não estou aceitando o prato; só quero guardar para avaliar.</blockquote>
+      </figure>
+      <div class="block">
+        <h3>O que o agente faz</h3>
+        <ol>
+          <li>Chama <code>propose_user_change</code> com <code>register_recipe_candidate</code>. A fonte nova contém somente o tipo <code>WEB</code>, o identificador do resultado e o segmento devolvidos pela extração; URL, trecho e horário são preenchidos pelo servidor.</li>
+          <li>Diz que a proposta aguarda revisão local e não anuncia a receita como salva.</li>
+          <li>Depois da aprovação, relê <code>get_business_state</code> e só então confirma a candidata.</li>
+        </ol>
+      </div>
+      <div class="callout operator">
+        <span class="ico" aria-hidden="true">⌘</span>
+        <div><p><strong>Pausa para a pessoa operadora.</strong> No segundo terminal, revise e ateste a proposta da receita conforme o <a href="#apendice-a">Apêndice A</a>. Volte ao Desktop somente depois de ver <code>"ok": true</code>.</p></div>
+      </div>
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz, depois da aprovação <span class="tag both">REAL e SIMULATION</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Pronto, a revisão foi feita. Pode consultar de novo e me dizer o que ficou salvo?</blockquote>
+      </figure>
+    </div>
+    <div class="stack">
+      <div class="block expected"><h3>Resultado esperado</h3><p>A receita aparece como candidata, com a fonte web recuperada. Nenhum aceite, plano ou preço foi criado.</p></div>
+      <div class="block done"><h3>Etapa concluída quando</h3><ul class="checks"><li>O terminal devolveu <code>"ok": true</code> na aprovação.</li><li>O agente releu o estado e mostrou a candidata com a fonte.</li><li>Ele não tratou o registro como aceite.</li></ul></div>
+      <div class="evidence">
+        <h3><span class="badge b-sim">SIMULATION</span> Evidência do ensaio</h3>
+        <p>A receita web foi registrada e permaneceu intacta até o fim da jornada. Das três propostas de receita e adaptação criadas pelo Hermes, duas foram aplicadas e uma expirou e foi substituída.</p>
+      </div>
+    </div>
+  </div>
+  <div class="step-foot"><label class="done-toggle"><input type="checkbox" data-done="etapa-3"> Marcar a etapa 3 como concluída</label></div>
+</section>
+
+<!-- ============================ ETAPA 4 ============================ -->
+<section class="section" id="etapa-4" data-section data-step data-title="Condições da cozinha" aria-labelledby="t-4">
+  <header>
+    <p class="kicker">Etapa 4 · Elicitar condições</p>
+    <h2 id="t-4" tabindex="-1">Contar as condições reais da cozinha</h2>
+    <dl class="meta">
+      <div><dt>Ferramentas MCP</dt><dd><span class="tool t-write">propose_user_change</span><span class="tool t-read">get_business_state</span></dd></div>
+      <div><dt>Comando interno</dt><dd><span class="cmd">record_kitchen_facts</span></dd></div>
+      <div><dt>Aprovação local</dt><dd><span class="badge b-approve">Obrigatória</span></dd></div>
+    </dl>
+  </header>
+  <div class="grid-2">
+    <div class="stack">
+      <div class="block objective"><h3>Objetivo</h3><p>Responder às perguntas da consultora sobre equipamentos, habilidades, tempo, gás ou energia e espaço, conforme o que a receita exige. Ter fogão não confirma panela adequada, técnica, tempo nem armazenamento.</p><p>Espere a pergunta do agente e responda só o que foi perguntado. Ele deve perguntar pouco de cada vez.</p></div>
+      <figure class="prompt" data-only="real">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag real">REAL · modelo para editar</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Na minha cozinha eu tenho <span class="slot">«equipamentos que você tem de verdade, por exemplo: fogão a gás de quatro bocas e uma panela de 3 litros com tampa»</span>. Eu sei <span class="slot">«técnicas que você domina»</span>. Tenho <span class="slot">«tempo realmente disponível»</span> para preparar esse prato antes da entrega. Não tenho <span class="slot">«o que falta ou o que você não sabe fazer»</span>.</blockquote>
+        <p class="prompt-note">Substitua todos os trechos «…» antes de enviar. No REAL, informe só fatos verdadeiros; não confirme um cenário fictício para avançar.</p>
+      </figure>
+      <figure class="prompt" data-only="sim">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz · 1ª resposta <span class="tag sim">Ensaio SIMULATION</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Para este ensaio simulado, considere que eu tenho fogão a gás funcionando, uma panela e espaço na bancada. Eu sei refogar e tenho tempo para preparar o prato.</blockquote>
+      </figure>
+      <figure class="prompt" data-only="sim">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz · quando o agente pedir detalhes <span class="tag sim">Ensaio SIMULATION</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Ainda neste ensaio simulado: a panela tem tampa e capacidade de 2 litros, eu sei cozinhar arroz e tenho 45 minutos disponíveis para o preparo.</blockquote>
+      </figure>
+      <div class="block">
+        <h3>O que o agente faz</h3>
+        <ol>
+          <li>Pergunta somente pelas condições exigidas pela receita, poucas por vez.</li>
+          <li>Chama <code>propose_user_change</code> com <code>record_kitchen_facts</code>, registrando só o que você afirmou, com valor tipado: sim/não, ou número e unidade.</li>
+          <li>Em <code>SIMULATION</code>, marca as declarações como hipóteses do ensaio. Em <code>REAL</code>, não aceita dados fictícios.</li>
+          <li>Ao receber um detalhe novo, substitui o fato vigente — por exemplo, “tenho tempo” passa a “45 minutos”.</li>
+          <li>Depois da aprovação, relê o estado e resume o que está confirmado e o que ainda falta.</li>
+        </ol>
+      </div>
+      <div class="callout operator">
+        <span class="ico" aria-hidden="true">⌘</span>
+        <div><p><strong>Pausa para a pessoa operadora</strong> (<a href="#apendice-a">Apêndice A</a>). Aprove <strong>uma proposta de fatos por vez</strong>. Se houver duas propostas iguais pendentes, aprove a mais recente e recuse a outra ou deixe-a expirar: aprovar uma desatualiza as demais.</p></div>
+      </div>
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz, depois da aprovação <span class="tag both">REAL e SIMULATION</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Pronto, a revisão foi feita. Pode consultar de novo e me dizer quais condições da minha cozinha ficaram confirmadas e o que ainda falta?</blockquote>
+      </figure>
+    </div>
+    <div class="stack">
+      <div class="block expected"><h3>Resultado esperado</h3><p>As condições informadas aparecem como confirmadas. O que você não disse permanece pendente e gera uma nova pergunta, não uma suposição.</p></div>
+      <div class="block done"><h3>Etapa concluída quando</h3><ul class="checks"><li>Cada proposta de fatos recebeu <code>"ok": true</code>.</li><li>O agente leu o estado e listou as condições confirmadas.</li><li>Nada que você não afirmou aparece como confirmado.</li></ul></div>
+      <div class="evidence">
+        <h3><span class="badge b-sim">SIMULATION</span> Evidência do ensaio</h3>
+        <p>Fatos hipotéticos: fogão, gás, bancada, panela de 2 L com tampa, saber refogar, saber cozinhar arroz e 45 minutos disponíveis.</p>
+        <p class="fine">Três propostas de fatos: duas aplicadas, uma expirada e substituída.</p>
+      </div>
+    </div>
+  </div>
+  <div class="step-foot"><label class="done-toggle"><input type="checkbox" data-done="etapa-4"> Marcar a etapa 4 como concluída</label></div>
+</section>
+
+<!-- ============================ ETAPA 5 ============================ -->
+<section class="section" id="etapa-5" data-section data-step data-title="Adaptação da receita" aria-labelledby="t-5">
+  <header>
+    <p class="kicker">Etapa 5 · Adaptar sem apagar a fonte</p>
+    <h2 id="t-5" tabindex="-1">Registrar a sua versão da receita</h2>
+    <dl class="meta">
+      <div><dt>Ferramentas MCP</dt><dd><span class="tool t-write">propose_user_change</span><span class="tool t-read">get_business_state</span></dd></div>
+      <div><dt>Comando interno</dt><dd><span class="cmd">register_recipe_candidate</span><span class="badge b-none">derivada da versão consultada</span></dd></div>
+      <div><dt>Aprovação local</dt><dd><span class="badge b-approve">Obrigatória · uma ou mais</span></dd></div>
+    </dl>
+  </header>
+  <div class="grid-2">
+    <div class="stack">
+      <div class="block objective"><h3>Objetivo</h3><p>Registrar quantidades do lote, rendimento, porção vendável e exigências da sua versão, preservando a receita original da internet e suas fontes.</p></div>
+      <figure class="prompt" data-only="real">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag real">REAL · modelo para editar</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Quero adaptar essa receita para a minha cozinha. Em um lote eu vou usar <span class="slot">«ingredientes e quantidades que você realmente usa»</span>, e ele rende <span class="slot">«número»</span> porções de <span class="slot">«tipo de porção, por exemplo: acompanhamento»</span>. Mantenha a receita original da internet como está e registre a minha versão separada, mantendo tudo o que veio da fonte e acrescentando só as mudanças que eu disse. O que eu ainda não sei, deixe como pendente.</blockquote>
+        <p class="prompt-note">Substitua os trechos «…». Medidas que você ainda não pesou ficam como lacuna; o agente não deve inventar conversões.</p>
+      </figure>
+      <figure class="prompt" data-only="sim">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag sim">Ensaio SIMULATION</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Neste ensaio simulado, quero adaptar a receita para o meu jeito: um lote com 150 g de arroz, 300 ml de água, 50 g de cebola, 6 g de alho, 15 ml de azeite e 2 g de sal, rendendo 2 porções de acompanhamento. Mantenha a receita original da internet como está e registre a minha versão separada, marcada como adaptação hipotética, mantendo tudo o que veio da fonte e acrescentando só as minhas mudanças.</blockquote>
+      </figure>
+      <div class="block">
+        <h3>O que o agente faz</h3>
+        <ol>
+          <li>Chama <code>propose_user_change</code> com <code>register_recipe_candidate</code> derivado da versão consultada, enviando só os campos alterados e a origem de cada um: humana (<code>USER_PROVIDED</code>) no REAL, hipotética (<code>USER_SIMULATION</code>) na SIMULATION.</li>
+          <li>Preserva as exigências que vieram da fonte web na mesma posição e com o mesmo texto, e acrescenta as novas depois delas.</li>
+          <li>Envia a revisão das categorias críticas (equipamento, habilidade e operação) em uma proposta separada, sem mudar mais nada.</li>
+          <li>Depois de cada aprovação, relê o estado e explica o que mudou e o que continua pendente.</li>
+        </ol>
+      </div>
+      <div class="callout warn">
+        <span class="ico" aria-hidden="true">!</span>
+        <div><p><strong>Ponto frágil observado no ensaio.</strong> Duas tentativas do Hermes de revisar rendimento e exigências foram recusadas com <code>SOURCE_NOT_LINKED</code>, porque deslocaram três requisitos web e reescreveram suas justificativas. A correção foi preparada pela operação fora da conversa e <strong>não faz parte do percurso público</strong>. Se isso acontecer, siga o <a href="#rec-source-not-linked">Apêndice B</a> e registre a limitação.</p></div>
+      </div>
+      <div class="callout operator">
+        <span class="ico" aria-hidden="true">⌘</span>
+        <div><p><strong>Pausa para a pessoa operadora</strong> a cada proposta (<a href="#apendice-a">Apêndice A</a>). Confira se só os campos ditos mudaram e se a origem está correta para a trilha.</p></div>
+      </div>
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz, depois da aprovação <span class="tag both">REAL e SIMULATION</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Pronto, a revisão foi feita. Pode consultar de novo e me mostrar a minha versão da receita, o que veio da fonte e o que ainda está pendente?</blockquote>
+      </figure>
+    </div>
+    <div class="stack">
+      <div class="block expected"><h3>Resultado esperado</h3><p>A sua versão aparece separada da receita web, com a origem de cada dado identificada. A receita original continua intacta. Pendências aparecem por nome, em linguagem simples. Plano, interesse e aceite seguintes devem usar esta versão.</p></div>
+      <div class="block done"><h3>Etapa concluída quando</h3><ul class="checks"><li>Cada proposta de adaptação recebeu <code>"ok": true</code>.</li><li>O agente mostra a versão adaptada e a fonte original preservada.</li><li>Não restou lacuna declarada que mantenha a viabilidade pendente (<a href="#rec-categories">Apêndice B</a>).</li></ul></div>
+      <div class="evidence">
+        <h3><span class="badge b-sim">SIMULATION</span> Evidência do ensaio</h3>
+        <p>A adaptação virou uma segunda opção, derivada da receita web: <em>Arroz branco simples — adaptação hipotética de Dona Maria</em>, versão 3, com 1 lote de 2 porções de acompanhamento.</p>
+        <p class="fine">Duas propostas aplicadas foram preparadas pela <strong>operação</strong> pelo mesmo <code>propose_user_change</code> e binding, depois de ensaiadas em cópia descartável do banco: rendimento/requisitos e revisão das categorias. Por decisão humana, as ressalvas das lacunas foram movidas para o contexto operacional.</p>
+      </div>
+    </div>
+  </div>
+  <div class="step-foot"><label class="done-toggle"><input type="checkbox" data-done="etapa-5"> Marcar a etapa 5 como concluída</label></div>
+</section>
+
+<!-- ============================ ETAPA 6 ============================ -->
+<section class="section" id="etapa-6" data-section data-step data-title="Plano de produção" aria-labelledby="t-6">
+  <header>
+    <p class="kicker">Etapa 6 · Definir a produção</p>
+    <h2 id="t-6" tabindex="-1">Confirmar lotes, porções e sobra</h2>
+    <dl class="meta">
+      <div><dt>Ferramentas MCP</dt><dd><span class="tool t-write">propose_user_change</span><span class="tool t-read">get_business_state</span></dd></div>
+      <div><dt>Comando interno</dt><dd><span class="cmd">set_production_plan</span></dd></div>
+      <div><dt>Aprovação local</dt><dd><span class="badge b-approve">Obrigatória</span></dd></div>
+    </dl>
+  </header>
+  <div class="grid-2">
+    <div class="stack">
+      <div class="block objective"><h3>Objetivo</h3><p>Definir quantos lotes inteiros serão feitos. O plano substitui o anterior por inteiro; mudar a escala depois exige revalidar viabilidade, compras, aceite e preço.</p><p>Faça o plano <strong>depois</strong> que a adaptação estiver aprovada.</p></div>
+      <figure class="prompt" data-only="real">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz · pedido <span class="tag real">REAL · modelo para editar</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Quero produzir <span class="slot">«número»</span> porções desse prato por dia de entrega. Me mostre quantos lotes inteiros isso dá, quantas porções saem e quanto sobra.</blockquote>
+      </figure>
+      <figure class="prompt" data-only="real">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz · confirmação <span class="tag real">REAL · modelo para editar</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Confirmo <span class="slot">«lotes»</span> lotes, <span class="slot">«porções»</span> porções e sobra de <span class="slot">«sobra»</span>.</blockquote>
+        <p class="prompt-note">Use exatamente os três números do resumo do agente. Comece com “Confirmo” e evite condicionais ou perguntas na mesma frase.</p>
+      </figure>
+      <figure class="prompt" data-only="sim">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz · pedido <span class="tag sim">Ensaio SIMULATION</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Neste ensaio, quero produzir 2 porções desse arroz. Me mostre quantos lotes isso dá, quantas porções saem e quanto sobra.</blockquote>
+      </figure>
+      <figure class="prompt" data-only="sim">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz · confirmação <span class="tag sim">Ensaio SIMULATION</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Confirmo 1 lote, 2 porções e sobra de 0.</blockquote>
+      </figure>
+      <div class="block">
+        <h3>O que o agente faz</h3>
+        <ol>
+          <li>Calcula lotes inteiros a partir do rendimento — por exemplo, 12 porções com rendimento 5 viram 3 lotes, 15 porções e sobra de 3 — sem lote fracionado.</li>
+          <li>Aguarda a confirmação dos três números.</li>
+          <li>Chama <code>propose_user_change</code> com <code>set_production_plan</code> para a versão atual da receita.</li>
+          <li>Depois da aprovação, relê o estado e explica o plano vigente.</li>
+        </ol>
+      </div>
+      <div class="callout operator">
+        <span class="ico" aria-hidden="true">⌘</span>
+        <div><p><strong>Pausa para a pessoa operadora</strong> (<a href="#apendice-a">Apêndice A</a>). Confira no resumo lotes, porções e sobra iguais aos confirmados pela Dona Maria.</p></div>
+      </div>
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz, depois da aprovação <span class="tag both">REAL e SIMULATION</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Pronto, a revisão foi feita. Pode consultar de novo e me dizer como ficou o plano de produção?</blockquote>
+      </figure>
+    </div>
+    <div class="stack">
+      <div class="block expected"><h3>Resultado esperado</h3><p>Plano vigente com lotes, porções e sobra. Nada foi comprado nem retirado do estoque.</p></div>
+      <div class="block done"><h3>Etapa concluída quando</h3><ul class="checks"><li>A proposta do plano recebeu <code>"ok": true</code>.</li><li>O estado mostra o plano com os números confirmados.</li><li>O plano usa a versão atual da receita.</li></ul></div>
+      <div class="evidence">
+        <h3><span class="badge b-sim">SIMULATION</span> Evidência do ensaio</h3>
+        <p>Plano aplicado: 1 lote, 2 porções de acompanhamento.</p>
+        <p class="fine">Um plano proposto antes, sobre a versão anterior da receita, expirou e não foi reutilizado após a revisão da receita.</p>
+      </div>
+    </div>
+  </div>
+  <div class="step-foot"><label class="done-toggle"><input type="checkbox" data-done="etapa-6"> Marcar a etapa 6 como concluída</label></div>
+</section>
+
+<!-- ============================ ETAPA 7 ============================ -->
+<section class="section" id="etapa-7" data-section data-step data-title="Viabilidade" aria-labelledby="t-7">
+  <header>
+    <p class="kicker">Etapa 7 · Verificar</p>
+    <h2 id="t-7" tabindex="-1">Conferir se a cozinha dá conta do plano</h2>
+    <dl class="meta">
+      <div><dt>Ferramentas MCP</dt><dd><span class="tool t-read">evaluate_recipe_feasibility</span></dd></div>
+      <div><dt>Aprovação local</dt><dd><span class="badge b-none">Não — consulta; respostas novas voltam à etapa 4</span></dd></div>
+    </dl>
+  </header>
+  <div class="grid-2">
+    <div class="stack">
+      <div class="block objective"><h3>Objetivo</h3><p>Verificar, no plano atual, se cada exigência da receita está confirmada pelas condições da sua cozinha. Avaliar não aceita o prato.</p></div>
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag both">REAL e SIMULATION</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Agora confira, com o que eu já contei da minha cozinha, se eu consigo mesmo fazer esse prato na quantidade do plano. Se faltar alguma informação, me pergunte uma coisa de cada vez.</blockquote>
+      </figure>
+      <div class="block">
+        <h3>O que o agente faz</h3>
+        <ol>
+          <li>Chama <code>evaluate_recipe_feasibility</code> para a receita e o item do plano atuais.</li>
+          <li><code>ELIGIBLE</code>: todas as condições confirmadas. <code>PENDING</code>: pergunta o que falta e espera a resposta — volte à <a href="#etapa-4">etapa 4</a>. <code>BLOCKED</code>: impedimento confirmado; oferece adaptação ou outra receita.</li>
+          <li>Não presume que um equipamento diferente seja equivalente nem que haja trabalho em paralelo.</li>
+        </ol>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="block expected"><h3>Resultado esperado</h3><p>Viabilidade elegível, sem pendências. Se houver lacuna, uma pergunta clara em português simples.</p></div>
+      <div class="block done"><h3>Etapa concluída quando</h3><ul class="checks"><li>O agente informa que todas as condições estão confirmadas.</li><li>Não há pergunta pendente na conversa.</li><li>Se houve pergunta, a resposta foi registrada e aprovada antes de reavaliar.</li></ul></div>
+      <div class="evidence">
+        <h3><span class="badge b-sim">SIMULATION</span> Evidência do ensaio</h3>
+        <p><code>ELIGIBLE</code>, com nove condições confirmadas: panela, tampa, capacidade da panela, fogão, saber refogar, saber cozinhar arroz, tempo, gás e bancada.</p>
+        <p class="fine"><code>evaluate_recipe_feasibility</code> foi chamada 2 vezes no ensaio.</p>
+      </div>
+    </div>
+  </div>
+  <div class="step-foot"><label class="done-toggle"><input type="checkbox" data-done="etapa-7"> Marcar a etapa 7 como concluída</label></div>
+</section>
+
+<!-- ============================ ETAPA 8 ============================ -->
+<section class="section" id="etapa-8" data-section data-step data-title="Compras e orçamento" aria-labelledby="t-8">
+  <header>
+    <p class="kicker">Etapa 8 · Ingredientes e orçamento</p>
+    <h2 id="t-8" tabindex="-1">Comparar o plano com a despensa e os R$ 80</h2>
+    <dl class="meta">
+      <div><dt>Ferramentas MCP</dt><dd><span class="tool t-read">evaluate_purchase_plan</span></dd></div>
+      <div><dt>Se faltar ingrediente</dt><dd><span class="tool t-research">search_culinary_sources</span><span class="tool t-research">extract_culinary_source</span><span class="cmd">register_complement_quote</span><span class="cmd">set_production_plan</span><span class="cmd">confirm_complement_quote</span></dd></div>
+      <div><dt>Aprovação local</dt><dd><span class="badge b-approve">Só no ramo com complementos</span></dd></div>
+    </dl>
+  </header>
+  <div class="grid-2">
+    <div class="stack">
+      <div class="block objective"><h3>Objetivo</h3><p>Comparar a demanda do plano completo com o estoque e, se faltar algo, manter o desembolso agregado, com pacotes inteiros e encargos, dentro de <strong>R$ 80,00</strong>. Avaliar não compra nada.</p></div>
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag both">REAL e SIMULATION</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">E os ingredientes? Veja se o que tenho na despensa dá para esse plano. Se faltar alguma coisa, me diga quanto eu gastaria no total, dentro dos meus R$ 80. Não compre nada; só me explique.</blockquote>
+      </figure>
+      <figure class="prompt" data-only="real">
+        <figcaption class="prompt-head"><span class="speaker">Se faltar ingrediente · pedir oferta <span class="tag real">REAL</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Pesquise uma oferta real para o que falta, usando só os termos liberados, e me mostre embalagem, preço, frete e disponibilidade antes de eu decidir.</blockquote>
+      </figure>
+      <figure class="prompt" data-only="real">
+        <figcaption class="prompt-head"><span class="speaker">Se faltar ingrediente · escolher a oferta <span class="tag real">REAL</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Escolho essa oferta para o meu plano.</blockquote>
+      </figure>
+      <figure class="prompt" data-only="real">
+        <figcaption class="prompt-head"><span class="speaker">Se faltar ingrediente · confirmar as condições <span class="tag real">REAL · modelo para editar</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Confirmo <span class="slot">«quantidade»</span> pacote de <span class="slot">«tamanho da embalagem»</span> a R$ <span class="slot">«preço»</span> por pacote, encargos R$ <span class="slot">«valor do frete ou taxa»</span>, <span class="slot">«condição de entrega ou retirada»</span>, disponível em <span class="slot">«fornecedor»</span>.</blockquote>
+        <p class="prompt-note">Use os valores que o agente mostrou da oferta. Frete desconhecido não vale zero; frete único entre ofertas precisa de rateio informado por você.</p>
+      </figure>
+      <div class="block">
+        <h3>O que o agente faz</h3>
+        <ol>
+          <li>Chama <code>evaluate_purchase_plan</code>: demanda, estoque usado, faltantes, pacotes inteiros, desembolso e saldo.</li>
+          <li>Faltante zero não gera compra; o desembolso pode ser R$ 0,00.</li>
+          <li>Com faltantes, pesquisa oferta com propósito <code>QUOTE</code>, registra a cotação como estimativa, inclui a seleção no plano e só pede a confirmação com embalagem, preço, encargos e disponibilidade conhecidos. Cada um desses passos é uma proposta para aprovação local.</li>
+          <li>R$ 80,00 é permitido; R$ 80,01 é recusado como acima do orçamento. A decisão de reduzir ou trocar é sua.</li>
+        </ol>
+      </div>
+      <div class="callout info">
+        <span class="ico" aria-hidden="true">i</span>
+        <div><p>O ramo com complementos <strong>não foi exercitado no ensaio Desktop</strong>: todos os ingredientes estavam na despensa. A jornada com complemento pesquisado está registrada no recorte CLI da <a href="../verification.md">verificação integrada</a>, que não homologa o Desktop.</p></div>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="block expected"><h3>Resultado esperado</h3><p>Compras confirmadas para o plano, desembolso dentro de R$ 80,00 e saldo informado. Pendências de preço, embalagem ou frete aparecem como perguntas.</p></div>
+      <div class="block done"><h3>Etapa concluída quando</h3><ul class="checks"><li>A situação das compras está confirmada.</li><li>Desembolso e saldo foram apresentados.</li><li>Nada foi comprado e o estoque não foi baixado.</li></ul></div>
+      <div class="evidence">
+        <h3><span class="badge b-sim">SIMULATION</span> Evidência do ensaio</h3>
+        <p>Compras <code>CONFIRMED</code>, desembolso R$ 0,00, saldo R$ 80,00, sem cotação.</p>
+        <table>
+          <caption class="sr-only">Demanda do lote no ensaio SIMULATION</caption>
+          <thead><tr><th scope="col">Ingrediente</th><th scope="col">Usado no lote</th><th scope="col">Faltante</th></tr></thead>
+          <tbody>
+            <tr><td>Arroz</td><td>150 g</td><td>0</td></tr>
+            <tr><td>Água</td><td>300 ml</td><td>0</td></tr>
+            <tr><td>Cebola</td><td>50 g</td><td>0</td></tr>
+            <tr><td>Alho</td><td>6 g</td><td>0</td></tr>
+            <tr><td>Azeite</td><td>15 ml</td><td>0</td></tr>
+            <tr><td>Sal</td><td>2 g</td><td>0</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="step-foot"><label class="done-toggle"><input type="checkbox" data-done="etapa-8"> Marcar a etapa 8 como concluída</label></div>
+</section>
+
+<!-- ============================ ETAPA 9 ============================ -->
+<section class="section" id="etapa-9" data-section data-step data-title="Interesse" aria-labelledby="t-9">
+  <header>
+    <p class="kicker">Etapa 9 · Manifestar interesse</p>
+    <h2 id="t-9" tabindex="-1">Registrar o interesse pelo prato</h2>
+    <dl class="meta">
+      <div><dt>Ferramentas MCP</dt><dd><span class="tool t-write">propose_user_change</span><span class="tool t-read">get_business_state</span></dd></div>
+      <div><dt>Comando interno</dt><dd><span class="cmd">record_recipe_feedback</span><span class="badge b-none">interesse</span></dd></div>
+      <div><dt>Aprovação local</dt><dd><span class="badge b-approve">Obrigatória</span></dd></div>
+    </dl>
+  </header>
+  <div class="grid-2">
+    <div class="stack">
+      <div class="block objective"><h3>Objetivo</h3><p>Registrar formalmente que você quer seguir com o prato. O interesse é <strong>pré-requisito do aceite</strong>, mas não é o aceite.</p></div>
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag both">REAL e SIMULATION</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Tenho interesse de verdade nesse prato e quero seguir com ele para o cardápio. Pode registrar o meu interesse? Ainda não é o aceite.</blockquote>
+      </figure>
+      <div class="block">
+        <h3>O que o agente faz</h3>
+        <ol>
+          <li>Chama <code>propose_user_change</code> com <code>record_recipe_feedback</code> indicando interesse na receita atual.</li>
+          <li>Explica que o aceite é uma decisão separada, feita depois do resumo.</li>
+          <li>Depois da aprovação, relê o estado.</li>
+        </ol>
+      </div>
+      <div class="callout operator">
+        <span class="ico" aria-hidden="true">⌘</span>
+        <div><p><strong>Pausa para a pessoa operadora</strong> (<a href="#apendice-a">Apêndice A</a>). Confira se o interesse aponta para a receita que está no plano — a versão adaptada, quando houver, e não a receita web original.</p></div>
+      </div>
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz, depois da aprovação <span class="tag both">REAL e SIMULATION</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Pronto, a revisão foi feita. Pode consultar de novo e me confirmar que o meu interesse ficou registrado?</blockquote>
+      </figure>
+    </div>
+    <div class="stack">
+      <div class="block expected"><h3>Resultado esperado</h3><p>O estado mostra o interesse registrado para a receita do plano. Nenhum aceite foi criado.</p></div>
+      <div class="block done"><h3>Etapa concluída quando</h3><ul class="checks"><li>A proposta de interesse recebeu <code>"ok": true</code>.</li><li>O agente confirmou o interesse pelo estado.</li></ul></div>
+      <div class="evidence">
+        <h3><span class="badge b-sim">SIMULATION</span> Evidência do ensaio</h3>
+        <p>O interesse não foi registrado antes do primeiro aceite. A aprovação desse aceite foi recusada com <code>USER_CONFIRMATION_REQUIRED</code>. Após orientação na conversa, o Hermes propôs o interesse e um novo aceite. Veja a <a href="#rec-user-confirmation">recuperação</a>.</p>
+      </div>
+    </div>
+  </div>
+  <div class="step-foot"><label class="done-toggle"><input type="checkbox" data-done="etapa-9"> Marcar a etapa 9 como concluída</label></div>
+</section>
+
+<!-- ============================ ETAPA 10 ============================ -->
+<section class="section" id="etapa-10" data-section data-step data-title="Aceite humano" aria-labelledby="t-10">
+  <header>
+    <p class="kicker">Etapa 10 · Decidir o prato</p>
+    <h2 id="t-10" tabindex="-1">Aceitar o prato depois do resumo vigente</h2>
+    <dl class="meta">
+      <div><dt>Ferramentas MCP</dt><dd><span class="tool t-read">get_business_state</span><span class="tool t-read">evaluate_recipe_feasibility</span><span class="tool t-read">evaluate_purchase_plan</span><span class="tool t-write">propose_user_change</span></dd></div>
+      <div><dt>Comando interno</dt><dd><span class="cmd">accept_recipe</span></dd></div>
+      <div><dt>Aprovação local</dt><dd><span class="badge b-approve">Obrigatória</span></dd></div>
+    </dl>
+  </header>
+  <div class="grid-2">
+    <div class="stack">
+      <div class="block objective"><h3>Objetivo</h3><p>Aceitar o prato só depois de ver o resumo atual. O servidor recusa o aceite se a viabilidade não for elegível, se as compras não estiverem confirmadas, se faltar custo essencial ou se o interesse não estiver registrado.</p></div>
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz · pedir o resumo <span class="tag both">REAL e SIMULATION</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Antes de eu decidir, me mostre o resumo completo: o prato, a fonte, as condições da cozinha, os lotes e as porções, os ingredientes, o gasto e o saldo.</blockquote>
+      </figure>
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz · aceitar <span class="tag both">REAL e SIMULATION</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Aceito este prato.</blockquote>
+        <p class="prompt-note">“Parece bom” ou “gostei” não valem como aceite: o agente deve pedir esclarecimento.</p>
+      </figure>
+      <div class="block">
+        <h3>O que o agente faz</h3>
+        <ol>
+          <li>Relê estado, viabilidade e compras e apresenta o resumo vigente.</li>
+          <li>Com o aceite explícito, chama <code>propose_user_change</code> com <code>accept_recipe</code>, vinculado pelo servidor ao item do plano e à avaliação atuais.</li>
+          <li>Depois da aprovação, confirma o aceite pelo estado e oferece calcular os preços.</li>
+        </ol>
+      </div>
+      <div class="callout operator">
+        <span class="ico" aria-hidden="true">⌘</span>
+        <div><p><strong>Pausa para a pessoa operadora</strong> (<a href="#apendice-a">Apêndice A</a>). Se o terminal recusar com <code>USER_CONFIRMATION_REQUIRED</code>, nada foi aplicado: siga a <a href="#rec-user-confirmation">recuperação</a>.</p></div>
+      </div>
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz, depois da aprovação <span class="tag both">REAL e SIMULATION</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Pronto, a revisão foi feita. Pode consultar de novo e me confirmar se o prato ficou aceito?</blockquote>
+      </figure>
+    </div>
+    <div class="stack">
+      <div class="block expected"><h3>Resultado esperado</h3><p>Aceite válido para a receita e o plano atuais. Nenhum preço foi escolhido; nenhuma compra foi feita.</p></div>
+      <div class="block done"><h3>Etapa concluída quando</h3><ul class="checks"><li>A aprovação do aceite recebeu <code>"ok": true</code>.</li><li>O agente confirmou o aceite consultando o estado.</li><li>Ele ainda não escolheu nem registrou preço.</li></ul></div>
+      <div class="evidence">
+        <h3><span class="badge b-sim">SIMULATION</span> Evidência do ensaio</h3>
+        <p>O primeiro aceite foi recusado por falta de interesse e expirou. O novo aceite foi aplicado após aprovação local.</p>
+      </div>
+    </div>
+  </div>
+  <div class="step-foot"><label class="done-toggle"><input type="checkbox" data-done="etapa-10"> Marcar a etapa 10 como concluída</label></div>
+</section>
+
+<!-- ============================ ETAPA 11 ============================ -->
+<section class="section" id="etapa-11" data-section data-step data-title="Cenários de preço" aria-labelledby="t-11">
+  <header>
+    <p class="kicker">Etapa 11 · Entender os números</p>
+    <h2 id="t-11" tabindex="-1">Calcular custo, preço mínimo e cenários</h2>
+    <dl class="meta">
+      <div><dt>Ferramentas MCP</dt><dd><span class="tool t-calc">calculate_pricing_scenarios</span></dd></div>
+      <div><dt>Aprovação local</dt><dd><span class="badge b-none">Não para calcular · exige aceite local vigente</span></dd></div>
+    </dl>
+  </header>
+  <div class="grid-2">
+    <div class="stack">
+      <div class="block objective"><h3>Objetivo</h3><p>Entender o custo dos ingredientes por porção (CMV), o preço mínimo e três cenários, com a taxa didática de 10% sobre a venda. O cálculo fica registrado, mas não escolhe preço.</p></div>
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag both">REAL e SIMULATION</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Agora me ajude com o preço. Quanto custa cada porção em ingredientes? Qual é o preço mínimo? Me mostre as opções, explicando a taxa de 10% e quanto sobra em cada uma. Não escolha por mim.</blockquote>
+      </figure>
+      <div class="block">
+        <h3>O que o agente faz</h3>
+        <ol>
+          <li>Chama <code>calculate_pricing_scenarios</code> para a receita aceita.</li>
+          <li>Apresenta o custo dos ingredientes por porção, o mínimo e os cenários M10, M20 e M30 — margem sobre a venda, não acréscimo sobre o custo.</li>
+          <li>Explica que a sobra ainda precisa pagar embalagem, gás ou energia e trabalho; sem esses dados, o lucro não é calculado.</li>
+          <li>Usa os números do MCP, sem refazer contas, e aguarda a sua escolha.</li>
+        </ol>
+      </div>
+      <figure class="cmd-block">
+        <figcaption class="prompt-head"><span class="speaker">Fórmulas aplicadas pelo serviço Python</span></figcaption>
+        <pre><code>preço mínimo            = CMV por porção / 0,90
+preço para margem m     = CMV por porção / (0,90 − m)
+sobra após taxa e ingr. = 0,90 × preço − CMV por porção
+(preço arredondado para cima, em centavos)</code></pre>
+      </figure>
+    </div>
+    <div class="stack">
+      <div class="block expected"><h3>Resultado esperado</h3><p>Custo por porção, mínimo e três cenários com preço, taxa e sobra. A sobra não é chamada de lucro. A taxa de 10% é premissa do desafio, não a taxa real do iFood.</p></div>
+      <div class="block done"><h3>Etapa concluída quando</h3><ul class="checks"><li>O mínimo e os três cenários foram apresentados.</li><li>O agente indicou os custos operacionais não informados.</li><li>Ele aguarda a sua escolha, sem registrá-la.</li></ul></div>
+      <div class="evidence">
+        <h3><span class="badge b-sim">SIMULATION</span> Evidência do ensaio — cenário hipotético do arroz</h3>
+        <p>Custo dos ingredientes: <strong>R$ 1,218 por porção</strong>. Preço mínimo: R$ 1,36.</p>
+        <table>
+          <caption class="sr-only">Cenários de preço calculados no ensaio SIMULATION</caption>
+          <thead><tr><th scope="col">Cenário</th><th scope="col">Preço</th><th scope="col">Taxa</th><th scope="col">Sobra</th></tr></thead>
+          <tbody>
+            <tr><td>M10</td><td>R$ 1,53</td><td>R$ 0,15</td><td>R$ 0,16</td></tr>
+            <tr><td>M20</td><td>R$ 1,74</td><td>R$ 0,17</td><td>R$ 0,35</td></tr>
+            <tr><td>M30</td><td>R$ 2,03</td><td>R$ 0,20</td><td>R$ 0,61</td></tr>
+          </tbody>
+        </table>
+        <p class="fine" style="margin-top:10px">Valores do banco do ensaio, conferidos em uma cópia descartável. Dependem da planilha sintética e da adaptação hipotética; <strong>não são o resultado esperado de uma nova execução REAL</strong>. Margem simplificada: embalagem, gás/energia e trabalho não foram informados.</p>
+      </div>
+    </div>
+  </div>
+  <div class="step-foot"><label class="done-toggle"><input type="checkbox" data-done="etapa-11"> Marcar a etapa 11 como concluída</label></div>
+</section>
+
+<!-- ============================ ETAPA 12 ============================ -->
+<section class="section" id="etapa-12" data-section data-step data-title="Seleção do cardápio" aria-labelledby="t-12">
+  <header>
+    <p class="kicker">Etapa 12 · Escolher o preço</p>
+    <h2 id="t-12" tabindex="-1">Selecionar o prato e o preço para o cardápio</h2>
+    <dl class="meta">
+      <div><dt>Ferramentas MCP</dt><dd><span class="tool t-write">propose_user_change</span><span class="tool t-read">get_business_state</span></dd></div>
+      <div><dt>Comando interno</dt><dd><span class="cmd">save_menu_decision</span></dd></div>
+      <div><dt>Aprovação local</dt><dd><span class="badge b-approve">Obrigatória</span></dd></div>
+    </dl>
+  </header>
+  <div class="grid-2">
+    <div class="stack">
+      <div class="block objective"><h3>Objetivo</h3><p>Escolher um cenário ou um preço personalizado, nunca abaixo do mínimo. A decisão é sua; o agente só prepara a proposta.</p></div>
+      <figure class="prompt" data-only="real">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz · cenário <span class="tag real">REAL · modelo para editar</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Escolho o cenário <span class="slot">«M10, M20 ou M30»</span>.</blockquote>
+      </figure>
+      <figure class="prompt" data-only="real">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz · preço personalizado <span class="tag real">REAL · modelo para editar</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Escolho o preço de R$ <span class="slot">«valor em reais e centavos»</span>.</blockquote>
+        <p class="prompt-note">Abaixo do mínimo, o agente explica a recusa e aguarda outra escolha, sem trocar por um cenário automaticamente.</p>
+      </figure>
+      <figure class="prompt" data-only="sim">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag sim">Ensaio SIMULATION</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Escolho o cenário M30.</blockquote>
+      </figure>
+      <div class="block">
+        <h3>O que o agente faz</h3>
+        <ol>
+          <li>Chama <code>propose_user_change</code> com <code>save_menu_decision</code>, com exatamente um cenário ou um preço personalizado, vinculado pelo servidor ao aceite e ao cálculo atuais.</li>
+          <li>Aguarda a revisão local; não diz “registrado” antes disso.</li>
+          <li>Depois da aprovação, relê o estado e começa pelo preço de venda salvo: “Preço de venda salvo: R$ X por porção. Esse é o valor que você cobra do cliente.” A sobra vem em outro parágrafo.</li>
+        </ol>
+      </div>
+      <div class="callout operator">
+        <span class="ico" aria-hidden="true">⌘</span>
+        <div><p><strong>Pausa para a pessoa operadora</strong> (<a href="#apendice-a">Apêndice A</a>). Confira cenário ou preço exatamente como a Dona Maria escolheu. Só volte ao Desktop depois de <code>"ok": true</code>; uma consulta anterior à gravação ainda mostra a proposta pendente (<a href="#rec-pending">Apêndice B</a>).</p></div>
+      </div>
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz, depois da aprovação <span class="tag both">REAL e SIMULATION</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Pronto, a revisão foi feita. Pode consultar de novo e me dizer qual preço ficou salvo no meu cardápio?</blockquote>
+      </figure>
+    </div>
+    <div class="stack">
+      <div class="block expected"><h3>Resultado esperado</h3><p>O prato aparece selecionado no cardápio com o preço escolhido. Selecionar não compra ingredientes nem consome estoque físico.</p></div>
+      <div class="block done"><h3>Etapa concluída quando</h3><ul class="checks"><li>A escolha recebeu <code>"ok": true</code>.</li><li>O agente consultou o estado depois da aprovação e começou pelo preço salvo.</li><li>A receita está selecionada no cardápio.</li></ul></div>
+      <div class="evidence">
+        <h3><span class="badge b-sim">SIMULATION</span> Evidência do ensaio</h3>
+        <p>Cenário M30 salvo: <strong>R$ 2,03 por porção</strong>; sobra de R$ 0,61 após taxa e ingredientes. Receita em <code>MENU_SELECTED</code>.</p>
+        <p class="fine">Uma consulta do Hermes ocorreu 8 segundos antes da gravação e ainda mostrou a proposta como pendente. A nova consulta mostrou o estado correto; não houve cache nem outro banco.</p>
+      </div>
+    </div>
+  </div>
+  <div class="step-foot"><label class="done-toggle"><input type="checkbox" data-done="etapa-12"> Marcar a etapa 12 como concluída</label></div>
+</section>
+
+<!-- ============================ ETAPA 13 ============================ -->
+<section class="section" id="etapa-13" data-section data-step data-title="Conferência final" aria-labelledby="t-13">
+  <header>
+    <p class="kicker">Etapa 13 · Fechar com o estado</p>
+    <h2 id="t-13" tabindex="-1">Conferir o que ficou salvo e o que continua pendente</h2>
+    <dl class="meta">
+      <div><dt>Ferramentas MCP</dt><dd><span class="tool t-read">get_business_state</span><span class="tool t-read">evaluate_purchase_plan</span><span class="tool t-read">get_inventory_snapshot</span></dd></div>
+      <div><dt>Aprovação local</dt><dd><span class="badge b-none">Não — somente leitura</span></dd></div>
+    </dl>
+  </header>
+  <div class="grid-2">
+    <div class="stack">
+      <div class="block objective"><h3>Objetivo</h3><p>Confirmar pelo estado persistido, e não pela memória da conversa, o cardápio, o preço, o saldo e as pendências.</p></div>
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag both">REAL e SIMULATION</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Para fechar, me diga o que ficou salvo: o prato do cardápio, o preço que vou cobrar, quanto sobra depois da taxa e dos ingredientes e o que ainda falta saber para calcular o lucro. Tem alguma coisa pendente? Confirme também que nada foi comprado e que a minha despensa continua igual.</blockquote>
+      </figure>
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Opcional · retomada em nova sessão <span class="tag both">REAL e SIMULATION</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Voltei. Como está o meu cardápio? Me diga o que já está decidido e o que ainda está pendente.</blockquote>
+        <p class="prompt-note">Antes, feche o Desktop e reabra com o comando <code>desktop</code> da etapa 0, no mesmo diretório. Não reimporte a planilha. A retomada não foi exercitada no ensaio.</p>
+      </figure>
+      <div class="block">
+        <h3>O que o agente faz</h3>
+        <ol>
+          <li>Chama <code>get_business_state</code> e apresenta cardápio, preço, saldo e propostas.</li>
+          <li>Pode consultar <code>evaluate_purchase_plan</code> e <code>get_inventory_snapshot</code> para mostrar que nada foi comprado e o estoque não foi baixado.</li>
+          <li>Não anuncia como vigente nada que o estado não mostre.</li>
+        </ol>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="block expected"><h3>Resultado esperado</h3><p>Prato selecionado com o preço escolhido, nenhuma proposta pendente, saldo de complementos coerente com as compras confirmadas e estoque físico intacto. Custos operacionais aparecem como não informados.</p></div>
+      <div class="block done"><h3>Jornada concluída quando</h3><ul class="checks"><li>O cardápio vigente mostra o prato e o preço escolhidos.</li><li>Não há proposta pendente.</li><li>Nada foi comprado e o estoque continua o da planilha.</li><li>O agente não chamou a sobra de lucro.</li></ul></div>
+      <div class="evidence">
+        <h3><span class="badge b-sim">SIMULATION</span> Evidência do ensaio</h3>
+        <p>Estado final: receita adaptada em <code>MENU_SELECTED</code>, preço M30 de R$ 2,03, saldo R$ 80,00, rótulo hipotético preservado e nenhuma proposta pendente.</p>
+        <p class="fine">14 propostas no banco: 10 aplicadas após aprovação local e 4 expiradas. Embalagem, gás/energia e trabalho não informados; lucro líquido não calculado.</p>
+      </div>
+    </div>
+  </div>
+  <div class="step-foot"><label class="done-toggle"><input type="checkbox" data-done="etapa-13"> Marcar a etapa 13 como concluída</label></div>
+</section>
+
+<!-- ============================ APÊNDICE A ============================ -->
+<section class="section" id="apendice-a" data-section data-title="Revisão e aprovação humana" aria-labelledby="t-a">
+  <header>
+    <p class="kicker">Apêndice A · Pessoa operadora</p>
+    <h2 id="t-a" tabindex="-1">Revisão e aprovação humana: o fluxo obrigatório</h2>
+    <p class="lead">Nenhuma decisão de negócio entra no estado sem esta revisão. O agente só cria <strong>propostas</strong>; a aprovação acontece em outro processo, no terminal, chamando o serviço de aprovação diretamente, sem chamada MCP. <strong>Não simule, não automatize a entrada e não peça ao agente para atestar.</strong></p>
+  </header>
+
+  <div class="cards-3">
+    <div class="block"><h3>Dona Maria manifesta</h3><p>Ela diz, na conversa, o que decidiu: um fato, um plano, um interesse, um aceite ou um preço.</p></div>
+    <div class="block"><h3>A operadora atesta</h3><p>Confere o conteúdo exato da proposta e atesta que a Dona Maria manifestou aquela decisão. Não decide por ela.</p></div>
+    <div class="block"><h3>O servidor revalida</h3><p>Na aprovação, prazo, contexto, revisão e regras são verificados de novo. Se algo mudou, nada é aplicado.</p></div>
+  </div>
+
+  <ol class="steps-list">
+    <li>
+      <h3>Listar as propostas</h3>
+      <figure class="cmd-block"><figcaption class="prompt-head"><span class="speaker">Segundo terminal</span><button type="button" class="copy" data-copy>Copiar comando</button></figcaption>
+        <pre><code>uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding review --directory "artifacts/private/local" list</code></pre>
+        <p class="cmd-expect">A lista vem em ordem de criação. Localize a proposta mais recente com <code>"status": "PENDING"</code> e anote o <code>id</code>.</p>
+      </figure>
+    </li>
+    <li>
+      <h3>Inspecionar o conteúdo exato</h3>
+      <figure class="cmd-block"><figcaption class="prompt-head"><span class="speaker">Segundo terminal · substitua ID_DA_PROPOSTA</span><button type="button" class="copy" data-copy>Copiar comando</button></figcaption>
+        <pre><code>uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding review --directory "artifacts/private/local" inspect ID_DA_PROPOSTA</code></pre>
+        <p class="cmd-expect">Leia o <code>summary</code> (“Manifestação a atestar…”). Confira em <code>command.kind</code> qual decisão está sendo proposta e, no conteúdo, se corresponde ao que a Dona Maria disse. Anote o <code>hash</code>.</p>
+      </figure>
+    </li>
+    <li>
+      <h3>Aprovar e atestar à mão</h3>
+      <figure class="cmd-block"><figcaption class="prompt-head"><span class="speaker">Segundo terminal · substitua ID e HASH</span><button type="button" class="copy" data-copy>Copiar comando</button></figcaption>
+        <pre><code>uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding review --directory "artifacts/private/local" approve ID_DA_PROPOSTA --hash HASH_DA_INSPECAO</code></pre>
+        <p class="cmd-expect">O terminal mostra de novo o resumo e o hash e pede: <em>“Digite ATESTO seguido do hash apresentado”</em>. Somente se o resumo corresponder ao que ela manifestou, digite <code>ATESTO</code>, um espaço e o hash. Essa entrada nunca é automatizada.</p>
+      </figure>
+    </li>
+    <li>
+      <h3>Esperar a gravação</h3>
+      <p>Aguarde o JSON de resultado com <code>"ok": true</code>. Só então volte ao Desktop. Se aparecer um código de recusa, nada foi aplicado: vá ao <a href="#apendice-b">Apêndice B</a>.</p>
+    </li>
+    <li>
+      <h3>Ou recusar</h3>
+      <figure class="cmd-block"><figcaption class="prompt-head"><span class="speaker">Segundo terminal · quando o resumo não corresponder</span><button type="button" class="copy" data-copy>Copiar comando</button></figcaption>
+        <pre><code>uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding review --directory "artifacts/private/local" reject ID_DA_PROPOSTA --hash HASH_DA_INSPECAO</code></pre>
+        <p class="cmd-expect">A recusa fica registrada localmente e não habilita nenhuma capacidade ao modelo.</p>
+      </figure>
+    </li>
+    <li>
+      <h3>Voltar ao Desktop</h3>
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag both">REAL e SIMULATION</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Pronto, a revisão foi feita. Pode consultar de novo e me dizer o que ficou salvo?</blockquote>
+      </figure>
+    </li>
+  </ol>
+
+  <div class="grid-2">
+    <div class="block">
+      <h3>Regras da revisão</h3>
+      <ul>
+        <li><strong>Uma proposta por vez, na ordem.</strong> Aprovar uma muda o estado e torna desatualizadas as outras pendentes.</li>
+        <li><strong>Prazo de 10 minutos.</strong> Proposta vencida exige nova proposta e nova inspeção.</li>
+        <li>Hash divergente ou conteúdo alterado exige inspecionar de novo.</li>
+        <li>Aprovar de novo uma proposta já aplicada não duplica o efeito.</li>
+        <li>Se a mesma pessoa faz os dois papéis, diga em voz alta: “agora falo como operadora”.</li>
+        <li>Os comandos são iguais em PowerShell, bash e zsh. Use sempre o mesmo <code>--directory</code> da preparação.</li>
+      </ul>
+      <p style="margin-top:12px">Referências: <a href="../../README.md#revisao-local">README, passo 10</a> e <a href="../setup.md#aprovacao-local">aprovação local</a>.</p>
+    </div>
+    <div class="table-wrap" style="margin-top:0">
+      <table>
+        <caption class="sr-only">O que conferir em cada proposta</caption>
+        <thead><tr><th scope="col">Etapa</th><th scope="col">Comando no resumo</th><th scope="col">Confira</th></tr></thead>
+        <tbody>
+          <tr><td>03</td><td><code>register_recipe_candidate</code></td><td>Fonte web da pesquisa, título e medidas originais.</td></tr>
+          <tr><td>04</td><td><code>record_kitchen_facts</code></td><td>Só os fatos ditos, com valores e unidades. Hipotéticos na SIMULATION.</td></tr>
+          <tr><td>05</td><td><code>register_recipe_candidate</code></td><td>Derivada da versão certa; só campos alterados; requisitos web preservados.</td></tr>
+          <tr><td>06</td><td><code>set_production_plan</code></td><td>Lotes, porções e sobra iguais aos confirmados.</td></tr>
+          <tr><td>08</td><td><code>register_complement_quote</code><br><code>confirm_complement_quote</code></td><td>Embalagem, preço, encargos e disponibilidade da oferta.</td></tr>
+          <tr><td>09</td><td><code>record_recipe_feedback</code></td><td>Interesse na receita que está no plano.</td></tr>
+          <tr><td>10</td><td><code>accept_recipe</code></td><td>Receita e plano atuais.</td></tr>
+          <tr><td>12</td><td><code>save_menu_decision</code></td><td>Cenário ou preço exatamente como escolhido.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ APÊNDICE B ============================ -->
+<section class="section" id="apendice-b" data-section data-title="Recuperação de erros" aria-labelledby="t-b">
+  <header>
+    <p class="kicker">Apêndice B · Recuperação</p>
+    <h2 id="t-b" tabindex="-1">Erros de orquestração vistos no ensaio e como sair deles</h2>
+    <p class="lead">Na conversa, o agente recebe mensagens simples, sem códigos. Os códigos abaixo aparecem no <strong>terminal da operadora</strong>, na forma <code>CÓDIGO: revisão recusada; …</code>, ou foram identificados no diagnóstico do ensaio. Em todos os casos, recusa significa que <strong>nada foi aplicado</strong>.</p>
+  </header>
+
+  <article class="rec" id="rec-source-not-linked" aria-labelledby="h-rec-snl">
+    <h3 id="h-rec-snl"><code>SOURCE_NOT_LINKED</code> Adaptação ou revisão da receita recusada</h3>
+    <dl>
+      <dt>Onde aparece</dt><dd>O agente diz que não conseguiu registrar a sua versão e pede auxílio à pessoa operadora; <code>review list</code> não mostra proposta nova. O código foi identificado no ensaio por diagnóstico operacional local, que não faz parte deste guia.</dd>
+      <dt>Causa</dt><dd>Uma fonte <code>WEB</code> só é herdada no mesmo índice e com o mesmo conteúdo do requisito. No ensaio, as chamadas deslocaram três requisitos web e reescreveram suas justificativas.</dd>
+      <dt>O que fazer</dt><dd>A operadora, declarando o papel, orienta o agente no Desktop. Depois, revise a nova proposta normalmente.</dd>
+      <dt>Limite</dt><dd>Esta orientação segue as observações do ensaio, mas <strong>não foi validada como correção dentro da conversa</strong>: lá, as duas propostas corretivas foram preparadas pela operação fora da conversa. Se a nova tentativa falhar, interrompa a etapa e registre a limitação. Não edite o banco nem prepare propostas por scripts.</dd>
+    </dl>
+    <figure class="prompt operator">
+      <figcaption class="prompt-head"><span class="speaker">Operadora diz no Desktop <span class="tag op">Recuperação</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+      <blockquote class="prompt-text">Aqui é a pessoa operadora. A proposta da versão adaptada não foi aceita. Refaça a proposta mantendo as exigências que vieram da receita da internet na mesma ordem e com o mesmo texto, e acrescente as novas exigências só depois delas. Se for revisar as categorias da receita, faça isso em outra proposta, sem mudar mais nada.</blockquote>
+    </figure>
+  </article>
+
+  <article class="rec" id="rec-user-confirmation" aria-labelledby="h-rec-ucr">
+    <h3 id="h-rec-ucr"><code>USER_CONFIRMATION_REQUIRED</code> Aceite sem interesse registrado</h3>
+    <dl>
+      <dt>Onde aparece</dt><dd>No terminal, ao aprovar o aceite: <code>USER_CONFIRMATION_REQUIRED: revisão recusada; confira proposta, contexto e armazenamento local.</code></dd>
+      <dt>Causa</dt><dd>O interesse pela receita não foi registrado antes do aceite. O mesmo código protege outras manifestações que exigem confirmação inequívoca.</dd>
+      <dt>O que fazer</dt><dd>Não repita a aprovação. Recuse a proposta antiga com <code>reject</code> ou deixe-a expirar. Volte ao Desktop como Dona Maria, peça o registro do interesse, aprove-o, peça o resumo e manifeste o aceite de novo. Aprove o novo aceite.</dd>
+    </dl>
+    <figure class="prompt">
+      <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag both">REAL e SIMULATION</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+      <blockquote class="prompt-text">Antes do aceite, registre que eu tenho interesse nesse prato. Depois que a revisão terminar, me mostre o resumo de novo para eu decidir.</blockquote>
+    </figure>
+  </article>
+
+  <article class="rec" id="rec-stale" aria-labelledby="h-rec-stale">
+    <h3 id="h-rec-stale"><code>STALE_REVISION</code> <code>AUTHORIZATION_EXPIRED</code> Revisão desatualizada ou vencida</h3>
+    <dl>
+      <dt>Onde aparece</dt><dd>No terminal, ao aprovar. O agente, se consultar o estado, verá a proposta como expirada ou ainda pendente.</dd>
+      <dt>Causa</dt><dd><code>STALE_REVISION</code>: o estado mudou depois que a proposta foi criada — outra aprovação, uma nova versão da receita ou um novo plano. <code>AUTHORIZATION_EXPIRED</code>: passaram os 10 minutos de validade.</dd>
+      <dt>O que fazer</dt><dd>Não tente reaproveitar a proposta antiga. Peça uma proposta atual e inspecione de novo. Para prevenir, aprove uma proposta por vez e só peça a próxima decisão depois de o agente reler o estado.</dd>
+    </dl>
+    <figure class="prompt">
+      <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag both">REAL e SIMULATION</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+      <blockquote class="prompt-text">Aquela confirmação não valeu, porque passou do prazo ou alguma coisa mudou antes da revisão. Consulte o estado atual e me apresente de novo só o que ainda falta decidir.</blockquote>
+    </figure>
+  </article>
+
+  <article class="rec" id="rec-pending" aria-labelledby="h-rec-pending">
+    <h3 id="h-rec-pending">Consulta feita antes de a gravação terminar</h3>
+    <dl>
+      <dt>Onde aparece</dt><dd>A operadora aprovou, mas o agente ainda descreve a decisão como pendente.</dd>
+      <dt>Causa</dt><dd>A consulta aconteceu antes do commit. No ensaio, ela ocorreu 8 segundos antes da gravação da escolha do preço. Não houve cache nem outro banco.</dd>
+      <dt>O que fazer</dt><dd>Aguarde o <code>"ok": true</code> no terminal e peça uma nova consulta. Não peça ao agente para repetir a proposta.</dd>
+    </dl>
+    <figure class="prompt">
+      <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag both">REAL e SIMULATION</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+      <blockquote class="prompt-text">A revisão acabou de terminar. Consulte o estado de novo, por favor, e me diga o que ficou salvo.</blockquote>
+    </figure>
+  </article>
+
+  <article class="rec" id="rec-hash" aria-labelledby="h-rec-hash">
+    <h3 id="h-rec-hash"><code>LOCAL_REVIEW_REFUSED</code> <code>AUTHORIZATION_REQUIRED</code> Hash ou atestação incorretos</h3>
+    <dl>
+      <dt>Onde aparece</dt><dd>No terminal, ao aprovar ou recusar.</dd>
+      <dt>Causa</dt><dd>Hash diferente do apresentado pela inspeção, texto de atestação digitado de forma diferente de <code>ATESTO</code> + espaço + hash, proposta já recusada ou conteúdo divergente da revisão local.</dd>
+      <dt>O que fazer</dt><dd>Inspecione de novo e copie o hash exatamente. Se a proposta ainda estiver dentro do prazo e correta, repita a aprovação. Caso contrário, peça uma proposta atual.</dd>
+    </dl>
+  </article>
+
+  <article class="rec" id="rec-categories" aria-labelledby="h-rec-cat">
+    <h3 id="h-rec-cat">Categorias descartadas ou viabilidade presa em pendente</h3>
+    <dl>
+      <dt>Onde aparece</dt><dd>Depois da aprovação da adaptação, a revisão das categorias não aparece no estado, ou a viabilidade continua pendente sem uma pergunta clara.</dd>
+      <dt>Causa</dt><dd>A revisão das categorias foi enviada junto com outras mudanças — ingredientes, método, rendimento, requisitos ou contexto —, e a aprovação a descarta. Lacunas declaradas na receita mantêm a viabilidade pendente.</dd>
+      <dt>O que fazer</dt><dd>Peça a revisão das categorias em uma proposta separada. Responda às lacunas que forem de fato conhecidas; as desconhecidas continuam pendentes e impedem o aceite, como deve ser.</dd>
+    </dl>
+    <figure class="prompt operator">
+      <figcaption class="prompt-head"><span class="speaker">Operadora diz no Desktop <span class="tag op">Recuperação</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+      <blockquote class="prompt-text">Aqui é a pessoa operadora. Faça a revisão das categorias da receita em uma proposta separada, sem mudar ingredientes, modo de preparo, rendimento, exigências ou contexto. Depois me diga quais informações ainda deixam a avaliação pendente.</blockquote>
+    </figure>
+  </article>
+
+  <article class="rec" id="rec-research" aria-labelledby="h-rec-research">
+    <h3 id="h-rec-research">Pesquisa indisponível ou sem resultado adequado</h3>
+    <dl>
+      <dt>Onde aparece</dt><dd>O agente avisa que não conseguiu pesquisar ou que os resultados não servem.</dd>
+      <dt>Causa</dt><dd>Cota ou disponibilidade do endpoint anônimo do Exa, versão incompatível do Hermes ou termos liberados que não descrevem o prato.</dd>
+      <dt>O que fazer</dt><dd>Execute <code>check-research</code> (etapa 0). Tente outro termo já liberado ou revise os termos pelo <a href="../setup.md#pesquisa">canal local</a>. Não habilite busca livre, não invente URL e não apresente uma pesquisa anterior como busca ao vivo.</dd>
+    </dl>
+  </article>
+
+  <article class="rec" id="rec-claims" aria-labelledby="h-rec-claims">
+    <h3 id="h-rec-claims">O agente afirma que salvou, mas o estado não mudou</h3>
+    <dl>
+      <dt>O que fazer</dt><dd>Confira <code>review list</code>: sem aprovação local, nada foi aplicado. Peça ao agente uma nova consulta do estado. Texto do modelo não prova persistência. Outros casos estão no <a href="../../README.md#problemas">README</a> e no <a href="../setup.md#recuperacao">guia de recuperação</a>.</dd>
+    </dl>
+  </article>
+</section>
+
+<!-- ============================ APÊNDICE C ============================ -->
+<section class="section" id="apendice-c" data-section data-title="REAL × SIMULATION" aria-labelledby="t-c">
+  <header>
+    <p class="kicker">Apêndice C · Reprodutibilidade</p>
+    <h2 id="t-c" tabindex="-1">O que o avaliador executa e o que é só evidência</h2>
+    <p class="lead">O percurso <strong>REAL</strong> é o caminho oficial e reproduzível. A jornada <strong>SIMULATION</strong> foi concluída de forma assistida em 17/11/2026 e é <strong>evidência</strong>: ela não homologa o perfil REAL com a planilha original, que continua a validar pelo avaliador.</p>
+  </header>
+
+  <div class="table-wrap">
+    <table>
+      <caption class="sr-only">Comparação entre as trilhas REAL e SIMULATION</caption>
+      <thead><tr><th scope="col">Aspecto</th><th scope="col"><span class="badge b-real">REAL</span> reproduzível</th><th scope="col"><span class="badge b-sim">SIMULATION</span> ensaio assistido</th></tr></thead>
+      <tbody>
+        <tr><td>Preparação</td><td><code>setup-real</code>, <code>check</code>, <code>configure</code>, <code>model</code>, <code>verify-profile</code>, <code>check-research</code> e <code>desktop</code>, todos públicos.</td><td>Workspace criado com os passos de <code>prepare</code> sobre uma planilha sintética e perfil com <code>configure</code>. Plugin, termos e configuração de pesquisa foram <strong>acrescentados manualmente</strong>.</td></tr>
+        <tr><td>Planilha</td><td>A original do desafio, versionada em <code>doc-specs/despensa_dona_maria.xlsx</code>, ou outra com as abas <code>Despensa</code> e <code>Precos</code>.</td><td>Sintética, com seis itens, fora do repositório. O <code>prepare</code> público cria apenas arroz.</td></tr>
+        <tr><td>Pesquisa</td><td>Exa anônimo com os termos que você liberou.</td><td>Exa anônimo com um termo: <code>arroz branco simples ingredientes</code>.</td></tr>
+        <tr><td>Dados da cozinha</td><td>Verdadeiros, com origem humana.</td><td>Hipotéticos, marcados como simulação.</td></tr>
+        <tr><td>Revisão da receita</td><td>Pelo agente na conversa, sujeita à <a href="#rec-source-not-linked">recusa observada</a>.</td><td>Duas propostas corretivas preparadas pela operação, fora da conversa.</td></tr>
+        <tr><td>Compras</td><td>Depende dos faltantes; o ramo de cotação pode ser exercido.</td><td>Desembolso R$ 0,00; sem cotação.</td></tr>
+        <tr><td>Preço</td><td>Depende dos seus custos. Não há resultado garantido.</td><td>M30, R$ 2,03 por porção; CMV R$ 1,218; taxa R$ 0,20; sobra R$ 0,61.</td></tr>
+        <tr><td>Retomada</td><td>Comando <code>desktop</code> no mesmo diretório; não validada no ensaio Desktop.</td><td>Não exercitada; uma conversa contínua das 03:14 às 03:59 (BRT).</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="grid-2">
+    <div class="block done">
+      <h3>Executável pelo avaliador</h3>
+      <ul>
+        <li>A <a href="#preparo">etapa 0</a> inteira, pelo onboarding oficial do README.</li>
+        <li>As etapas 1 a 13 na trilha REAL, com a planilha original e as condições verdadeiras da sua cozinha.</li>
+        <li>O fluxo de revisão e aprovação do <a href="#apendice-a">Apêndice A</a>.</li>
+        <li>As orientações de recuperação do <a href="#apendice-b">Apêndice B</a>, com o limite declarado para <code>SOURCE_NOT_LINKED</code>.</li>
+        <li>A suíte automatizada do <a href="../../README.md#validar">README</a>, que não comprova pesquisa real nem a qualidade da conversa.</li>
+      </ul>
+    </div>
+    <div class="block" style="border-top:3px solid var(--sim-line)">
+      <h3>Somente evidência da SIMULATION</h3>
+      <ul>
+        <li>O perfil <code>SIMULATION</code> com pesquisa: o onboarding atual não configura pesquisa nesse modo, e <code>verify-profile</code> e <code>desktop</code> recusam o perfil quando ela é acrescentada à mão.</li>
+        <li>A planilha sintética de seis itens e os números do arroz, incluindo o preço de R$ 2,03 e a margem simplificada.</li>
+        <li>As propostas corretivas da operação e os scripts de diagnóstico, que permanecem privados e fora do Git.</li>
+        <li>O comportamento do modelo <code>openai/gpt-6.1-sol</code>; outro modelo pode conduzir a conversa de outra forma.</li>
+      </ul>
+      <p style="margin-top:12px">O fluxo opcional <code>scripts/demo.py</code> cria um <code>SIMULATION</code> só com arroz e sem pesquisa, para diagnóstico do núcleo. Ele não reproduz esta jornada e não foi validado aqui como percurso Desktop (<a href="../setup.md#demo-portatil">simulação opcional</a>).</p>
+    </div>
+  </div>
+
+  <div class="evidence" style="margin-top:22px">
+    <h3><span class="badge b-sim">SIMULATION</span> Chamadas feitas pelo Hermes no ensaio</h3>
+    <table>
+      <caption class="sr-only">Contagem de chamadas de ferramentas no ensaio</caption>
+      <thead><tr><th scope="col">Ferramenta</th><th scope="col">Chamadas</th></tr></thead>
+      <tbody>
+        <tr><td><code>get_business_state</code></td><td>26</td></tr>
+        <tr><td><code>get_inventory_snapshot</code></td><td>1</td></tr>
+        <tr><td><code>search_culinary_sources</code> / <code>extract_culinary_source</code></td><td>1 / 1</td></tr>
+        <tr><td><code>propose_user_change</code></td><td>14 — 12 propostas criadas, 2 recusadas</td></tr>
+        <tr><td><code>evaluate_recipe_feasibility</code> / <code>evaluate_purchase_plan</code></td><td>2 / 2</td></tr>
+        <tr><td><code>calculate_pricing_scenarios</code></td><td>1</td></tr>
+      </tbody>
+    </table>
+    <p class="fine" style="margin-top:10px">Nenhuma ferramenta fora do catálogo foi usada para aprovar ou gravar. As 10 propostas aplicadas foram inspecionadas e aprovadas no terminal com atestação manual. Registro completo: <a href="../verification-desktop-e2e.md">jornada E2E assistida</a>.</p>
+  </div>
+
+  <div class="block" style="margin-top:22px">
+    <h3>Fontes conferidas para este guia</h3>
+    <ul>
+      <li><a href="../../README.md">README</a> e <a href="../setup.md">docs/setup.md</a> — percurso, comandos e recuperação.</li>
+      <li><a href="../verification-desktop-e2e.md">docs/verification-desktop-e2e.md</a> — ensaio, intervenções e limites.</li>
+      <li><a href="../speaker/demo-hermes.md">docs/speaker/demo-hermes.md</a> — roteiro cronometrado.</li>
+      <li><a href="../../.hermes.md">.hermes.md</a> e <a href="../../skills/dona-maria-cardapio/SKILL.md">skill dona-maria-cardapio</a> — conduta do agente.</li>
+      <li><a href="../../src/dona_maria/business_state.py">business_state.py</a> (<code>ATTENDANCE_TOOLS</code>), <a href="../../src/dona_maria/approvals.py">approvals.py</a>, <a href="../../src/dona_maria/approval_cli.py">approval_cli.py</a> e <a href="../../src/dona_maria/hermes_research/__init__.py">plugin de pesquisa</a> — contratos e mensagens.</li>
+    </ul>
+  </div>
+</section>
+
+<nav class="pager" aria-label="Navegação entre etapas">
+  <button type="button" id="prev">← Anterior</button>
+  <span class="pager-pos" id="pager-pos"></span>
+  <button type="button" id="next">Próxima →</button>
+</nav>
+
+<footer class="site-foot">
+  <p>Sabor da Maria · Guia interativo da demonstração no Hermes Desktop. Página estática, sem backend nem dependências externas; o progresso fica salvo apenas neste navegador.</p>
+  <p>O Hermes Agent pertence à Nous Research. Nomes e marcas de terceiros pertencem aos respectivos titulares.</p>
+</footer>
+</main>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+  "use strict";
+  const root = document.documentElement;
+  document.body.classList.remove("no-js");
+  root.classList.add("js");
+
+  const STORE = "sabor-da-maria.demo-walkthrough.v1";
+  const read = () => { try { return JSON.parse(localStorage.getItem(STORE)) || {}; } catch { return {}; } };
+  const saved = read();
+  const state = {
+    track: saved.track === "sim" ? "sim" : "real",
+    evidence: saved.evidence !== false,
+    done: Array.isArray(saved.done) ? saved.done : [],
+  };
+  const persist = () => { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch { /* armazenamento indisponível */ } };
+
+  const sections = [...document.querySelectorAll("main [data-section]")];
+  const steps = sections.filter((s) => s.hasAttribute("data-step"));
+  const navLinks = [...document.querySelectorAll("a[data-nav]")];
+  const prev = document.getElementById("prev");
+  const next = document.getElementById("next");
+  const pagerPos = document.getElementById("pager-pos");
+  const toast = document.getElementById("toast");
+  let current = 0;
+  let toastTimer;
+
+  function notify(message, tone) {
+    clearTimeout(toastTimer);
+    toast.className = "toast show" + (tone ? " " + tone : "");
+    toast.textContent = message;
+    toastTimer = setTimeout(() => { toast.className = "toast"; }, 3600);
+  }
+
+  function label(section) { return section.dataset.title; }
+
+  function show(index, { focus = false, target = null } = {}) {
+    current = Math.max(0, Math.min(sections.length - 1, index));
+    sections.forEach((s, i) => { s.hidden = i !== current; });
+    const section = sections[current];
+    navLinks.forEach((a) => {
+      if (a.getAttribute("href") === "#" + section.id) a.setAttribute("aria-current", "step");
+      else a.removeAttribute("aria-current");
+    });
+    prev.disabled = current === 0;
+    next.disabled = current === sections.length - 1;
+    prev.textContent = current === 0 ? "← Anterior" : "← " + label(sections[current - 1]);
+    next.textContent = current === sections.length - 1 ? "Fim do guia" : label(sections[current + 1]) + " →";
+    const stepIndex = steps.indexOf(section);
+    pagerPos.textContent = stepIndex >= 0 ? "Etapa " + stepIndex + " de " + (steps.length - 1) : label(section);
+    document.title = label(section) + " — Roteiro da demo · Sabor da Maria";
+    if (target && target !== section) {
+      target.scrollIntoView({ block: "start" });
+      if (focus) { target.setAttribute("tabindex", "-1"); target.focus({ preventScroll: true }); }
+    } else {
+      window.scrollTo(0, 0);
+      if (focus) section.querySelector("h1, h2").focus({ preventScroll: true });
+    }
+  }
+
+  function fromHash(focus) {
+    const id = decodeURIComponent(location.hash.slice(1));
+    const target = id ? document.getElementById(id) : null;
+    const section = target ? target.closest("[data-section]") : null;
+    show(section ? sections.indexOf(section) : 0, { focus, target });
+  }
+
+  function go(index) {
+    if (index < 0 || index >= sections.length) return;
+    const id = sections[index].id;
+    if (location.hash === "#" + id) show(index, { focus: true });
+    else location.hash = id;
+  }
+
+  function renderProgress() {
+    const done = steps.filter((s) => state.done.includes(s.id)).length;
+    const bar = document.getElementById("progress");
+    bar.firstElementChild.style.width = (done / steps.length) * 100 + "%";
+    bar.setAttribute("aria-valuenow", String(done));
+    bar.setAttribute("aria-valuetext", done + " de " + steps.length + " etapas concluídas");
+    document.getElementById("progress-text").innerHTML = "<strong>" + done + "</strong> de " + steps.length + " etapas concluídas";
+    navLinks.forEach((a) => {
+      const id = a.getAttribute("href").slice(1);
+      const isDone = state.done.includes(id);
+      a.classList.toggle("is-done", isDone);
+      let hint = a.querySelector(".done-hint");
+      if (isDone && !hint) { hint = document.createElement("span"); hint.className = "sr-only done-hint"; hint.textContent = " (concluída)"; a.appendChild(hint); }
+      if (!isDone && hint) hint.remove();
+    });
+    document.querySelectorAll("input[data-done]").forEach((box) => { box.checked = state.done.includes(box.dataset.done); });
+  }
+
+  function setTrack(track, announce) {
+    state.track = track;
+    root.dataset.track = track;
+    document.getElementById(track === "sim" ? "track-sim" : "track-real").checked = true;
+    persist();
+    if (announce) notify(track === "sim" ? "Trilha SIMULATION: prompts do ensaio assistido, com dados hipotéticos." : "Trilha REAL: prompts para a planilha original e a sua cozinha.");
+  }
+
+  function setEvidence(visible) {
+    state.evidence = visible;
+    document.body.classList.toggle("hide-sim", !visible);
+    document.getElementById("show-evidence").checked = visible;
+    persist();
+  }
+
+  async function copyText(text) {
+    try {
+      if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true; }
+    } catch { /* tenta o método alternativo */ }
+    const area = document.createElement("textarea");
+    area.value = text;
+    area.setAttribute("readonly", "");
+    area.style.position = "fixed";
+    area.style.opacity = "0";
+    document.body.appendChild(area);
+    area.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch { ok = false; }
+    area.remove();
+    return ok;
+  }
+
+  function textOf(figure) {
+    const prompt = figure.querySelector(".prompt-text");
+    if (prompt) return prompt.textContent.replace(/\s+/g, " ").trim();
+    return figure.querySelector("pre").textContent.trim();
+  }
+
+  document.querySelectorAll("button[data-copy]").forEach((button) => {
+    const figure = button.closest("figure");
+    const isPrompt = Boolean(figure.querySelector(".prompt-text"));
+    const caption = figure.querySelector(".speaker").textContent.replace(/\s+/g, " ").trim();
+    const section = label(button.closest("[data-section]"));
+    button.setAttribute("aria-label", (isPrompt ? "Copiar prompt: " : "Copiar comando: ") + caption + " — " + section);
+    button.addEventListener("click", async () => {
+      const text = textOf(figure);
+      const ok = await copyText(text);
+      if (!ok) {
+        const selection = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(figure.querySelector(".prompt-text, pre"));
+        selection.removeAllRanges();
+        selection.addRange(range);
+        notify("Não foi possível copiar automaticamente. O texto foi selecionado: use Ctrl+C.", "err");
+        return;
+      }
+      const original = isPrompt ? "Copiar prompt" : "Copiar comando";
+      button.textContent = "Copiado ✓";
+      button.classList.add("is-copied");
+      setTimeout(() => { button.textContent = original; button.classList.remove("is-copied"); }, 1800);
+      if (text.includes("«")) notify("Copiado. Substitua os trechos entre « » pelos seus dados antes de enviar.", "warn");
+      else if (text.includes("ID_DA_PROPOSTA") || text.includes("HASH_DA_INSPECAO")) notify("Comando copiado. Troque ID_DA_PROPOSTA e HASH_DA_INSPECAO pelos valores do terminal.", "warn");
+      else notify(isPrompt ? "Prompt copiado. Cole no Hermes Desktop." : "Comando copiado. Cole no terminal da operadora.");
+    });
+  });
+
+  document.querySelectorAll("input[data-done]").forEach((box) => {
+    box.addEventListener("change", () => {
+      const id = box.dataset.done;
+      state.done = state.done.filter((d) => d !== id);
+      if (box.checked) state.done.push(id);
+      persist();
+      renderProgress();
+      if (box.checked) notify("Etapa marcada como concluída.");
+    });
+  });
+
+  document.getElementById("reset-progress").addEventListener("click", () => {
+    state.done = [];
+    persist();
+    renderProgress();
+    notify("Progresso reiniciado.");
+  });
+
+  document.querySelectorAll("input[name=track]").forEach((radio) => {
+    radio.addEventListener("change", () => { if (radio.checked) setTrack(radio.value, true); });
+  });
+  document.getElementById("show-evidence").addEventListener("change", (e) => setEvidence(e.target.checked));
+
+  prev.addEventListener("click", () => go(current - 1));
+  next.addEventListener("click", () => go(current + 1));
+  window.addEventListener("hashchange", () => fromHash(true));
+  document.addEventListener("keydown", (e) => {
+    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    if (e.target.closest("input, textarea, select, [contenteditable]")) return;
+    if (e.key === "ArrowRight") { e.preventDefault(); go(current + 1); }
+    if (e.key === "ArrowLeft") { e.preventDefault(); go(current - 1); }
+  });
+
+  setTrack(state.track, false);
+  setEvidence(state.evidence);
+  renderProgress();
+  fromHash(false);
+})();
+</script>
+</body>
+</html>
