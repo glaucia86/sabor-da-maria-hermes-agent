@@ -24,6 +24,10 @@ Para demonstrar do início, prepare outra pasta, sem apagar o histórico anterio
 
 ## Roteiro
 
+Os prompts de cada etapa, em linguagem natural e na trilha REAL, estão no
+[guia interativo](../demo/hermes-desktop-walkthrough.html), também acessível
+pelo slide 11 da apresentação.
+
 | Tempo | Ação | Evidência esperada |
 | --- | --- | --- |
 | 0:00–1:00 | Pedir consulta da despensa e informar o objetivo de lançamento. | Ingredientes reais e orçamento de R$ 80, sem pedir UUID à cozinheira. |

@@ -11,7 +11,7 @@
 
 <!-- 1 · Capa -->
 <section data-timing="30">
- <div class="slide cover" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="01 / 14">
+ <div class="slide cover" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="01 / 15">
   <div class="cover-top"><p class="kicker">Desafio técnico · Senior AI Engineer</p><span class="edition">iFood · Engenharia de IA</span></div>
   <div class="cover-body">
    <div>
@@ -31,16 +31,16 @@
   </div>
  </div>
  <aside class="notes">
-<p>Olá, Lucas e Hildebrando! Obrigada pelo tempo de vocês.</p>
-<p>Hoje vou apresentar o Sabor da Maria, a solução que desenvolvi para o desafio de Senior AI Engineer do iFood.</p>
-<p>Vou começar pelo problema e pelas decisões de engenharia. Depois mostro a arquitetura e os fluxos da solução.</p>
-<p>Em seguida, teremos a demonstração prática. Para encerrar, apresento as limitações, os próximos passos e abro espaço para perguntas.</p>
+<p>Olá, Lucas e Hildebrando. Obrigada pelo tempo de vocês.</p>
+<p>Vou apresentar o Sabor da Maria: uma consultora de cardápio e preço que eu construí sobre o Hermes Agent para o desafio de Senior AI Engineer.</p>
+<p>Dividi a conversa em três partes. Primeiro, o problema e as decisões de arquitetura. Depois, a demonstração no Hermes Desktop e o que o ensaio completo mostrou. No final, limitações, próximos passos e perguntas.</p>
+<p>Se quiserem interromper em algum ponto, fiquem à vontade.</p>
  </aside>
 </section>
 
 <!-- 2 · O que é o desafio? -->
-<section data-timing="75">
- <div class="slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="02 / 14">
+<section data-timing="65">
+ <div class="slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="02 / 15">
   <p class="kicker">{{icon clipboard-list}}01 · O que é o desafio?</p>
   <h2 class="title">Uma consultora de cardápio<br>e preço para a Dona Maria.</h2>
   <div class="mt-8 grid flex-1 grid-cols-[1fr_1.25fr] gap-7">
@@ -68,21 +68,16 @@
   </div>
  </div>
  <aside class="notes">
-<p>O desafio apresenta a Dona Maria, que está abrindo seu primeiro delivery.</p>
-<p>Ela fornece uma planilha com duas abas: uma mostra o estoque e a outra registra as compras e os preços pagos. Ao todo, são 37 ingredientes.</p>
-<p>Temos também R$ 80 para comprar complementos e uma taxa de plataforma de 10% sobre o preço de venda.</p>
-<p>O Hermes Agent precisa ajudá-la em quatro etapas.</p>
-<p>Primeiro, pesquisar receitas reais na internet e ouvir a opinião dela.</p>
-<p>Depois, descobrir se ela tem equipamentos, técnicas e condições para preparar o prato. Para mim, esse é o coração do desafio.</p>
-<p>Em seguida, comparar ingredientes, identificar o que falta e verificar o orçamento.</p>
-<p>Por último, após o aceite de um prato, calcular o CMV e apresentar cenários de preço.</p>
-<p>Mas a escolha final continua sendo da Dona Maria.</p>
+<p>Começando pelo enunciado. A Dona Maria está abrindo o primeiro delivery e chega com uma planilha de duas abas: uma com o que ela tem em estoque e outra com o que comprou e quanto pagou. São 37 ingredientes. Essa planilha original está no repositório e é a entrada padrão da instalação.</p>
+<p>Há duas premissas fixas: R$ 80 para complementos e uma taxa de 10% sobre o preço de venda.</p>
+<p>O agente precisa acompanhá-la em quatro etapas: pesquisar receitas reais e ouvir o que ela acha; descobrir se ela tem equipamento, técnica e tempo para o prato; comparar o que tem com o que falta, dentro do orçamento; e, só depois do aceite, calcular o CMV e propor cenários de preço.</p>
+<p>Eu destaquei a segunda etapa porque, para mim, é o coração do desafio: é ali que uma boa recomendação vira problema na cozinha. E, em todas as etapas, quem decide é a Dona Maria.</p>
  </aside>
 </section>
 
 <!-- 3 · Qual problema resolve? -->
-<section data-timing="75">
- <div class="slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="03 / 14">
+<section data-timing="65">
+ <div class="slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="03 / 15">
   <p class="kicker">{{icon target}}02 · Qual problema resolve?</p>
   <h2 class="title">Aqui, uma recomendação errada<br>vira <span class="text-coral">prejuízo real</span>.</h2>
   <div class="mt-8 grid grid-cols-3 gap-5">
@@ -99,46 +94,38 @@
   </ul>
  </div>
  <aside class="notes">
-<p>Por trás do enunciado existem três perguntas: o que ela consegue produzir, se tem condições reais de preparar e quanto deve cobrar.</p>
-<p>Uma resposta errada pode trazer prejuízo.</p>
-<p>Imagine recomendar uma receita que exige forno quando ela não tem esse equipamento.</p>
-<p>Ou tratar os R$ 80 como orçamento individual de cada prato, em vez de um limite compartilhado.</p>
-<p>Na precificação, aplicar a taxa sobre o custo, e não sobre a venda, também pode gerar um preço abaixo do mínimo.</p>
-<p>Com LLMs há outros riscos: um cálculo errado, um fato esquecido ou até um “parece bom” interpretado como aprovação.</p>
-<p>Por isso, não quis construir apenas um recomendador.</p>
-<p>Separei a conversa do Hermes das regras determinísticas em Python. E mantive a aprovação humana fora do controle do modelo.</p>
+<p>Quando eu traduzo o enunciado, sobram três perguntas: o que ela consegue produzir, se tem condições reais de preparar e quanto cobrar sem perder dinheiro.</p>
+<p>O que me chamou atenção é que, aqui, uma resposta errada não é só uma resposta ruim; é prejuízo. Recomendar uma receita de forno para quem não tem forno, e ela descobrir isso depois de comprar. Tratar os R$ 80 como verba de cada prato, quando é um limite único. Aplicar os 10% sobre o custo, e não sobre a venda, e cobrar abaixo do mínimo.</p>
+<p>E existe uma classe de erro que é própria de LLM: errar uma conta, esquecer algo que ela contou dez mensagens atrás ou entender um “parece bom” como aceite.</p>
+<p>Esses riscos definiram a arquitetura. Eu não queria um recomendador que acerta na maioria das vezes; queria que esses erros não conseguissem virar estado de negócio. É isso que o próximo slide resume.</p>
  </aside>
 </section>
 
 <!-- 4 · Solução escolhida -->
-<section data-timing="75">
- <div class="slide solution-slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="04 / 14">
+<section data-timing="80">
+ <div class="slide solution-slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="04 / 15">
   <p class="kicker">{{icon lightbulb}}03 · Solução escolhida</p>
   <h2 class="title">O LLM <span class="text-mint">conversa</span>. O código <span class="text-mint">valida</span>.<br>A Dona Maria <span class="text-mint">decide</span>.</h2>
   <div class="mt-9 grid grid-cols-4 gap-5">
-   <div class="card flex flex-col p-6"><div class="icon-tile">{{icon bot}}</div><h3 class="mt-5 text-[25px] font-bold">Hermes Agent</h3><p class="mt-2 flex-1 text-[19px] leading-snug text-muted">Conduz a conversa, pesquisa receitas, faz as perguntas certas e explica os números.</p><p class="mt-4 font-mono text-[15px] text-amber">context file · skill · plugins</p></div>
+   <div class="card flex flex-col p-6"><div class="icon-tile">{{icon bot}}</div><h3 class="mt-5 text-[25px] font-bold">Hermes Agent</h3><p class="mt-2 flex-1 text-[19px] leading-snug text-muted">Conduz a conversa, pesquisa receitas reais via Exa, faz as perguntas certas e explica os números.</p><p class="mt-4 font-mono text-[15px] text-amber">skill · 2 plugins</p></div>
    <div class="card flex flex-col p-6"><div class="icon-tile">{{icon shield-check}}</div><h3 class="mt-5 text-[25px] font-bold">Python + MCP</h3><p class="mt-2 flex-1 text-[19px] leading-snug text-muted">Valida viabilidade, orçamento e preço com regras determinísticas e <span class="font-mono">Decimal</span>.</p><p class="mt-4 font-mono text-[15px] text-amber">6 tools · stdio</p></div>
    <div class="card flex flex-col p-6"><div class="icon-tile">{{icon database}}</div><h3 class="mt-5 text-[25px] font-bold">SQLite</h3><p class="mt-2 flex-1 text-[19px] leading-snug text-muted">Guarda fatos, receitas, decisões e auditoria. Retomar não depende da memória do modelo.</p><p class="mt-4 font-mono text-[15px] text-amber">estado · histórico</p></div>
-   <div class="card flex flex-col p-6"><div class="icon-tile">{{icon user-check}}</div><h3 class="mt-5 text-[25px] font-bold">Decisão humana</h3><p class="mt-2 flex-1 text-[19px] leading-snug text-muted">Toda decisão vira proposta, aprovada num terminal local fora do alcance do modelo.</p><p class="mt-4 font-mono text-[15px] text-amber">aprovação local</p></div>
+   <div class="card flex flex-col p-6"><div class="icon-tile">{{icon user-check}}</div><h3 class="mt-5 text-[25px] font-bold">Decisão humana</h3><p class="mt-2 flex-1 text-[19px] leading-snug text-muted">O agente só cria propostas. A aprovação roda num processo local separado, sem tool para o modelo.</p><p class="mt-4 font-mono text-[15px] text-amber">aprovação local</p></div>
   </div>
   <p class="takeaway">{{icon flask-conical size-7 text-mint}}Regra no código, não no prompt: um teste prova a regra sem chamar um LLM.</p>
  </div>
  <aside class="notes">
-<p>Aqui está uma das principais decisões de arquitetura: separar o que o modelo pode fazer do que a aplicação precisa garantir.</p>
-<p>O Hermes conduz a conversa com a Dona Maria, pesquisa receitas e faz perguntas sobre a cozinha.</p>
-<p>Para orientar esse atendimento, configurei um arquivo de contexto, uma skill e dois plugins: um para a política de ferramentas e outro para a pesquisa mediada.</p>
-<p>Mas as regras de negócio não ficam no prompt.</p>
-<p>O Hermes acessa, por MCP via stdio, um serviço Python com seis ferramentas de atendimento. É ali que verifico viabilidade, orçamento e precificação.</p>
-<p>Uso Pydantic para validar dados, Decimal nos cálculos financeiros e SQLite para persistir fatos, receitas e decisões.</p>
-<p>Assim, o negócio não depende da memória automática do agente.</p>
-<p>E a Dona Maria continua decidindo. O Hermes propõe, mas um operador humano atesta a manifestação dela por um canal separado.</p>
-<p>Em resumo: o modelo conversa, o Python valida e a decisão é humana.</p>
+<p>Esta é a decisão central do projeto: separar o que o modelo pode fazer do que a aplicação precisa garantir.</p>
+<p>O Hermes é a interface e o orquestrador. Ele conversa em linguagem simples, escolhe qual ferramenta chamar, pesquisa receitas e explica os números. Para orientar esse atendimento, configurei um arquivo de contexto, uma skill e dois plugins: um de política, que fecha o catálogo de ferramentas, e um de pesquisa, que consulta o Exa pelo endpoint anônimo, sem chave de API.</p>
+<p>As regras não ficam no prompt. Ficam num serviço Python que o Hermes acessa por MCP via stdio, com seis ferramentas de negócio. Ali, Pydantic valida a entrada, Decimal faz as contas e as invariantes são conferidas antes de qualquer gravação. O SQLite guarda fatos, receitas, decisões e auditoria, então retomar o atendimento não depende do que o modelo lembra.</p>
+<p>E a decisão continua humana. O Hermes só consegue criar propostas; quem aplica é um processo local separado, que não aparece no catálogo do modelo.</p>
+<p>O ganho prático é que cada regra pode ser provada por um teste, sem chamar nenhum LLM. Mas eu não cheguei aqui direto; avaliei outros caminhos.</p>
  </aside>
 </section>
 
 <!-- 5 · Por que essa solução? -->
 <section data-timing="90">
- <div class="slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="05 / 14">
+ <div class="slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="05 / 15">
   <p class="kicker">{{icon scale}}04 · Por que essa solução?</p>
   <h2 class="title-sm">Cada escolha fecha um risco concreto.</h2>
   <div class="card mt-6 overflow-hidden">
@@ -151,47 +138,41 @@
      <tr><td class="px-5 py-3">Memória do agente guarda o estado</td><td class="px-5 py-3 text-muted">Sessão cai, fato some ou é inventado</td><td class="px-5 py-3">SQLite + <span class="font-mono text-[17px] text-mint">get_business_state</span>; memória automática desligada</td></tr>
      <tr><td class="px-5 py-3">Valores em <span class="font-mono text-[17px]">float</span></td><td class="px-5 py-3 text-muted">Arredondamento leva o preço abaixo do piso</td><td class="px-5 py-3"><span class="font-mono text-[17px]">Decimal</span> e piso arredondado para cima</td></tr>
      <tr><td class="px-5 py-3">Agente confirma a própria decisão</td><td class="px-5 py-3 text-muted">“Parece bom” vira aceite</td><td class="px-5 py-3">Proposta + aprovação local fora do modelo</td></tr>
-     <tr><td class="px-5 py-3">Busca web livre</td><td class="px-5 py-3 text-muted">Prompt injection, vazamento da despensa</td><td class="px-5 py-3">Pesquisa mediada: termos liberados, extração por ID</td></tr>
+     <tr><td class="px-5 py-3">Busca web livre</td><td class="px-5 py-3 text-muted">Prompt injection, vazamento da despensa</td><td class="px-5 py-3">Exa mediado: termos liberados, extração por ID</td></tr>
      <tr><td class="px-5 py-3">Backend distribuído</td><td class="px-5 py-3 text-muted">Complexidade sem demanda</td><td class="px-5 py-3">MCP local + SQLite, reproduzível em 1 máquina</td></tr>
     </tbody>
    </table>
   </div>
  </div>
  <aside class="notes">
-<p>Para chegar a essa solução, avaliei alguns caminhos e os riscos de cada um.</p>
-<p>O mais simples seria deixar o LLM fazer as contas. Mas uma regra esquecida ou um arredondamento errado pode trazer prejuízo.</p>
-<p>Por isso, coloquei as validações em Python, com testes automatizados.</p>
-<p>Também desliguei a memória automática do Hermes e passei a guardar o estado do negócio no SQLite.</p>
-<p>Nos cálculos financeiros, usei Decimal e arredondamento para cima, em centavos, para não cobrar abaixo do preço mínimo.</p>
-<p>Outra escolha foi separar proposta de aprovação. O agente pode sugerir, mas não confirma a própria decisão.</p>
-<p>Na pesquisa, uso apenas termos públicos autorizados para reduzir riscos de prompt injection e exposição da despensa.</p>
-<p>Por fim, mantive tudo local. Infraestrutura distribuída não era necessária para o escopo do desafio, embora essa escolha tenha limitações.</p>
+<p>Cada linha desta tabela é um caminho que eu considerei e descartei, junto com o risco que ele traria.</p>
+<p>O mais rápido seria deixar o LLM fazer as contas no prompt. Funciona na demo e falha no dia em que ele esquece uma regra ou arredonda para baixo. Por isso, regras e cálculos estão em Python, com testes que não dependem de modelo.</p>
+<p>Também não uso a memória do agente como estado de negócio. Desliguei a memória automática do Hermes; o estado vem do SQLite pelo <code>get_business_state</code>, inclusive numa sessão nova. Nos valores, Decimal em vez de float, e o preço sobe para o centavo seguinte, para nunca ficar abaixo do piso.</p>
+<p>O ponto que mais pesou foi a aprovação. Se o agente pode confirmar a própria decisão, um “parece bom” vira aceite. Então ele propõe, e a aprovação acontece fora dele.</p>
+<p>Na pesquisa, o modelo não envia consulta nem URL livre: escolhe entre termos públicos liberados, e a extração é feita pelo ID do resultado registrado. Isso reduz a superfície para prompt injection e evita mandar a despensa para fora.</p>
+<p>Por fim, mantive tudo local: um backend distribuído traria complexidade que o desafio não pede, com o custo de ainda não atender vários restaurantes. Vamos ver como as peças se encaixam.</p>
  </aside>
 </section>
 
 <!-- 6 · Arquitetura -->
-<section data-timing="90">
- <div class="slide diagram-slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="06 / 14">
+<section data-timing="80">
+ <div class="slide diagram-slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="06 / 15">
   <p class="kicker">{{icon layers}}05 · Arquitetura</p>
   <h2 class="title-sm">Quem conversa, quem valida, quem guarda e quem aprova.</h2>
-  <figure class="board"><img class="diagram" src="assets/diagrams/arquitetura.svg" alt="Arquitetura: Hermes conduz a conversa, Python/MCP valida as regras e SQLite persiste o estado; o operador aprova decisões fora do modelo."></figure>
+  <figure class="board"><img class="diagram" src="assets/diagrams/arquitetura.svg" alt="Arquitetura: Dona Maria conversa com o Hermes Agent, que usa plugin de pesquisa com Exa, plugin de política e seis tools MCP via stdio; o domínio Python valida com Pydantic e Decimal e persiste no SQLite. Um processo local separado do operador importa a planilha e aprova propostas, sem tool de aprovação para o modelo."></figure>
  </div>
  <aside class="notes">
-<p>Este é o desenho da solução. A ideia principal foi separar bem as responsabilidades.</p>
-<p>A Dona Maria conversa com o Hermes, orientado pelo arquivo de contexto e pela skill.</p>
-<p>Dentro dele, o plugin de política restringe as ferramentas disponíveis. E a pesquisa na web acontece por um plugin separado, com termos autorizados.</p>
-<p>Quando precisa consultar estoque, avaliar receitas ou calcular preços, o Hermes usa seis ferramentas MCP, por stdio.</p>
-<p>O MCP e as regras de negócio fazem parte do mesmo serviço Python local. Nele, Pydantic valida dados e Decimal apoia os cálculos. O SQLite guarda o estado e o histórico.</p>
-<p>Na parte inferior, temos o canal do operador humano, fora do alcance do modelo.</p>
-<p>É por esse canal que a planilha é importada e que as decisões manifestadas pela Dona Maria são revisadas e atestadas.</p>
-<p>A seta tracejada representa o fluxo lógico dessa manifestação, não uma conexão técnica direta entre pessoas.</p>
-<p>Ou seja: o Hermes conversa, o Python valida, o SQLite guarda e a aprovação humana acontece separadamente.</p>
+<p>Aqui estão as mesmas responsabilidades, agora como componentes.</p>
+<p>À esquerda, a Dona Maria conversa com o Hermes no Desktop. O Hermes recebe o <code>.hermes.md</code> e a skill, que definem papel, linguagem e condução, e usa o modelo escolhido no perfil. Dentro do host há dois plugins: o de política mantém a allowlist e hooks que comparam a ferramenta pedida com a executada; o de pesquisa expõe só duas ferramentas e fala com o Exa usando os termos liberados.</p>
+<p>No centro está o serviço Python. MCP e domínio rodam no mesmo processo local: o adaptador recebe a chamada por stdio, os serviços de inventário, planejamento, cotação e preço validam as regras, e o SQLite guarda snapshot, estado, histórico e auditoria.</p>
+<p>Embaixo, o canal do operador, que é outro processo. É por ele que a planilha entra com o <code>setup-real</code> e que as propostas são listadas, inspecionadas e atestadas. A CLI chama o serviço de aprovação direto em Python e grava no mesmo banco; não passa pelo MCP, e o modelo não tem nenhuma ferramenta de aprovação.</p>
+<p>A seta tracejada é só o fluxo lógico: a Dona Maria manifesta na conversa, mas a atestação acontece fora dela. Agora, os fluxos.</p>
  </aside>
 </section>
 
 <!-- 7 · Fluxo 1 -->
 <section data-timing="60">
- <div class="slide diagram-slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="07 / 14">
+ <div class="slide diagram-slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="07 / 15">
   <p class="kicker">{{icon route}}06 · Fluxo 1 · Despensa → candidatas</p>
   <h2 class="title-sm">Da planilha às receitas que valem a conversa.</h2>
   <figure class="board"><img class="diagram" src="assets/diagrams/fluxo-despensa.svg" alt="Fluxo da despensa: importação da planilha, validação de quantidades e custos e consulta do estado persistido."></figure>
@@ -202,22 +183,16 @@
   </div>
  </div>
  <aside class="notes">
-<p>Agora vou mostrar como a solução funciona na prática, começando pela despensa da Dona Maria.</p>
-<p>Primeiro, o operador importa a planilha com o comando setup-real.</p>
-<p>O sistema cruza as duas abas para identificar quais ingredientes estão disponíveis, suas quantidades e o custo unitário.</p>
-<p>Se faltar um preço ou uma conversão de medida, ele registra a pendência. Não assume um valor qualquer.</p>
-<p>Essas informações ficam no SQLite.</p>
-<p>A partir daí, o Hermes consulta o inventário e pesquisa receitas reais na internet, usando somente termos autorizados e mantendo a referência das fontes.</p>
-<p>A Dona Maria também pode sugerir uma receita própria.</p>
-<p>Com essas opções, o Hermes pergunta o que ela achou.</p>
-<p>Mas aqui está um detalhe importante: gostar de uma receita ainda não significa conseguir prepará-la.</p>
-<p>E é isso que verificamos no próximo fluxo.</p>
+<p>O primeiro fluxo começa antes da conversa. O operador importa a planilha com o <code>setup-real</code>; com a original, são 37 itens.</p>
+<p>O importador cruza as duas abas: o estoque diz o que está disponível, e a compra diz o custo unitário. Cinco quilos de arroz por R$ 24,90 viram cerca de meio centavo por grama. Preço ou conversão ausente vira pendência, nunca zero, e o snapshot fica imutável no SQLite.</p>
+<p>Na conversa, o Hermes consulta o inventário e pesquisa no Exa só com os termos liberados. A extração é feita pelo ID do resultado, com fonte, hash e horário registrados, e o texto da página é tratado como dado. A Dona Maria também pode trazer uma receita própria.</p>
+<p>Com as candidatas na mesa, ela dá a opinião. Mas gostar de uma receita não é conseguir prepará-la, e é isso que o próximo fluxo verifica.</p>
  </aside>
 </section>
 
 <!-- 8 · Fluxo 2 -->
 <section data-timing="75">
- <div class="slide diagram-slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="08 / 14">
+ <div class="slide diagram-slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="08 / 15">
   <p class="kicker">{{icon list-checks}}07 · Fluxo 2 · Elicitação e viabilidade</p>
   <h2 class="title-sm">Nenhum aceite com pergunta pendente.</h2>
   <figure class="board"><img class="diagram" src="assets/diagrams/fluxo-viabilidade.svg" alt="Fluxo de viabilidade: pesquisa, interesse, condições da cozinha, ingredientes e orçamento são verificados antes do aceite."></figure>
@@ -228,46 +203,38 @@
   </div>
  </div>
  <aside class="notes">
-<p>Agora chegamos ao que considero o coração do desafio: descobrir se a Dona Maria realmente consegue preparar uma receita antes de recomendar compras.</p>
-<p>O sistema avalia não apenas os ingredientes, mas também equipamentos, técnicas e condições da cozinha, como tempo, gás e espaço para armazenamento.</p>
-<p>Se alguma informação ainda não foi confirmada, o Hermes precisa perguntar em vez de presumir.</p>
-<p>Por exemplo, ela pode dizer que tem forno, mas apenas uma assadeira.</p>
-<p>Essa informação vira proposta, passa pela atestação humana e então o sistema reavalia a viabilidade.</p>
-<p>Se existir um impedimento, precisamos adaptar o planejamento ou considerar outra receita.</p>
-<p>Depois, o serviço verifica os ingredientes que faltam e calcula as compras, incluindo embalagens inteiras e frete.</p>
-<p>Os R$ 80 são compartilhados entre todos os pratos.</p>
-<p>Só quando a receita é viável e o planejamento cabe no orçamento é que ela pode seguir para a decisão da Dona Maria.</p>
-<p>E é esse processo de aprovação que mostro no próximo slide.</p>
+<p>Este é o fluxo que eu considero o coração do desafio.</p>
+<p>Cada receita traz requisitos de preparo: equipamento, técnica, operação e ingredientes na escala do plano. Para cada requisito, o serviço procura um fato confirmado sobre a cozinha da Dona Maria. Se esse fato não existe, o estado é UNKNOWN, e o comportamento correto é perguntar, não presumir. Ter fogão não confirma que a panela comporta o lote, nem que ela tem tempo livre antes da entrega.</p>
+<p>A resposta dela vira proposta, passa pela aprovação local, e só então o <code>evaluate_recipe_feasibility</code> reavalia. Se um requisito está confirmado como ausente, o resultado é BLOCKED, e o caminho é adaptar a receita ou trocar de candidata.</p>
+<p>Depois vêm as compras. O <code>evaluate_purchase_plan</code> soma os faltantes de todos os pratos, considera pacote inteiro e frete e compara com os R$ 80 agregados. Só ofertas confirmadas entram, e a confirmação vale por no máximo 24 horas.</p>
+<p>O aceite só passa com viabilidade ELIGIBLE e compras CONFIRMED. E como uma decisão dessas chega ao banco é o assunto do próximo slide.</p>
  </aside>
 </section>
 
 <!-- 9 · Fluxo 3 -->
-<section data-timing="75">
- <div class="slide diagram-slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="09 / 14">
+<section data-timing="80">
+ <div class="slide diagram-slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="09 / 15">
   <p class="kicker">{{icon user-check}}08 · Fluxo 3 · Proposta e aprovação humana</p>
-  <h2 class="title-sm">O modelo propõe. A pessoa aprova.</h2>
-  <figure class="board"><img class="diagram" src="assets/diagrams/fluxo-aprovacao.svg" alt="Fluxo de aprovação: Hermes cria a proposta, o operador revisa e atesta a decisão, e o serviço revalida as regras antes de gravar os efeitos."></figure>
-  <p class="mt-5 flex flex-wrap items-center gap-3 text-[18px] text-muted"><span class="font-bold tracking-widest text-amber">VALE PARA</span>
-   <span class="chip">fatos da cozinha</span><span class="chip">receitas</span><span class="chip">cotações</span><span class="chip">aceite do prato</span><span class="chip">escolha do preço</span></p>
+  <h2 class="title-sm">Manifestar ainda não é uma decisão válida.</h2>
+  <figure class="board"><img class="diagram" src="assets/diagrams/fluxo-aprovacao.svg" alt="Fluxo de aprovação: Dona Maria manifesta a decisão, o Hermes cria a proposta pendente, o operador local confere e atesta, e o serviço revalida as regras antes de gravar efeito e auditoria."></figure>
+  <div class="mt-5 grid grid-cols-3 gap-4 text-[16px] leading-snug">
+   <p class="card px-4 py-3"><span class="font-bold text-amber">1 · Manifestação</span><br><span class="text-muted">Dona Maria diz, na conversa, o que quer.</span></p>
+   <p class="card px-4 py-3"><span class="font-bold text-amber">2 · Proposta</span><br><span class="text-muted">Hermes grava um comando pendente; o negócio não muda.</span></p>
+   <p class="card px-4 py-3"><span class="font-bold text-amber">3 · Aprovação</span><br><span class="text-muted">Operador atesta o conteúdo exato; o Python revalida e aplica.</span></p>
+  </div>
  </div>
  <aside class="notes">
-<p>Agora chegamos a uma das decisões mais importantes da arquitetura: impedir que o agente aprove as próprias propostas.</p>
-<p>Isso vale para fatos sobre a cozinha, aceite de receitas e escolha de preços.</p>
-<p>Quando a Dona Maria manifesta uma decisão, o Hermes registra uma proposta pendente. Isso não significa que ela já foi aplicada.</p>
-<p>Nesse momento, entra o operador humano.</p>
-<p>Em uma CLI, num terminal separado, ele verifica se a proposta corresponde ao que a Dona Maria decidiu e atesta essa manifestação. O operador não escolhe por ela.</p>
-<p>A aprovação acontece fora das ferramentas disponíveis para o modelo.</p>
-<p>Antes de aplicar a alteração, o serviço verifica o prazo de dez minutos, a revisão do estado e as regras de negócio.</p>
-<p>Se algo mudou ou não está válido, ele bloqueia a operação.</p>
-<p>Se tudo estiver correto, a decisão e a auditoria são registradas juntas no SQLite.</p>
-<p>Depois, o Hermes pode consultar o estado atualizado e informar o resultado.</p>
-<p>Ou seja: o agente propõe e explica. Quem decide é a Dona Maria.</p>
+<p>Este é o controle que mais influenciou a arquitetura. Eu separo três momentos que costumam se misturar.</p>
+<p>O primeiro é a manifestação. A Dona Maria diz “aceito este prato” ou “escolho o M30”. É a vontade dela, mas ainda não é uma decisão válida no sistema.</p>
+<p>O segundo é a proposta. O Hermes transforma essa fala num comando tipado e chama <code>propose_user_change</code>. O que vai para o banco é uma proposta pendente, com hash e a revisão de estado esperada. O negócio não muda.</p>
+<p>O terceiro é a aprovação operacional. Num processo local separado, o operador inspeciona um resumo determinístico e atesta, com o hash, que aquele conteúdo exato corresponde ao que ela disse. Ele não decide por ela; confirma a manifestação. Mesmo assim, o Python revalida o prazo de dez minutos, a revisão do estado e as regras. Se falhar, recusa sem efeito parcial. Se passar, efeito e auditoria entram na mesma transação.</p>
+<p>Isso vale para fatos da cozinha, receitas, plano, interesse, cotações, aceite e preço. O custo é operacional: cada decisão exige uma ida ao terminal. Aceitei esse custo porque, assim, o modelo nunca autoriza a si mesmo.</p>
  </aside>
 </section>
 
 <!-- 10 · Fluxo 4 -->
 <section data-timing="75">
- <div class="slide diagram-slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="10 / 14">
+ <div class="slide diagram-slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="10 / 15">
   <p class="kicker">{{icon calculator}}09 · Fluxo 4 · CMV e preço</p>
   <h2 class="title-sm">Do custo do prato ao preço que ela escolhe.</h2>
   <figure class="board"><img class="diagram" src="assets/diagrams/fluxo-preco.svg" alt="Fluxo de preço: após aceite vigente, o serviço calcula CMV, piso e cenários; Dona Maria escolhe e a aprovação local registra o preço."></figure>
@@ -278,70 +245,112 @@
   </div>
  </div>
  <aside class="notes">
-<p>Depois que a Dona Maria aceita um prato, chegamos à precificação.</p>
-<p>Primeiro, o serviço calcula o CMV, que significa Custo da Mercadoria Vendida. Aqui, consideramos o custo dos ingredientes usados em cada porção.</p>
-<p>Existe uma diferença importante.</p>
-<p>Se ela compra um pacote inteiro, o valor total entra no orçamento de compras. Mas o CMV considera apenas a quantidade consumida no prato.</p>
-<p>Também precisamos considerar a taxa de 10% cobrada sobre o preço de venda.</p>
-<p>Por exemplo, com CMV de R$ 10, o piso é R$ 11,12, arredondado para cima.</p>
-<p>Nesse preço, a sobra depois da taxa e dos ingredientes é de aproximadamente um centavo. Não é R$ 1,12 de lucro.</p>
-<p>A partir daí, o sistema mostra três cenários, com margens de 10%, 20% e 30%.</p>
-<p>Esses valores ainda não representam lucro líquido: faltam despesas como embalagem, gás e mão de obra.</p>
-<p>A Dona Maria escolhe um cenário ou outro preço acima do piso. E essa decisão passa pela aprovação humana.</p>
+<p>Com o aceite aplicado, entra a precificação. O <code>calculate_pricing_scenarios</code> só roda com aceite vigente; ele grava o cálculo, mas não escolhe preço.</p>
+<p>O CMV aqui é o custo dos ingredientes consumidos por porção: quantidade usada vezes o custo unitário de cada origem, dividido pelo rendimento do lote. O pacote inteiro conta no orçamento de compras, mas no CMV entra só o que o prato consome.</p>
+<p>A taxa de 10% incide sobre a venda. Ela recebe 90% do preço, então o piso é o CMV dividido por 0,90. Com CMV de R$ 10, o piso é R$ 11,12, arredondado para cima, e a sobra nesse ponto é um centavo, não R$ 1,12.</p>
+<p>Os cenários M10, M20 e M30 são margens sobre a venda. O enunciado pede dois ou três; os percentuais foram escolha minha. E eu evito a palavra lucro: essa sobra ainda precisa pagar embalagem, gás e trabalho, que não estão na planilha.</p>
+<p>A Dona Maria escolhe um cenário ou um preço acima do piso, e essa escolha passa pelo mesmo fluxo de aprovação. Isso fecha a arquitetura; agora quero mostrar como ela aparece na prática.</p>
  </aside>
 </section>
 
 <!-- 11 · Demonstração -->
-<section data-timing="30">
- <div class="slide demo-slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="11 / 14">
-  <div class="demo-heading"><div><p class="kicker">Da arquitetura à experiência</p><h2>Demonstração<span class="text-coral">.</span></h2><p>Hermes Desktop para conversar. Terminal para aprovar.<br>Uma jornada completa com a planilha original.</p></div><div class="play-mark" aria-hidden="true">{{icon play}}</div></div>
+<section data-timing="55">
+ <div class="slide demo-slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="11 / 15">
+  <div class="demo-heading"><div><p class="kicker">Da arquitetura à experiência</p><h2>Demonstração<span class="text-coral">.</span></h2><p>Hermes Desktop para conversar. Terminal para aprovar.<br>Perfil REAL, planilha original e prompts em linguagem natural.</p></div><div class="play-mark" aria-hidden="true">{{icon play}}</div></div>
   <ol class="demo-steps">
-   <li><span>01</span>Despensa carregada</li>
-   <li><span>02</span>Receita pesquisada na web</li>
+   <li><span>01</span>Despensa consultada</li>
+   <li><span>02</span>Receita real via Exa</li>
    <li><span>03</span>Perguntas sobre a cozinha</li>
-   <li><span>04</span>Compras dentro de R$ 80</li>
-   <li><span>05</span>Aceite aprovado no terminal</li>
+   <li><span>04</span>Plano, viabilidade e R$ 80</li>
+   <li><span>05</span>Interesse e aceite aprovados</li>
    <li><span>06</span>CMV, cenários e escolha</li>
   </ol>
+  <p class="demo-guide"><a href="../../demo/hermes-desktop-walkthrough.html" data-pages-href="https://github.com/glaucia86/sabor-da-maria-hermes-agent/blob/main/docs/demo/hermes-desktop-walkthrough.html" target="_blank" rel="noopener">{{icon map}}Guia interativo da Dona Maria · docs/demo/hermes-desktop-walkthrough.html {{icon arrow-up-right}}</a></p>
  </div>
  <aside class="notes">
-<p>Agora vou mostrar a solução funcionando no Hermes Desktop, usando os dados da planilha original.</p>
-<p>As decisões são atestadas por um operador humano, numa CLI em terminal separado.</p>
-<p>Essa interface foi uma escolha para o protótipo. Em produção, eu a substituiria por uma experiência mais amigável, mantendo a aprovação fora do alcance do modelo.</p>
-<p>Vamos acompanhar a jornada: consulta à despensa, pesquisa de receitas, perguntas sobre a cozinha, orçamento, aceite e precificação.</p>
+<p>Até aqui, mostrei as decisões de arquitetura e os controles do sistema. Agora quero mostrar como isso aparece para a Dona Maria, que não precisa saber o que é MCP, SQLite ou hash de proposta.</p>
+<p>Vou usar o perfil REAL, com a planilha original, seguindo o guia interativo do repositório: prompts em primeira pessoa, em linguagem natural, com a explicação do que o agente faz em cada etapa. Vocês podem usar o mesmo guia para testar.</p>
+<p>No Desktop, eu sou a Dona Maria; no terminal, sou a operadora que atesta as propostas. Vou avisar quando trocar de papel.</p>
+<p>Uma transparência: a jornada completa que registrei no Desktop foi um ensaio em SIMULATION; o percurso REAL completo ainda não está homologado. Se algo travar, mostro o estado alcançado e a pendência, sem completar com hipótese.</p>
  </aside>
 </section>
 
-<!-- 12 · Melhorias -->
-<section data-timing="60">
- <div class="slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="12 / 14">
-  <p class="kicker">{{icon sparkles}}10 · O que pode virar melhoria?</p>
-  <h2 class="title">Mais valor na jornada.<br>Menos atrito na operação.</h2>
-  <div class="improvement-grid">
-   <div class="improvement"><span class="improvement-number">01</span><div><h3>Pesquisa mais rica</h3><p>Termos derivados da despensa e 2–3 candidatas por busca.</p><small>Hoje: 1 resultado e termos liberados pelo operador.</small></div></div>
-   <div class="improvement"><span class="improvement-number">02</span><div><h3>Aprovação mais fluida</h3><p>Revisão na interface, fora do catálogo do modelo.</p><small>Hoje: um terminal separado.</small></div></div>
-   <div class="improvement"><span class="improvement-number">03</span><div><h3>Lucro de verdade</h3><p>Embalagem, gás, energia e trabalho no cálculo.</p><small>Hoje: sobra após ingredientes e taxa.</small></div></div>
-   <div class="improvement"><span class="improvement-number">04</span><div><h3>Evals entre modelos</h3><p>Comparar qualidade, latência e custo com os 18 roteiros integrados.</p><small>Hoje: um modelo verificado.</small></div></div>
-   <div class="improvement"><span class="improvement-number">05</span><div><h3>Preferências semânticas</h3><p>Relacionar “não gosto de fritura” a “empanado”, com confirmação. Hoje, a correspondência é literal.</p></div></div>
+<!-- 12 · Ensaio E2E -->
+<section data-timing="95">
+ <div class="slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="12 / 15">
+  <p class="kicker">{{icon clipboard-check}}11 · Evidência · Ensaio E2E no Desktop</p>
+  <h2 class="title-sm">O ensaio completo: o que os controles seguraram<br>e onde precisei intervir.</h2>
+  <p class="mt-3 text-[16px] text-muted">17/11/2026 · Hermes Desktop · workspace <span class="font-mono text-mint">SIMULATION</span> com planilha sintética de 6 itens · não são resultados da planilha original</p>
+  <div class="mt-5 grid flex-1 grid-cols-[1.12fr_1fr] gap-6">
+   <ol class="card flex flex-col justify-between px-5 py-4 text-[17px] leading-snug">
+    <li class="flex gap-3">{{icon circle-check size-5 flex-none text-mint mt-0.5}}<span>Despensa sintética consultada</span></li>
+    <li class="flex gap-3">{{icon circle-check size-5 flex-none text-mint mt-0.5}}<span>Receita real pesquisada e extraída via Exa</span></li>
+    <li class="flex gap-3">{{icon circle-check size-5 flex-none text-mint mt-0.5}}<span>Receita original <span class="font-mono text-[15px] text-mint">WEB</span> preservada intacta</span></li>
+    <li class="flex gap-3">{{icon circle-check size-5 flex-none text-mint mt-0.5}}<span>Adaptação hipotética separada · <span class="font-mono text-[15px] text-mint">USER_SIMULATION</span></span></li>
+    <li class="flex gap-3">{{icon circle-check size-5 flex-none text-mint mt-0.5}}<span>Condições da cozinha registradas e aprovadas</span></li>
+    <li class="flex gap-3">{{icon circle-check size-5 flex-none text-mint mt-0.5}}<span>Plano de 1 lote e 2 porções · viabilidade <span class="font-mono text-[15px] text-mint">ELIGIBLE</span></span></li>
+    <li class="flex gap-3">{{icon circle-check size-5 flex-none text-mint mt-0.5}}<span>Compras <span class="font-mono text-[15px] text-mint">CONFIRMED</span>, sem complementos · saldo R$ 80,00</span></li>
+    <li class="flex gap-3">{{icon circle-check size-5 flex-none text-mint mt-0.5}}<span>Interesse registrado e aceite humano aprovado</span></li>
+    <li class="flex gap-3">{{icon circle-check size-5 flex-none text-mint mt-0.5}}<span>Cenários M10, M20 e M30 calculados; M30 escolhido</span></li>
+    <li class="flex gap-3">{{icon circle-check size-5 flex-none text-mint mt-0.5}}<span>Cardápio em <span class="font-mono text-[15px] text-mint">MENU_SELECTED</span> · nenhuma proposta pendente</span></li>
+   </ol>
+   <div class="flex flex-col gap-4">
+    <div class="card px-5 py-4">
+     <p class="text-sm font-bold tracking-widest text-amber">PREÇO PERSISTIDO · M30</p>
+     <p class="mt-1 text-[44px] font-bold leading-tight text-mint">R$ 2,03 <span class="text-[18px] font-semibold text-muted">por porção</span></p>
+     <div class="mt-3 grid grid-cols-3 gap-3 text-[15px]">
+      <p><span class="block text-muted">CMV ingredientes</span><span class="font-mono text-[17px]">R$ 1,218</span></p>
+      <p><span class="block text-muted">Taxa 10%</span><span class="font-mono text-[17px]">R$ 0,20</span></p>
+      <p><span class="block text-muted">Sobra</span><span class="font-mono text-[17px]">≈ R$ 0,61</span></p>
+     </div>
+     <p class="mt-3 text-[15px] leading-snug text-muted">Sobra não é lucro líquido: embalagem, gás/energia e trabalho não foram informados.</p>
+    </div>
+    <div class="card flex-1 border-coral/50 px-5 py-4">
+     <p class="text-sm font-bold tracking-widest text-coral">O QUE NÃO FOI AUTÔNOMO</p>
+     <ul class="mt-3 flex flex-col gap-3 text-[16px] leading-snug text-muted">
+      <li>2 propostas corretivas da adaptação foram preparadas pela operação, fora da conversa, após recusas <span class="font-mono text-ink">SOURCE_NOT_LINKED</span>.</li>
+      <li>O 1º aceite foi recusado: o interesse ainda não estava registrado.</li>
+      <li>A pesquisa do perfil SIMULATION foi configurada manualmente.</li>
+     </ul>
+    </div>
+   </div>
   </div>
  </div>
  <aside class="notes">
-<p>Depois de implementar essa jornada, identifiquei algumas oportunidades de evolução.</p>
-<p>Na pesquisa, hoje trabalhamos com termos autorizados e uma candidata por busca. Eu ampliaria para duas ou três opções, mantendo os controles.</p>
-<p>A aprovação também poderia sair do terminal e ganhar uma interface mais amigável, sem dar ao modelo permissão para aprovar.</p>
-<p>Na precificação, incluiria embalagem, gás, energia e mão de obra para estimar o resultado do negócio com mais precisão.</p>
-<p>Na avaliação do agente, já existe uma matriz com 18 casos integrados em execução assistida por CLI.</p>
-<p>Mas isso ainda não é uma comparação controlada entre modelos, nem uma homologação do Desktop.</p>
-<p>O próximo passo seria executar evals por modelo, comparando qualidade, latência e custo.</p>
-<p>Também evoluiria a interpretação de preferências. Se a Dona Maria disser que evita fritura, o agente poderia relacionar isso a pratos empanados e confirmar a preferência.</p>
-<p>São melhorias para transformar o protótipo em uma experiência mais útil e simples de operar.</p>
+<p>Antes de hoje, fiz um ensaio completo no Hermes Desktop, em 17 de novembro, num workspace SIMULATION com uma planilha sintética de seis itens. Quero mostrar o que ele comprovou e o que não comprovou.</p>
+<p>Numa conversa contínua de uns 45 minutos, o Hermes consultou a despensa, pesquisou no Exa e extraiu uma receita real de arroz branco. A receita web ficou intacta, e a adaptação entrou como versão separada, marcada como <code>USER_SIMULATION</code>, para nunca ser confundida com fato real. Depois vieram as condições da cozinha, o plano de 1 lote e 2 porções, viabilidade ELIGIBLE e compras CONFIRMED sem complemento. Interesse e aceite passaram pela aprovação local.</p>
+<p>O CMV ficou em R$ 1,218 por porção. A escolha foi o M30, e o preço persistido é R$ 2,03. Tirando a taxa simplificada de 10% e os ingredientes, sobram uns 61 centavos, que não são lucro líquido: embalagem, gás e trabalho não foram informados. No fim, o cardápio ficou em MENU_SELECTED, com saldo de R$ 80,00 e nenhuma proposta pendente.</p>
+<p>O que não foi autônomo: duas tentativas do Hermes de revisar a adaptação foram recusadas porque perdiam o vínculo com a fonte web, e as propostas corretivas foram preparadas pela operação, fora da conversa. O primeiro aceite também foi recusado, porque o interesse ainda não estava registrado. Os controles funcionaram; a experiência ainda precisa melhorar.</p>
  </aside>
 </section>
 
-<!-- 13 · Próximos passos -->
-<section data-timing="45">
- <div class="slide roadmap-slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="13 / 14">
-  <div class="flex items-center justify-between"><p class="kicker">{{icon route}}11 · Próximos passos</p><span class="roadmap-status">EVOLUÇÃO PROPOSTA</span></div>
+<!-- 13 · Melhorias -->
+<section data-timing="60">
+ <div class="slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="13 / 15">
+  <p class="kicker">{{icon sparkles}}12 · O que pode virar melhoria?</p>
+  <h2 class="title">Mais valor na jornada.<br>Menos atrito na operação.</h2>
+  <div class="improvement-grid">
+   <div class="improvement"><span class="improvement-number">01</span><div><h3>Adaptação sem correção manual</h3><p>Ferramenta e skill preservando os requisitos da fonte ao adaptar.</p><small>Hoje: 2 propostas corretivas no ensaio E2E.</small></div></div>
+   <div class="improvement"><span class="improvement-number">02</span><div><h3>Pesquisa mais rica</h3><p>Termos derivados da despensa e 2–3 candidatas por busca.</p><small>Hoje: 1 resultado e termos liberados pelo operador.</small></div></div>
+   <div class="improvement"><span class="improvement-number">03</span><div><h3>Aprovação mais fluida</h3><p>Revisão na interface, fora do catálogo do modelo.</p><small>Hoje: um terminal separado.</small></div></div>
+   <div class="improvement"><span class="improvement-number">04</span><div><h3>Lucro de verdade</h3><p>Embalagem, gás, energia e trabalho no cálculo.</p><small>Hoje: sobra após ingredientes e taxa.</small></div></div>
+   <div class="improvement"><span class="improvement-number">05</span><div><h3>Evals entre modelos</h3><p>Comparar qualidade, latência e custo com os 18 roteiros integrados.</p><small>Hoje: um modelo observado.</small></div></div>
+   <div class="improvement"><span class="improvement-number">06</span><div><h3>Preferências semânticas</h3><p>Relacionar “não gosto de fritura” a “empanado”, com confirmação.</p><small>Hoje: correspondência literal.</small></div></div>
+  </div>
+ </div>
+ <aside class="notes">
+<p>Juntando o desenvolvimento e o ensaio, estas são as melhorias que eu priorizaria.</p>
+<p>A primeira veio do E2E. O domínio recusou corretamente uma adaptação que perdia o vínculo com a fonte, mas o Hermes não se corrigiu sozinho. Eu deixaria o contrato da ferramenta e a skill mais explícitos, para isso não depender da operação.</p>
+<p>Na pesquisa, traria duas ou três candidatas por busca, com os mesmos controles. A aprovação poderia ir para uma tela de revisão, ainda fora do catálogo do modelo. No preço, entrariam embalagem, gás, energia e trabalho.</p>
+<p>Nos evals, há 18 casos no recorte CLI, mas um único modelo observado; o próximo passo é comparar modelos em qualidade, latência e custo. E as preferências deixariam de ser literais: “não gosto de fritura” deveria levar a perguntar sobre empanados.</p>
+<p>Isso é evolução do protótipo. Para virar produto, a ordem é outra.</p>
+ </aside>
+</section>
+
+<!-- 14 · Próximos passos -->
+<section data-timing="50">
+ <div class="slide roadmap-slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="14 / 15">
+  <div class="flex items-center justify-between"><p class="kicker">{{icon route}}13 · Próximos passos</p><span class="roadmap-status">EVOLUÇÃO PROPOSTA</span></div>
   <h2 class="title">Do protótipo ao produto.<br>Uma decisão de cada vez.</h2>
   <p class="roadmap-subtitle">Cinco etapas para levar a confiança do núcleo à operação.</p>
   <ol class="roadmap" aria-label="Sequência proposta de evolução, sem prazos definidos">
@@ -354,21 +363,17 @@
   <div class="roadmap-summary"><div><span>Base atual</span><strong>Protótipo local · operação assistida</strong></div>{{icon arrow-right}}<div><span>Direção de evolução</span><strong>Serviço integrado ao delivery</strong></div></div>
  </div>
  <aside class="notes">
-<p>Pensando em transformar o protótipo em produto, eu seguiria cinco etapas.</p>
-<p>A primeira é identidade e autorização. Precisamos autenticar a Dona Maria e quem atesta suas decisões.</p>
-<p>Depois, eu prepararia a solução para vários restaurantes.</p>
-<p>Minha proposta seria uma plataforma multi-tenant: cada estabelecimento teria um consultor personalizado, com seus próprios dados e restrições, mas compartilhando a mesma arquitetura e governança.</p>
-<p>Nesse cenário, avaliaria MCP remoto, isolamento por restaurante e PostgreSQL, conforme a necessidade de escala e concorrência.</p>
-<p>A terceira etapa seria observabilidade, para acompanhar ferramentas, falhas, qualidade e custo.</p>
-<p>A quarta seria integrar os evals de conversa com Hermes ao pipeline de CI.</p>
-<p>E a quinta, conectar a solução à operação do delivery para publicar cardápios e preços aprovados.</p>
-<p>A evolução seria gradual, preservando as regras de negócio e os controles de segurança.</p>
+<p>Pensando em produto, eu seguiria esta sequência, e a ordem importa.</p>
+<p>Primeiro, identidade. Hoje a atestação é local e não autentica a cozinheira; antes de escalar, preciso saber quem pode decidir.</p>
+<p>Depois, multiusuário: cada restaurante com seus dados e restrições sobre as mesmas regras, com MCP remoto, isolamento por tenant e PostgreSQL quando a concorrência justificar.</p>
+<p>Em seguida, observabilidade: tracing das ferramentas, métricas da jornada e custo de LLM. Depois, levar o Hermes e os evals de conversa para a CI, que hoje cobre só o núcleo e o MCP. E, por último, integrar ao delivery para publicar cardápio e preço aprovados.</p>
+<p>Em todas as etapas, o contrato continua o mesmo: o modelo propõe, e o domínio valida o que pode ser persistido.</p>
  </aside>
 </section>
 
-<!-- 14 · Agradecimentos -->
-<section data-timing="30">
- <div class="slide closing-slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="14 / 14">
+<!-- 15 · Agradecimentos -->
+<section data-timing="40">
+ <div class="slide closing-slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="15 / 15">
   <p class="kicker">Uma conversa sobre engenharia de IA</p>
   <h2 class="mt-6">Obrigada<span>.</span></h2>
   <p class="closing-copy">Lucas Rolim &amp; Hildebrando Azevedo,<br>obrigada pela conversa.</p>
@@ -379,11 +384,9 @@
   </div>
  </div>
  <aside class="notes">
-<p>Bom, pessoal, essa foi a solução que desenvolvi para o desafio Sabor da Maria.</p>
-<p>Lucas e Hildebrando, muito obrigada pelo tempo e pela oportunidade de apresentar o projeto.</p>
-<p>O repositório está público, com o código, as decisões de arquitetura e as instruções para executar a aplicação.</p>
-<p>Também deixei slides técnicos complementares sobre segurança, persistência e testes, caso queiram aprofundar algum ponto.</p>
-<p>Agora fico à disposição para as perguntas.</p>
+<p>Para fechar, a ideia que guiou o projeto: o Hermes pode raciocinar, pesquisar, conversar e propor, mas quem aplica as regras e decide o que pode ser persistido é a aplicação Python. Uma manifestação só vira decisão depois de passar por uma aprovação fora do modelo.</p>
+<p>O repositório está público, com a planilha original, o passo a passo de instalação, o guia interativo e o registro do ensaio, incluindo as intervenções.</p>
+<p>Obrigada, Lucas e Hildebrando. Deixei um apêndice sobre invariantes, persistência, segurança, verificação e trade-offs, se quiserem aprofundar. Fico à disposição.</p>
  </aside>
 </section>
 
@@ -397,8 +400,8 @@
   </div>
  </div>
  <aside class="notes">
-<p>Os próximos slides ficam disponíveis apenas se vocês quiserem aprofundar algum ponto técnico.</p>
-<p>Organizei o material em invariantes, persistência, segurança, verificação e trade-offs.</p>
+<p>Estes slides ficam como apoio para as perguntas. Eu abro só o que for útil para a discussão.</p>
+<p>São cinco temas: invariantes, persistência, segurança, verificação e trade-offs.</p>
  </aside>
 </section>
 
@@ -421,12 +424,10 @@
   </ul>
  </div>
  <aside class="notes">
-<p>Aqui estão algumas regras que a conversa não pode contornar.</p>
-<p>Os R$ 80 são um orçamento único para todos os pratos. Não podemos tratar esse valor como se estivesse disponível novamente para cada receita.</p>
-<p>A taxa de 10% também incide sobre o preço de venda. É uma regra do desafio, não uma afirmação sobre contratos reais do iFood.</p>
-<p>Quando falta um preço ou uma medida, o sistema não inventa zero. Informação desconhecida gera pergunta. Um impeditivo bloqueia o aceite.</p>
-<p>E, se mudar alguma premissa, como a receita ou o rendimento, as decisões dependentes precisam ser reavaliadas.</p>
-<p>Por último, separo dados reais e de simulação em bancos diferentes. O modelo não transforma uma hipótese em fato real só porque alguém pediu na conversa.</p>
+<p>Estas são as regras que nenhuma conversa contorna, porque estão no domínio e não no prompt.</p>
+<p>Os R$ 80 são um teto único para todos os pratos, contando pacote inteiro e encargos. A taxa de 10% incide sobre a venda; é premissa do desafio, não uma afirmação sobre contratos reais do iFood. E os cálculos usam Decimal, com o preço sempre arredondado para cima em centavos.</p>
+<p>Informação ausente não vira zero. Desconhecido gera pergunta, impeditivo bloqueia o aceite, e custo incompleto impede aceite e preço definitivos. Se uma premissa muda, como a receita ou o rendimento, as decisões que dependiam dela deixam de valer.</p>
+<p>Por fim, REAL e SIMULATION ficam em bancos separados. Foi isso que permitiu fazer o ensaio com dados hipotéticos sem nenhuma chance de eles virarem fato real.</p>
  </aside>
 </section>
 
@@ -442,13 +443,11 @@
   <p class="mt-8 text-[21px] text-muted">O snapshot importado é imutável. Correções viram versões e overlays, preservando a origem de cada dado.</p>
  </div>
  <aside class="notes">
-<p>O SQLite guarda as decisões que fazem parte do mesmo planejamento. Esse conjunto é o que chamamos de workspace.</p>
-<p>Cada alteração indica a revisão de estado que espera encontrar.</p>
-<p>Se outra decisão mudou o estado antes, a operação é recusada. Isso evita aplicar uma proposta desatualizada.</p>
-<p>Também uso transações: a alteração e seu registro de auditoria são gravados juntos.</p>
-<p>E existe idempotência. Se a mesma operação for repetida com o mesmo conteúdo, o sistema devolve o resultado já registrado. Se o identificador vier com conteúdo diferente, trata como conflito.</p>
-<p>A planilha original não é reescrita. Correções e esclarecimentos ficam em camadas separadas, preservando a origem.</p>
-<p>SQLite atende ao protótipo local. Para vários operadores e acesso remoto, eu reavaliaria o armazenamento.</p>
+<p>A unidade de consistência é o workspace: o conjunto de receitas, plano, fatos e escolhas que dividem o mesmo orçamento e o mesmo estoque.</p>
+<p>Toda alteração declara a revisão de estado que espera encontrar. Se outra decisão mudou o estado antes, a operação é recusada; é isso que impede aplicar uma proposta desatualizada. A alteração e a auditoria entram na mesma transação, então não existe gravação pela metade.</p>
+<p>Também há idempotência. A mesma operação com o mesmo conteúdo devolve o resultado já gravado; o mesmo identificador com conteúdo diferente é tratado como conflito.</p>
+<p>A planilha importada nunca é reescrita. Correções viram versões e camadas, preservando a origem de cada dado, como aconteceu com a receita web e a adaptação no ensaio.</p>
+<p>SQLite resolve bem o protótipo local. Com vários operadores e acesso remoto, eu reavaliaria o armazenamento.</p>
  </aside>
 </section>
 
@@ -459,19 +458,16 @@
   <div class="mt-7 grid grid-cols-2 gap-5">
    <div class="card p-6"><p class="flex items-center gap-3 text-[22px] font-semibold">{{icon bot size-6 text-mint}}No host Hermes</p><ul class="mt-3 flex flex-col gap-2 text-[19px] text-muted"><li>Allowlist com as 6 tools MCP + 2 de pesquisa.</li><li>Hooks comparam o nome pedido com o executado.</li><li>Memória automática e perfil de usuário desligados.</li></ul></div>
    <div class="card p-6"><p class="flex items-center gap-3 text-[22px] font-semibold">{{icon server size-6 text-mint}}No domínio Python</p><ul class="mt-3 flex flex-col gap-2 text-[19px] text-muted"><li>Banco e workspace fixados pelo operador.</li><li>Schemas estritos: campo extra é recusado.</li><li>Aprovação fora do catálogo do modelo.</li></ul></div>
-   <div class="card p-6"><p class="flex items-center gap-3 text-[22px] font-semibold">{{icon globe size-6 text-mint}}Na pesquisa</p><ul class="mt-3 flex flex-col gap-2 text-[19px] text-muted"><li>Sem consulta ou URL livre.</li><li>Limites de redirect, volume e destino.</li></ul></div>
+   <div class="card p-6"><p class="flex items-center gap-3 text-[22px] font-semibold">{{icon globe size-6 text-mint}}Na pesquisa</p><ul class="mt-3 flex flex-col gap-2 text-[19px] text-muted"><li>Exa anônimo, 1 resultado por busca, sem fallback.</li><li>Sem consulta ou URL livre.</li><li>Limites de redirect, volume e destino.</li></ul></div>
    <div class="card p-6"><p class="flex items-center gap-3 text-[22px] font-semibold">{{icon file-spreadsheet size-6 text-mint}}Na planilha</p><ul class="mt-3 flex flex-col gap-2 text-[19px] text-muted"><li>Até 5 MiB, 50 MiB descompactado, 20 mil linhas.</li><li>Células são dados, nunca instruções.</li></ul></div>
   </div>
  </div>
  <aside class="notes">
-<p>Aqui a ideia foi reduzir o que o modelo consegue fazer e validar tudo no ponto em que uma ação teria efeito.</p>
-<p>No Hermes, configurei uma lista fechada de ferramentas permitidas.</p>
-<p>Identifiquei também um risco no reparo de nomes de ferramentas pelo host. Uma chamada originalmente proibida podia acabar direcionada para uma ferramenta permitida.</p>
-<p>Por isso, o plugin compara a chamada original com a que será executada e bloqueia divergências.</p>
-<p>No serviço Python, o banco e o workspace são fixados pelo operador, e a aprovação não está disponível como ferramenta do modelo.</p>
-<p>A pesquisa não aceita consultas ou URLs livres. E a importação da planilha impõe limites de tamanho e trata as células como dados.</p>
-<p>Existe uma limitação importante: um perfil isolado do Hermes não equivale a uma sandbox do sistema operacional.</p>
-<p>Em produção, eu reforçaria também as identidades e as permissões de cada processo.</p>
+<p>Em segurança, a ideia foi reduzir o que o modelo consegue fazer e validar tudo no ponto onde a ação teria efeito.</p>
+<p>No Hermes, o catálogo é fechado: seis ferramentas MCP e duas de pesquisa. Durante o desenvolvimento, encontrei um risco no reparo de nomes de ferramentas do host: uma chamada proibida podia acabar redirecionada para uma ferramenta permitida. Por isso, o plugin de política compara o nome pedido com o executado e bloqueia a divergência. Memória automática e perfil de usuário ficam desligados.</p>
+<p>No Python, banco e workspace são fixados pelo operador, os schemas recusam campos extras e a aprovação não existe como ferramenta do modelo.</p>
+<p>Na pesquisa, o Exa é chamado pelo endpoint anônimo, com um resultado por busca e sem fallback para outro provedor. Não há consulta nem URL livre, e a extração tem limites de redirect, de volume e de destino. Na planilha, há limites de tamanho, e as células são sempre tratadas como dados.</p>
+<p>A limitação que eu deixo explícita: um perfil isolado do Hermes não é uma sandbox do sistema operacional. Em produção, eu reforçaria identidade e permissões por processo.</p>
  </aside>
 </section>
 
@@ -480,27 +476,26 @@
   <p class="kicker">{{icon flask-conical}}A4 · Verificação</p>
   <h2 class="title-sm">Cada evidência tem um escopo.</h2>
   <div class="card mt-7 overflow-hidden">
-   <table class="w-full text-[20px]">
+   <table class="w-full text-[18px] leading-snug">
     <thead class="bg-white/5 text-left text-[15px] uppercase tracking-widest text-amber"><tr><th class="px-5 py-3">Camada</th><th class="px-5 py-3">O que verifica</th><th class="px-5 py-3">O que não cobre</th></tr></thead>
     <tbody class="divide-y divide-line">
-     <tr><td class="px-5 py-3">800+ testes pytest + Hypothesis</td><td class="px-5 py-3 text-muted">Regras, limites, persistência, concorrência</td><td class="px-5 py-3 text-muted">Qualidade da conversa</td></tr>
+     <tr><td class="px-5 py-3">804 testes pytest + Hypothesis</td><td class="px-5 py-3 text-muted">Regras, limites, persistência, concorrência (16/11)</td><td class="px-5 py-3 text-muted">Qualidade da conversa</td></tr>
      <tr><td class="px-5 py-3">Integração MCP stdio</td><td class="px-5 py-3 text-muted">Contrato, catálogo e dispatch reais</td><td class="px-5 py-3 text-muted">Interface do Hermes</td></tr>
      <tr><td class="px-5 py-3">18 Agent Evals integrados</td><td class="px-5 py-3 text-muted">CLI assistido, ferramentas e estado</td><td class="px-5 py-3 text-muted">Autonomia geral ou Desktop</td></tr>
-     <tr><td class="px-5 py-3">CI em Windows, Ubuntu e macOS</td><td class="px-5 py-3 text-muted">Núcleo e MCP</td><td class="px-5 py-3 text-muted">Host e modelo reais</td></tr>
+     <tr><td class="px-5 py-3">Preparação REAL (17/11)</td><td class="px-5 py-3 text-muted">Planilha original: 37 itens, <span class="font-mono text-[16px]">check</span> em PASS</td><td class="px-5 py-3 text-muted">Conversa REAL no Desktop</td></tr>
+     <tr><td class="px-5 py-3">Ensaio E2E no Desktop (17/11)</td><td class="px-5 py-3 text-muted">Jornada SIMULATION completa, Exa real, preço persistido</td><td class="px-5 py-3 text-muted">Perfil REAL e autonomia total</td></tr>
+     <tr><td class="px-5 py-3">CI em Windows, Ubuntu e macOS</td><td class="px-5 py-3 text-muted">Núcleo e MCP, em versão anterior</td><td class="px-5 py-3 text-muted">Host e modelo reais</td></tr>
     </tbody>
    </table>
   </div>
-  <p class="mt-6 text-[20px] text-muted">Nos evals, a resposta do modelo não basta: a verificação olha as ferramentas chamadas e o estado gravado.</p>
+  <p class="mt-6 text-[19px] text-muted">Nos evals e no E2E, a resposta do modelo não basta: a verificação olha as ferramentas chamadas e o estado gravado.</p>
  </div>
  <aside class="notes">
-<p>Para avaliar a solução, separei as evidências por camada.</p>
-<p>Primeiro, os testes determinísticos em Python verificam regras de negócio, persistência e concorrência. O Hypothesis também gera variações de operações para explorar casos extremos.</p>
-<p>Depois, os testes de integração exercitam o servidor MCP real por stdio.</p>
-<p>Já os evals do agente analisam jornadas. Não verifico apenas a resposta escrita: também confiro as ferramentas chamadas e o estado persistido.</p>
-<p>Na matriz S19, são 18 casos do fluxo assistido por CLI, com a revisão humana delegada explicitamente.</p>
-<p>Isso não significa 18 execuções novas da mesma versão, nem validação completa do Hermes Desktop.</p>
-<p>A CI executa o núcleo em Windows, Ubuntu e macOS, mas não instala o Hermes nem um modelo real.</p>
-<p>Por isso, ainda precisamos validar a jornada completa no Desktop, com a planilha original.</p>
+<p>Eu separei as evidências por camada, porque cada uma prova uma coisa diferente.</p>
+<p>Os testes determinísticos cobrem regras, limites, persistência e concorrência; o Hypothesis gera sequências de operações para achar casos extremos. A última regressão completa foi em 16 de novembro, com 804 aprovados. Depois da troca para o Exa, rodei 77 testes direcionados de pesquisa, não a suíte inteira. Os testes de integração exercitam o servidor MCP real por stdio.</p>
+<p>Nos evals do agente, eu não olho só a resposta escrita: confiro as ferramentas chamadas e o estado persistido. São 18 casos no recorte CLI assistido, com a revisão delegada declarada.</p>
+<p>Em 17 de novembro, preparei o REAL com a planilha original até o <code>check</code>, e fiz o ensaio completo no Desktop em SIMULATION. A conversa REAL completa no Desktop ainda falta, e eu não a apresento como feita.</p>
+<p>A CI roda o núcleo em Windows, Ubuntu e macOS, mas não instala o Hermes nem um modelo.</p>
  </aside>
 </section>
 
@@ -514,20 +509,17 @@
     <tbody class="divide-y divide-line">
      <tr><td class="px-5 py-3">Hermes + MCP local</td><td class="px-5 py-3 text-muted">Reuso do host, regras testáveis sem LLM</td><td class="px-5 py-3 text-muted">Depende da versão do host e dos hooks</td></tr>
      <tr><td class="px-5 py-3">SQLite</td><td class="px-5 py-3 text-muted">Atomicidade e reprodução local</td><td class="px-5 py-3 text-muted">Escala e acesso compartilhado limitados</td></tr>
-     <tr><td class="px-5 py-3">Aprovação externa</td><td class="px-5 py-3 text-muted">O modelo não autoriza a si mesmo</td><td class="px-5 py-3 text-muted">Operação mais lenta</td></tr>
+     <tr><td class="px-5 py-3">Aprovação externa</td><td class="px-5 py-3 text-muted">O modelo não autoriza a si mesmo</td><td class="px-5 py-3 text-muted">Operação mais lenta e mais passos</td></tr>
      <tr><td class="px-5 py-3">Pesquisa por termos liberados</td><td class="px-5 py-3 text-muted">Menor exposição de dados</td><td class="px-5 py-3 text-muted">Menos liberdade de busca</td></tr>
+     <tr><td class="px-5 py-3">Exa anônimo</td><td class="px-5 py-3 text-muted">Avaliador não precisa de chave de pesquisa</td><td class="px-5 py-3 text-muted">Cota e disponibilidade externas, sem fallback</td></tr>
     </tbody>
    </table>
   </div>
  </div>
  <aside class="notes">
-<p>Escolhi uma arquitetura local porque o desafio não exigia um backend distribuído, um ORM adicional ou outra interface.</p>
-<p>Isso trouxe simplicidade e facilitou testar as regras independentemente do LLM.</p>
-<p>Mas os custos dessas decisões são claros.</p>
-<p>A aprovação por terminal exige mais passos. A pesquisa com termos autorizados tem menos flexibilidade. E a integração depende da versão do Hermes e de seus hooks.</p>
-<p>O SQLite facilita a execução local, mas não resolve sozinho as necessidades de uma plataforma multiusuário.</p>
-<p>Eu só migraria para outra infraestrutura quando os requisitos de concorrência, isolamento e acesso remoto justificassem.</p>
-<p>A ideia é evoluir sem abrir mão dos contratos e controles que já estão funcionando.</p>
+<p>Escolhi uma arquitetura local porque o desafio não pedia backend distribuído, outro orquestrador ou uma interface própria. Isso trouxe simplicidade e me deixou testar as regras sem depender do LLM.</p>
+<p>Os custos também são claros. A aprovação externa adiciona passos, e o ensaio mostrou isso. A pesquisa por termos liberados dá menos liberdade. A integração depende da versão do Hermes e dos hooks; por isso o plugin recusa outra versão. O Exa anônimo evita pedir chave ao avaliador, mas tem cota e disponibilidade que eu não controlo, e eu preferi falhar de forma explícita a cair numa busca livre.</p>
+<p>O SQLite atende a execução local, mas não resolve sozinho uma plataforma multiusuário. Eu só trocaria a infraestrutura quando concorrência, isolamento e acesso remoto justificassem, sem abrir mão dos contratos que já estão funcionando.</p>
  </aside>
 </section>
 
@@ -535,9 +527,10 @@
 <script src="vendor/reveal-5.2.1/dist/reveal.js"></script>
 <script src="vendor/reveal-5.2.1/plugin/notes/notes.js"></script>
 <script>
+if(location.hostname.endsWith('github.io'))document.querySelectorAll('a[data-pages-href]').forEach(a=>{a.href=a.dataset.pagesHref});
 Reveal.initialize({width:1280,height:800,margin:0.025,hash:true,slideNumber:false,
   transition:matchMedia('(prefers-reduced-motion: reduce)').matches?'none':'fade',
-  transitionSpeed:'fast',controls:true,progress:true,center:false,totalTime:900,
+  transitionSpeed:'fast',controls:true,progress:true,center:false,totalTime:1030,
   pdfSeparateFragments:false,
   plugins:[RevealNotes]});
 </script>

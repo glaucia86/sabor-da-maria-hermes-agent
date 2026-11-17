@@ -1123,7 +1123,7 @@
 			}
 		},
 		{
-			"x": 733.492666704428,
+			"x": 741.6713,
 			"y": 109.66462318410282,
 			"rotation": 0,
 			"isLocked": false,
@@ -1137,7 +1137,7 @@
 			"props": {
 				"color": "black",
 				"size": "s",
-				"w": 8,
+				"w": 93.96270995281905,
 				"font": "draw",
 				"textAlign": "middle",
 				"autoSize": true,
@@ -1150,7 +1150,7 @@
 							"content": [
 								{
 									"type": "text",
-									"text": "Web (DDGS)"
+									"text": "Web (Exa)"
 								}
 							]
 						}
@@ -1173,7 +1173,7 @@
 			"props": {
 				"color": "orange",
 				"size": "s",
-				"w": 256.67891120910645,
+				"w": 285.7896752538002,
 				"font": "draw",
 				"textAlign": "start",
 				"autoSize": true,
@@ -1192,7 +1192,7 @@
 							"content": [
 								{
 									"type": "text",
-									"text": "Canal local do operador · fora do "
+									"text": "Processo local separado do operador"
 								}
 							]
 						},
@@ -1204,7 +1204,7 @@
 							"content": [
 								{
 									"type": "text",
-									"text": "alcance do modelo"
+									"text": "sem tool de aprovação para o modelo"
 								}
 							]
 						}

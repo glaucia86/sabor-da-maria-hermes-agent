@@ -1,9 +1,11 @@
 # Apresentação técnica — Sabor da Maria
 
-- [Slides Reveal.js](slides/index.html): 14 slides (~15 minutos) + 5 de apêndice, notas em português.
+- [Slides Reveal.js](slides/index.html): 15 slides (~17 minutos) + 5 de apêndice, notas em português.
 - [Guia para Lucas Rolim](guia-apresentacao-lucas.md): fala de cada slide, ritmo,
   cortes e perguntas difíceis ligadas ao código.
 - [Demo Hermes](demo-hermes.md): 5–10 minutos, Desktop, planilha real e aprovação no terminal.
+- [Guia interativo da Dona Maria](../demo/hermes-desktop-walkthrough.html): prompts
+  naturais da demonstração, também acessível pelo slide 11.
 - [Verificação do percurso REAL](verification-local-real.md): testes atuais e pendências humanas.
 - [Jornada E2E assistida no Desktop](../verification-desktop-e2e.md): ensaio `SIMULATION` concluído e intervenções operacionais.
 - [Verificação e limites S20](verification-s20.md): resultados reais e integração.
@@ -24,11 +26,14 @@ execute o build abaixo e inclua os artefatos atualizados na alteração.
 Na raiz do checkout:
 
 ```sh
-python -m http.server 8765 --bind 127.0.0.1 --directory docs/speaker/slides
+python -m http.server 8765 --bind 127.0.0.1 --directory docs
 ```
 
-Abra [a apresentação local](http://127.0.0.1:8765). Sirva somente a pasta dos
-slides; não sirva a raiz do projeto nem `artifacts/private`. Encerre com Ctrl+C.
+Abra [a apresentação local](http://127.0.0.1:8765/speaker/slides/). Sirva somente
+a pasta `docs`, para que o link do slide 11 abra o guia interativo; não sirva a
+raiz do projeto nem `artifacts/private`. Encerre com Ctrl+C.
+No GitHub Pages, que publica apenas a pasta dos slides, o mesmo link abre o
+arquivo do guia no GitHub.
 Setas/espaço navegam; **F** ativa tela cheia; **S** abre as notas da apresentadora;
 **Esc** mostra a visão geral. Permita popup apenas para esse endereço local se
 necessário. O plugin de notas exige HTTP local; abrir por `file://` não é o
@@ -46,10 +51,10 @@ Para imprimir, acrescente `?print-pdf` à URL e use a impressão do navegador.
 O tema usa Manrope variável local ([OFL](slides/assets/fonts/Manrope-OFL.txt)),
 fundo carvão, texto marfim e vermelho para destacar decisões. Cores, tipografia,
 espaçamento e componentes ficam em `slides/src/deck.css`; os rodapés distinguem
-os 14 slides principais do material de apoio. A apresentação mantém os arquivos
+os 15 slides principais do material de apoio. A apresentação mantém os arquivos
 locais do Reveal.js e funciona offline.
 
-Em `#/12`, a linha do tempo apresenta cinco etapas propostas, sem inventar
+Em `#/13`, a linha do tempo apresenta cinco etapas propostas, sem inventar
 prazos ou tratar trabalho futuro como concluído. As setas destacam uma etapa
 por vez, mantendo a sequência inteira visível. A impressão não duplica o slide
 para cada destaque; animações são desativadas com redução de movimento.
