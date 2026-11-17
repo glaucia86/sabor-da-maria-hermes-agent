@@ -3,8 +3,131 @@
 import json
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
+
+
+@pytest.fixture
+def hermes_runtime(tmp_path, monkeypatch):
+    """Launcher sintético; a consulta roda em Python real, sem perfis pessoais."""
+    from dona_maria import onboarding
+
+    package = tmp_path / "runtime com espaços" / "hermes_cli"
+    package.mkdir(parents=True)
+    (package / "__init__.py").write_text("", encoding="utf-8")
+    identity = package / "version_info.py"
+    identity.write_text(
+        "from types import SimpleNamespace\n"
+        "def get_version_info():\n"
+        "    return SimpleNamespace(base_version='0.23.1', "
+        "commit='3b421578588243f920886e6fe79a6faa87ea026e')\n",
+        encoding="utf-8",
+    )
+    data = {"context_mode": "REAL", "workspace_id": "synthetic"}
+    profile = "sabor-real-synthetic"
+    launcher = str(tmp_path / "hermes.exe")
+    runtime = [
+        sys.executable,
+        "-I",
+        "-c",
+        f"import sys, runpy; sys.path.insert(0, {str(package.parent)!r}); "
+        "runpy.run_module('hermes_cli.version_info', run_name='__main__', alter_sys=True)",
+        "-p",
+        profile,
+    ]
+    run = subprocess.run
+
+    def host_process(command, **kwargs):
+        if command[0] != launcher:
+            assert Path(command[0]) == Path(sys.executable)
+            assert command[-2:] == ["-p", profile]
+            assert "PYTHONPATH" not in kwargs["env"]
+            return run(command, **kwargs)
+        if command[1:2] == ["--print-runtime-command"]:
+            assert command[2:] == ["--module", "hermes_cli.version_info", "--", "-p", profile]
+            output = json.dumps(runtime)
+        else:
+            assert command[1:3] == ["-p", profile]
+            arguments = command[3:]
+            output = {
+                ("--version",): "Hermes Agent v0.23.1",
+                ("skills", "list", "--enabled-only"): "dona-maria-cardapio",
+                ("mcp", "test", "dona_maria"): "",
+                ("config", "get", "model.default", "--json"): '"synthetic-model"',
+            }[tuple(arguments)]
+        return subprocess.CompletedProcess(command, 0, output, "")
+
+    monkeypatch.setattr(subprocess, "run", host_process)
+    monkeypatch.setattr("shutil.which", lambda name: launcher)
+    monkeypatch.setattr(onboarding, "manifest", lambda directory: (data, None))
+    monkeypatch.setattr(onboarding, "settings", lambda *args: {})
+    monkeypatch.setattr(onboarding, "profile_home", lambda directory: tmp_path)
+    monkeypatch.setattr(onboarding, "profile_plugins", lambda data: {})
+    monkeypatch.setattr(onboarding, "conversation_context", lambda data: "synthetic")
+    (tmp_path / "conversation").mkdir()
+    (tmp_path / "conversation/.hermes.md").write_text("synthetic", encoding="utf-8")
+    return identity, runtime
+
+
+def test_profile_accepts_installed_identity_without_commit_in_version_label(
+    tmp_path, hermes_runtime
+):
+    from dona_maria.onboarding import verify_profile
+
+    assert verify_profile(tmp_path)["research_version_label"] == "MATCH"
+
+
+@pytest.mark.parametrize("fault", ["commit", "short_commit", "version", "executable", "missing"])
+def test_profile_rejects_unconfirmed_runtime(tmp_path, hermes_runtime, fault):
+    from dona_maria.onboarding import SetupError, verify_profile
+
+    identity, _ = hermes_runtime
+    source = identity.read_text(encoding="utf-8")
+    if fault == "commit":
+        source = source.replace("3b421578588243f920886e6fe79a6faa87ea026e", "3b421578" + "0" * 32)
+    elif fault == "short_commit":
+        source = source.replace("3b421578588243f920886e6fe79a6faa87ea026e", "3b4215785882")
+    elif fault == "version":
+        source = source.replace("0.23.1", "0.23.10")
+    elif fault == "executable":
+        source += f"\nimport sys\nsys.executable = {str(tmp_path / 'other-python.exe')!r}\n"
+    else:
+        source = "raise ImportError('PRIVATE-CANARY')\n"
+    identity.write_text(source, encoding="utf-8")
+    with pytest.raises(SetupError, match="Versão/commit") as error:
+        verify_profile(tmp_path)
+    assert "PRIVATE-CANARY" not in str(error.value)
+
+
+@pytest.mark.parametrize("command", [None, {}, [], ["python", "-c", "pass"], [1] * 6])
+def test_profile_rejects_invalid_runtime_command(tmp_path, hermes_runtime, monkeypatch, command):
+    from dona_maria.onboarding import SetupError, verify_profile
+
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *args, **kwargs: subprocess.CompletedProcess(args, 0, json.dumps(command), ""),
+    )
+    with pytest.raises(SetupError, match="Versão/commit"):
+        verify_profile(tmp_path)
+
+
+@pytest.mark.parametrize(
+    "failure", [OSError, subprocess.TimeoutExpired, subprocess.CalledProcessError]
+)
+def test_profile_fails_closed_when_launcher_unavailable(
+    tmp_path, hermes_runtime, monkeypatch, failure
+):
+    from dona_maria.onboarding import SetupError, verify_profile
+
+    def unavailable(*args, **kwargs):
+        raise failure(1, "PRIVATE-CANARY")
+
+    monkeypatch.setattr(subprocess, "run", unavailable)
+    with pytest.raises(SetupError, match="Versão/commit") as error:
+        verify_profile(tmp_path)
+    assert "PRIVATE-CANARY" not in str(error.value)
 
 
 def cli(*args):
@@ -186,6 +309,18 @@ def test_real_profile_and_desktop_use_owned_context_and_human_approved_search(
 
     def host_process(command, **kwargs):
         calls.append((command, kwargs))
+        if command[1:2] == ["--print-runtime-command"]:
+            output = json.dumps([sys.executable, "-I", "-c", "pass", *command[-2:]])
+            return subprocess.CompletedProcess(command, 0, output, "")
+        if command[0] == sys.executable:
+            output = json.dumps(
+                {
+                    "executable": sys.executable,
+                    "version": config.get("host_version", "0.23.1"),
+                    "commit": config.get("host_commit", "3b421578588243f920886e6fe79a6faa87ea026e"),
+                }
+            )
+            return subprocess.CompletedProcess(command, 0, output, "")
         if command[1:3] == ["profile", "create"]:
             (host / "profiles" / command[3]).mkdir(parents=True)
             return subprocess.CompletedProcess(command, 0, "", "")
@@ -195,7 +330,7 @@ def test_real_profile_and_desktop_use_owned_context_and_human_approved_search(
         if arguments == ["config", "path"]:
             output = str(profile_path / "config.yaml")
         elif arguments == ["--version"]:
-            output = config.get("host_version", "Hermes Agent v0.23.1 · local 3b4215785882")
+            output = "Hermes Agent v0.23.1"
         elif arguments[:2] == ["config", "set"]:
             try:
                 config[arguments[2]] = json.loads(arguments[3])
@@ -238,11 +373,12 @@ def test_real_profile_and_desktop_use_owned_context_and_human_approved_search(
     assert command[5] == str(options["cwd"])
     assert "## Início e retomada" in (options["cwd"] / ".hermes.md").read_text(encoding="utf-8")
     assert "NOT_RUN" in capsys.readouterr().out
-    for incompatible in (
-        "Hermes Agent v99.0.0 · local 000000000000",
-        "Hermes Agent v0.23.1 · local 3b4215780000",
+    for version, commit in (
+        ("99.0.0", "3b421578588243f920886e6fe79a6faa87ea026e"),
+        ("0.23.1", "3b42157800000000000000000000000000000000"),
     ):
-        config["host_version"] = incompatible
+        config["host_version"] = version
+        config["host_commit"] = commit
         calls.clear()
         with pytest.raises(SystemExit):
             main()

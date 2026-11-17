@@ -5,7 +5,6 @@ import asyncio
 import importlib.metadata
 import json
 import os
-import re
 import shutil
 import sqlite3
 import subprocess
@@ -434,23 +433,75 @@ def profile_home(directory):
     return home
 
 
+def verify_hermes_runtime(directory, profile):
+    from dona_maria.hermes_research import HERMES_COMMIT
+
+    options = {
+        "cwd": directory,
+        "env": environment(),
+        "check": True,
+        "capture_output": True,
+        "text": True,
+        "encoding": "utf-8",
+        "errors": "replace",
+        "timeout": 60,
+    }
+    try:
+        executable = shutil.which("hermes")
+        if not executable:
+            raise ValueError
+        # O launcher vincula Python e bootstrap à instalação; o banner não é identidade.
+        resolved = subprocess.run(
+            [
+                executable,
+                "--print-runtime-command",
+                "--module",
+                "hermes_cli.version_info",
+                "--",
+                "-p",
+                profile,
+            ],
+            **options,
+        )
+        command = json.loads(resolved.stdout)
+        if (
+            not isinstance(command, list)
+            or len(command) != 6
+            or not all(isinstance(part, str) and part for part in command)
+            or command[1:3] != ["-I", "-c"]
+            or command[4:] != ["-p", profile]
+            or not Path(command[0]).is_absolute()
+            or not Path(command[0]).is_file()
+        ):
+            raise ValueError
+        command[3] += (
+            "; import json; from hermes_cli.version_info import get_version_info; "
+            "identity = get_version_info(); "
+            "print(json.dumps(dict(executable=sys.executable, "
+            "version=identity.base_version, commit=identity.commit)))"
+        )
+        result = subprocess.run([command[0], "-B", *command[1:]], **options)
+        identity = json.loads(result.stdout)
+        if (
+            not isinstance(identity, dict)
+            or identity.get("version") != "0.23.1"
+            or identity.get("commit") != HERMES_COMMIT
+            or not isinstance(identity.get("executable"), str)
+            or not Path(identity["executable"]).is_absolute()
+            or Path(identity["executable"]).resolve() != Path(command[0]).resolve()
+        ):
+            raise ValueError
+    except (OSError, ValueError, subprocess.SubprocessError):
+        raise SetupError(
+            "Versão/commit do Hermes incompatível ou não identificado. Pesquisa exige "
+            "0.23.1 / 3b421578588243f920886e6fe79a6faa87ea026e; confira docs/setup.md."
+        ) from None
+
+
 def verify_profile(directory):
     data, _ = manifest(directory)
     if data["context_mode"] == "REAL":
-        from dona_maria.hermes_research import HERMES_COMMIT
-
-        lines = hermes(directory, ["--version"], capture=True).stdout.splitlines()
-        version = lines[0] if lines else ""
-        commits = re.findall(r"\b[0-9a-f]{8,40}\b", version)
-        if (
-            not re.search(r"\bv0\.23\.1\b", version)
-            or not commits
-            or any(not HERMES_COMMIT.startswith(commit) for commit in commits)
-        ):
-            raise SetupError(
-                "Versão/commit do Hermes incompatível ou não identificado. Pesquisa exige "
-                "0.23.1 / 3b421578588243f920886e6fe79a6faa87ea026e; confira docs/setup.md."
-            )
+        verify_hermes_runtime(directory, profile_name(data))
     for key, expected in settings(directory, data).items():
         actual = hermes(directory, ["config", "get", key, "--json"], capture=True)
         if json.loads(actual.stdout) != expected:
