@@ -3,9 +3,77 @@
 import json
 import subprocess
 import sys
+from hashlib import sha256
 from pathlib import Path
 
 import pytest
+
+
+def test_refresh_research_preserves_real_inventory_database_and_profile_secrets(
+    tmp_path, inventory_file, monkeypatch
+):
+    from dona_maria import onboarding
+
+    directory = tmp_path / "real"
+    onboarding.setup_real(directory, inventory_file)
+    (directory / "profile-ready.json").write_text("{}", encoding="utf-8")
+    (directory / "research.json").write_text('{"arroz":"arroz"}', encoding="utf-8")
+    home = tmp_path / "profile"
+    plugin = home / "plugins/dona-maria-mediated-research"
+    plugin.mkdir(parents=True)
+    secret = home / ".env"
+    secret.write_text("PRIVATE-CANARY", encoding="utf-8")
+    before = {p.name: sha256(p.read_bytes()).digest() for p in directory.iterdir()}
+    calls = []
+    monkeypatch.setattr(onboarding, "profile_home", lambda _: home)
+    monkeypatch.setattr(onboarding, "verify_hermes_runtime", lambda *args: None)
+    monkeypatch.setattr(
+        onboarding, "hermes", lambda directory, arguments, **kw: calls.append(arguments)
+    )
+    report = onboarding.refresh_research(directory)
+    assert report["business_writes"] is False
+    assert ["config", "set", "web.search_backend", "exa"] in calls
+    assert all(
+        c[2].startswith("web.")
+        or c[2] in {"plugins.enabled", "plugins.entries.dona-maria-mediated-research"}
+        for c in calls
+    )
+    assert secret.read_text(encoding="utf-8") == "PRIVATE-CANARY"
+    assert before == {p.name: sha256(p.read_bytes()).digest() for p in directory.iterdir()}
+    assert (plugin / "__init__.py").read_bytes() == (
+        onboarding.ROOT / "src/dona_maria/hermes_research/__init__.py"
+    ).read_bytes()
+    (plugin / "__init__.py").write_text("previous-plugin", encoding="utf-8")
+    (directory / "research.json").write_text("{}", encoding="utf-8")
+    calls.clear()
+    with pytest.raises(ValueError, match="Termos públicos"):
+        onboarding.refresh_research(directory)
+    assert (plugin / "__init__.py").read_text(encoding="utf-8") == "previous-plugin"
+    assert calls == []
+
+
+def test_check_research_reports_network_failure_without_private_details(tmp_path, monkeypatch):
+    from dona_maria import onboarding
+
+    monkeypatch.setattr(
+        onboarding, "manifest", lambda _: ({"context_mode": "REAL", "workspace_id": "test"}, None)
+    )
+    monkeypatch.setattr(onboarding, "profile_home", lambda _: tmp_path)
+    monkeypatch.setattr(
+        onboarding,
+        "verify_hermes_runtime",
+        lambda *args: [sys.executable, "-I", "-c", "import os, sys, runpy"],
+    )
+
+    def fail(command, **kwargs):
+        assert "hermes_research_check" in command[4]
+        assert kwargs["env"]["HERMES_DISABLE_LAZY_INSTALLS"] == "1"
+        raise subprocess.CalledProcessError(1, command, stderr="PRIVATE-CANARY")
+
+    monkeypatch.setattr(subprocess, "run", fail)
+    with pytest.raises(onboarding.SetupError, match="cota") as error:
+        onboarding.check_research(tmp_path)
+    assert "PRIVATE-CANARY" not in str(error.value)
 
 
 @pytest.fixture
@@ -374,7 +442,8 @@ def test_real_profile_and_desktop_use_owned_context_and_human_approved_search(
     main()
     assert secret.read_text(encoding="utf-8") == "PRIVATE-CANARY"
     assert "model.default" not in config
-    assert config["web.search_backend"] == "ddgs"
+    assert config["web.search_backend"] == "exa"
+    assert config["web.provider_tier.exa"] == "free"
     assert config["web.keyless_fallback"] is False
     assert config["platform_toolsets.cli"] == ["mcp-dona_maria", "culinary_research"]
     assert config["plugins.isolation"] == "host"

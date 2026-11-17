@@ -3,7 +3,6 @@
 import asyncio
 import importlib.util
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -54,37 +53,19 @@ class HermesSearchAdapter:
         # Não usa autodetecção, cache ou rescue de web_search_tool para outro serviço.
         if _configured_backend("search") != self.provider_name:
             raise BusinessRuleError("COMPATIBILITY_BLOCKED", "Provedor de busca incompatível.")
-        provider = get_provider(self.provider_name)
-        if (
-            provider is None
-            and self.provider_name == "ddgs"
-            and os.environ.get("HERMES_PLUGIN_HOST_PROCESS") == "1"
-            and os.environ.get("HERMES_SAFE_MODE", "").strip().lower()
-            not in {"1", "true", "yes", "on"}
-        ):
-            from hermes_cli.config import load_config_readonly
+        if self.provider_name == "exa":
+            # Endpoint anônimo nativo, sem créditos Nous nem failover para outro provedor.
+            from plugins.web.keyless_mcp import exa_search_keyless
 
-            configuration = load_config_readonly()
-            settings = configuration.get("plugins") if isinstance(configuration, dict) else None
-            if not isinstance(settings, dict):
-                raise BusinessRuleError("COMPATIBILITY_BLOCKED", "Configuração incompatível.")
-            enabled, disabled = settings.get("enabled", []), settings.get("disabled", [])
-            if (
-                isinstance(enabled, list)
-                and isinstance(disabled, list)
-                and any(key in enabled for key in ("web-ddgs", "web/ddgs"))
-                and not any(key in disabled for key in ("web-ddgs", "web/ddgs"))
-            ):
-                # Provedores bundled ficam no processo principal; use o mesmo DDGS autorizado.
-                from plugins.web.ddgs.provider import DDGSWebSearchProvider
-
-                provider = DDGSWebSearchProvider()
-        if provider is None or not provider.supports_search():
-            raise BusinessRuleError("COMPATIBILITY_BLOCKED", "Provedor de busca indisponível.")
-        response = await asyncio.to_thread(provider.search, query, 1)
+            response = await asyncio.to_thread(exa_search_keyless, query, 1)
+        else:
+            provider = get_provider(self.provider_name)
+            if provider is None or not provider.supports_search():
+                raise BusinessRuleError("COMPATIBILITY_BLOCKED", "Provedor de busca indisponível.")
+            response = await asyncio.to_thread(provider.search, query, 1)
         if len(canonical_json(response).encode("utf-8")) > 1024 * 1024:
             raise BusinessRuleError("RESOURCE_LIMIT_EXCEEDED", "Busca excede o limite.")
-        if response.get("success") is not True:
+        if response.get("success") is not True or not response.get("data", {}).get("web"):
             raise BusinessRuleError("DATA_SOURCE_UNAVAILABLE", "Busca indisponível.")
         return [
             {"url": hit["url"], "title": hit["title"], "description": hit.get("description", "")}

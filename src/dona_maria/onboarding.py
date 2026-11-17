@@ -305,7 +305,7 @@ def settings(directory, data):
                 "plugins.enabled": [
                     "dona-maria-attendance-policy",
                     "dona-maria-mediated-research",
-                    "web-ddgs",
+                    "web-exa",
                 ],
                 "plugins.entries.dona-maria-mediated-research": {
                     "allow_tool_override": False,
@@ -313,12 +313,13 @@ def settings(directory, data):
                         "application_source": (ROOT / "src").as_posix(),
                         "database": str(directory / "workspace.sqlite3"),
                         "workspace_id": data["workspace_id"],
-                        "search_provider": "ddgs",
+                        "search_provider": "exa",
                         "public_terms": terms,
                     },
                 },
                 "platform_toolsets.cli": ["mcp-dona_maria", "culinary_research"],
-                "web.search_backend": "ddgs",
+                "web.search_backend": "exa",
+                "web.provider_tier.exa": "free",
                 "web.keyless_fallback": False,
                 "security.allow_private_urls": False,
                 "security.fake_ip_ranges": [],
@@ -333,7 +334,7 @@ def approve_search_terms(directory, service):
     path = directory / "research.json"
     if path.exists():
         return
-    print("Pesquisa real com DDGS. Somente os termos liberados serão enviados ao provedor.")
+    print("Pesquisa real com Exa anônimo. Somente os termos liberados serão enviados ao provedor.")
     print("Informe ingredientes ou pratos públicos, sem quantidades, custos ou dados pessoais.")
     entered = input("Termos separados por vírgula (ex.: arroz, feijão): ")
     terms = {f"termo-{i}": term.strip() for i, term in enumerate(entered.split(","), 1)}
@@ -576,6 +577,70 @@ def verify_profile(directory):
     }
 
 
+def refresh_research(directory):
+    data, _ = manifest(directory)
+    if data["context_mode"] != "REAL" or not (directory / "profile-ready.json").is_file():
+        raise SetupError("Atualização exige perfil REAL já preparado; não reimporte a planilha.")
+    verify_hermes_runtime(directory, profile_name(data))
+    home = profile_home(directory)
+    expected = settings(directory, data)
+    plugin = home / "plugins/dona-maria-mediated-research"
+    if (
+        not plugin.is_dir()
+        or plugin.is_symlink()
+        or any((plugin / name).is_symlink() for name in ("__init__.py", "plugin.yaml"))
+    ):
+        raise SetupError("Plugin de pesquisa ausente ou redirecionado.")
+    for name in ("__init__.py", "plugin.yaml"):
+        shutil.copyfile(ROOT / "src/dona_maria/hermes_research" / name, plugin / name)
+    for key, value in expected.items():
+        if key in {
+            "plugins.enabled",
+            "plugins.entries.dona-maria-mediated-research",
+        } or key.startswith("web."):
+            hermes(
+                directory,
+                ["config", "set", key, value if isinstance(value, str) else json.dumps(value)],
+                capture=True,
+            )
+    return {
+        "research": "UPDATED_NOT_EXERCISED",
+        "business_writes": False,
+        "next_step": "Reabra o Desktop neste perfil e execute check-research e verify-profile.",
+    }
+
+
+def check_research(directory):
+    data, _ = manifest(directory)
+    home = profile_home(directory)
+    command = verify_hermes_runtime(directory, profile_name(data))
+    command[3] += (
+        f"; os.environ['HERMES_HOME'] = {str(home)!r}; "
+        "from hermes_constants import set_hermes_home_override; "
+        f"set_hermes_home_override({str(home)!r}); "
+        f"sys.path.insert(0, {str(ROOT / 'src')!r}); "
+        "runpy.run_module('dona_maria.hermes_research_check', run_name='__main__')"
+    )
+    try:
+        result = subprocess.run(
+            [command[0], "-B", *command[1:]],
+            cwd=directory,
+            env=environment() | {"HERMES_DISABLE_LAZY_INSTALLS": "1"},
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=60,
+        )
+        return json.loads(result.stdout)
+    except (OSError, ValueError, subprocess.SubprocessError):
+        raise SetupError(
+            "Pesquisa indisponível: confira perfil, rede, versão e cota do endpoint anônimo Exa. "
+            "Nenhuma fonte ou decisão foi gravada. Não há fallback automático; tente novamente "
+            "mais tarde. A disponibilidade no computador do avaliador não é garantida."
+        ) from None
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -588,6 +653,8 @@ def main():
             "check",
             "configure",
             "verify-profile",
+            "refresh-research",
+            "check-research",
             "model",
             "chat",
             "desktop",
@@ -647,6 +714,10 @@ def main():
             result = configure(directory)
         elif args.action == "verify-profile":
             result = verify_profile(directory)
+        elif args.action == "refresh-research":
+            result = refresh_research(directory)
+        elif args.action == "check-research":
+            result = check_research(directory)
         elif args.action in {"model", "chat", "desktop"}:
             data, _ = manifest(directory)
             if args.action == "model":

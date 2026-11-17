@@ -76,6 +76,74 @@ def host_boundary(monkeypatch, tmp_path, inventory_file):
 
 
 @pytest.mark.anyio
+async def test_exa_uses_native_anonymous_endpoint_without_registry_or_failover(
+    host_boundary, monkeypatch
+):
+    context, tools, queries, _ = host_boundary
+    original = context.get_config
+    context.get_config = lambda key, default=None: (
+        "exa" if key == "search_provider" else original(key, default)
+    )
+    registry = sys.modules["agent.web_search_registry"]
+    native_search = registry.get_provider("fixture").search
+    monkeypatch.setattr(registry, "_configured_backend", lambda _: "exa")
+    monkeypatch.setattr(registry, "get_provider", lambda _: pytest.fail("No registry fallback"))
+    native = ModuleType("plugins.web.keyless_mcp")
+    native.exa_search_keyless = native_search
+    monkeypatch.setitem(sys.modules, native.__name__, native)
+    register(context)
+    request = {"purpose": "RECIPE", "public_term_ids": ["arroz"]}
+    result = json.loads(await tools["search_culinary_sources"]["handler"](request))
+    assert result["ok"] and result["data"]["provider"] == "exa"
+    assert queries == [("receita arroz", 1)]
+    database = Path(context.get_config("database"))
+    before = sha256(database.read_bytes()).digest()
+    for failure in ({"success": False, "error": "quota"}, {"success": True, "data": {"web": []}}):
+        native.exa_search_keyless = lambda *args, response=failure: response
+        refused = json.loads(await tools["search_culinary_sources"]["handler"](request))
+        assert refused["error"]["code"] == "DATA_SOURCE_UNAVAILABLE"
+        assert sha256(database.read_bytes()).digest() == before
+
+    def unavailable(*args):
+        raise ConnectionError("PRIVATE-CANARY")
+
+    native.exa_search_keyless = unavailable
+    refused = json.loads(await tools["search_culinary_sources"]["handler"](request))
+    assert refused["error"]["code"] == "DATA_SOURCE_UNAVAILABLE"
+    assert "PRIVATE-CANARY" not in str(refused)
+    assert sha256(database.read_bytes()).digest() == before
+    monkeypatch.setattr(registry, "_configured_backend", lambda _: "auto")
+    refused = json.loads(await tools["search_culinary_sources"]["handler"](request))
+    assert refused["error"]["code"] == "COMPATIBILITY_BLOCKED"
+
+
+@pytest.mark.anyio
+async def test_live_diagnostic_reads_profile_and_never_persists_research(
+    host_boundary, monkeypatch
+):
+    from dona_maria.hermes_research_check import check
+
+    context, _, queries, _ = host_boundary
+    settings = {
+        key: context.get_config(key)
+        for key in ("database", "workspace_id", "search_provider", "public_terms")
+    }
+    database = Path(settings["database"])
+    before = sha256(database.read_bytes()).digest()
+
+    async def extract(self, url):
+        return {"url": url, "content_sha256": "a" * 64, "text": "Ingredientes: arroz"}
+
+    monkeypatch.setattr("dona_maria.research_network.SecureExtractor.extract", extract)
+    report = await check(settings)
+    assert queries == [("receita arroz", 1)]
+    assert report["research"] == "LIVE_SEARCH_AND_EXTRACTION_PASS"
+    assert report["business_writes"] is False
+    assert report["desktop_conversation"] == "NOT_TESTED"
+    assert sha256(database.read_bytes()).digest() == before
+
+
+@pytest.mark.anyio
 async def test_plugin_registers_only_two_bound_capabilities_and_dispatches_public_query(
     host_boundary,
 ):
@@ -124,56 +192,6 @@ def test_registration_diagnostic_never_includes_private_exception_text(host_boun
         register(host_boundary[0])
     assert "PRIVATE-CANARY" not in str(error.value)
     assert host_boundary[1] == {}
-
-
-@pytest.mark.anyio
-@pytest.mark.parametrize(
-    "isolated,enabled,disabled,safe,allowed",
-    [
-        (True, ["web-ddgs"], [], False, True),
-        (True, ["web/ddgs"], [], False, True),
-        (False, ["web-ddgs"], [], False, False),
-        (True, [], [], False, False),
-        (True, ["web-ddgs"], ["web-ddgs"], False, False),
-        (True, ["web-ddgs"], ["web/ddgs"], False, False),
-        (True, "web-ddgs", [], False, False),
-        (True, ["web-ddgs"], None, False, False),
-        (True, ["web-ddgs"], [], True, False),
-    ],
-)
-async def test_isolated_host_uses_only_explicitly_enabled_native_ddgs(
-    host_boundary, monkeypatch, isolated, enabled, disabled, safe, allowed
-):
-    context, tools, queries, _ = host_boundary
-    original_config = context.get_config
-    context.get_config = lambda key, default=None: (
-        "ddgs" if key == "search_provider" else original_config(key, default)
-    )
-    registry = sys.modules["agent.web_search_registry"]
-    native_provider = registry.get_provider("ddgs")
-    monkeypatch.setattr(registry, "_configured_backend", lambda capability: "ddgs")
-    monkeypatch.setattr(registry, "get_provider", lambda name: None)
-    monkeypatch.setenv("HERMES_PLUGIN_HOST_PROCESS", "1" if isolated else "0")
-    monkeypatch.setenv("HERMES_SAFE_MODE", " true " if safe else "0")
-    config = ModuleType("hermes_cli.config")
-    config.load_config_readonly = lambda: {
-        "plugins": {
-            "enabled": enabled,
-            "disabled": disabled,
-        }
-    }
-    monkeypatch.setitem(sys.modules, config.__name__, config)
-    native = ModuleType("plugins.web.ddgs.provider")
-    native.DDGSWebSearchProvider = lambda: native_provider
-    monkeypatch.setitem(sys.modules, native.__name__, native)
-    register(context)
-    response = json.loads(
-        await tools["search_culinary_sources"]["handler"](
-            {"purpose": "RECIPE", "public_term_ids": ["arroz"]}
-        )
-    )
-    assert response["ok"] is allowed
-    assert queries == ([("receita arroz", 1)] if allowed else [])
 
 
 @pytest.mark.anyio
