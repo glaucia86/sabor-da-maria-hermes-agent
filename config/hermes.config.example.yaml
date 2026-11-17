@@ -3,8 +3,11 @@
 # Do not replace the entire private profile with this example.
 # Provider credentials belong only in Hermes' private configuration.
 plugins:
+  isolation: host
   enabled:
     - dona-maria-attendance-policy
+agent:
+  disabled_toolsets: [desktop_ui]
 platform_toolsets:
   cli: [mcp-dona_maria]
 tools:

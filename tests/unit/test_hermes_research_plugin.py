@@ -105,6 +105,27 @@ def test_incompatible_host_registers_no_capability(host_boundary):
     assert tools == {}
 
 
+def test_registration_failure_reports_only_safe_stage_and_exception_type(host_boundary):
+    context, tools, _, _ = host_boundary
+    context.get_config = lambda key: None
+    with pytest.raises(RuntimeError, match=r"APPLICATION_SOURCE:ValueError") as error:
+        register(context)
+    assert tools == {}
+    assert error.value.__suppress_context__
+    assert isinstance(error.value.__context__, ValueError)
+
+
+def test_registration_diagnostic_never_includes_private_exception_text(host_boundary, monkeypatch):
+    def fail(source):
+        raise OSError("PRIVATE-CANARY credential and local path")
+
+    monkeypatch.setattr("dona_maria.hermes_research._load_application", fail)
+    with pytest.raises(RuntimeError, match=r"APPLICATION_SOURCE:OSError") as error:
+        register(host_boundary[0])
+    assert "PRIVATE-CANARY" not in str(error.value)
+    assert host_boundary[1] == {}
+
+
 @pytest.mark.anyio
 @pytest.mark.parametrize(
     "isolated,enabled,disabled,safe,allowed",

@@ -43,6 +43,10 @@ def hermes_runtime(tmp_path, monkeypatch):
             assert Path(command[0]) == Path(sys.executable)
             assert command[-2:] == ["-p", profile]
             assert "PYTHONPATH" not in kwargs["env"]
+            if "hermes_gateway_check.py" in command[4]:
+                return subprocess.CompletedProcess(
+                    command, 0, '{"gateway_plugin_registration": "PASS"}', ""
+                )
             return run(command, **kwargs)
         if command[1:2] == ["--print-runtime-command"]:
             assert command[2:] == ["--module", "hermes_cli.version_info", "--", "-p", profile]
@@ -76,6 +80,22 @@ def test_profile_accepts_installed_identity_without_commit_in_version_label(
     from dona_maria.onboarding import verify_profile
 
     assert verify_profile(tmp_path)["research_version_label"] == "MATCH"
+
+
+def test_profile_refuses_gateway_registration_failure(tmp_path, hermes_runtime, monkeypatch):
+    from dona_maria.onboarding import SetupError, verify_profile
+
+    original = subprocess.run
+
+    def failed_gateway(command, **kwargs):
+        if len(command) > 4 and "hermes_gateway_check.py" in command[4]:
+            raise subprocess.CalledProcessError(1, command, stderr="PRIVATE-CANARY")
+        return original(command, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", failed_gateway)
+    with pytest.raises(SetupError, match="gateway") as error:
+        verify_profile(tmp_path)
+    assert "PRIVATE-CANARY" not in str(error.value)
 
 
 @pytest.mark.parametrize("fault", ["commit", "short_commit", "version", "executable", "missing"])
@@ -313,6 +333,10 @@ def test_real_profile_and_desktop_use_owned_context_and_human_approved_search(
             output = json.dumps([sys.executable, "-I", "-c", "pass", *command[-2:]])
             return subprocess.CompletedProcess(command, 0, output, "")
         if command[0] == sys.executable:
+            if "hermes_gateway_check.py" in command[4]:
+                return subprocess.CompletedProcess(
+                    command, 0, '{"gateway_plugin_registration": "PASS"}', ""
+                )
             output = json.dumps(
                 {
                     "executable": sys.executable,
@@ -353,6 +377,8 @@ def test_real_profile_and_desktop_use_owned_context_and_human_approved_search(
     assert config["web.search_backend"] == "ddgs"
     assert config["web.keyless_fallback"] is False
     assert config["platform_toolsets.cli"] == ["mcp-dona_maria", "culinary_research"]
+    assert config["plugins.isolation"] == "host"
+    assert config["agent.disabled_toolsets"] == ["desktop_ui"]
     research = config["plugins.entries.dona-maria-mediated-research"]
     assert set(research["settings"]["public_terms"].values()) == {"feijão", "arroz"}
     assert research["settings"]["database"] == str(target / "workspace.sqlite3")

@@ -93,22 +93,28 @@ class HermesSearchAdapter:
 
 
 def register(ctx):
+    stage = "HOST_IMPORT"
     try:
         from hermes_cli.version_info import get_version_info
         from tools.url_safety import create_ssrf_safe_async_client
 
+        stage = "HOST_VERSION"
         identity = get_version_info()
         if identity.base_version != "0.23.1" or identity.commit != HERMES_COMMIT:
             raise ValueError
+        stage = "APPLICATION_SOURCE"
         _load_application(ctx.get_config("application_source"))
+        stage = "APPLICATION_IMPORT"
         from dona_maria.business_state import AttendanceService
         from dona_maria.planning import canonical_json
         from dona_maria.research import RESEARCH_TOOLS, ResearchService
         from dona_maria.research_network import SecureExtractor
 
+        stage = "BINDING"
         binding = AttendanceService(
             Path(ctx.get_config("database")), ctx.get_config("workspace_id"), "ATTENDANCE"
         )
+        stage = "SEARCH_CONFIG"
         adapter = HermesSearchAdapter(ctx.get_config("search_provider"))
         service = ResearchService(
             binding,
@@ -116,9 +122,24 @@ def register(ctx):
             search=adapter,
             extractor=SecureExtractor(client_factory=create_ssrf_safe_async_client),
         )
-    except Exception:
+    except Exception as exc:
+        # Somente categorias fixas; mensagens e tracebacks podem conter dados privados.
+        kind = next(
+            (
+                base.__name__
+                for base in (ImportError, OSError, ValueError, TypeError)
+                if isinstance(exc, base)
+            ),
+            "Exception",
+        )
+        reason = {
+            "Origem local explícita obrigatória.": "SOURCE_NOT_CONFIGURED",
+            "Origem local fora do diretório autorizado.": "SOURCE_OUTSIDE_ROOT",
+            "Outra versão da aplicação já está carregada.": "SOURCE_CONFLICT",
+        }.get(str(exc), "INITIALIZATION_FAILED")
         raise RuntimeError(
-            "Plugin de pesquisa incompatível ou não configurado; capacidade bloqueada."
+            "Plugin de pesquisa incompatível ou não configurado; capacidade bloqueada. "
+            f"[{stage}:{kind}:{reason}]"
         ) from None
 
     def handler_for(name):

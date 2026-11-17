@@ -264,6 +264,8 @@ def hermes(directory, arguments, *, capture=False, profile=None, cwd=None):
 def settings(directory, data):
     result = {
         "plugins.enabled": ["dona-maria-attendance-policy"],
+        "plugins.isolation": "host",
+        "agent.disabled_toolsets": ["desktop_ui"],
         "platform_toolsets.cli": ["mcp-dona_maria"],
         "tools.tool_search.enabled": "off",
         "memory.memory_enabled": False,
@@ -438,7 +440,7 @@ def verify_hermes_runtime(directory, profile):
 
     options = {
         "cwd": directory,
-        "env": environment(),
+        "env": environment() | {"HERMES_DISABLE_LAZY_INSTALLS": "1"},
         "check": True,
         "capture_output": True,
         "text": True,
@@ -474,6 +476,7 @@ def verify_hermes_runtime(directory, profile):
             or not Path(command[0]).is_file()
         ):
             raise ValueError
+        runtime_command = list(command)
         command[3] += (
             "; import json; from hermes_cli.version_info import get_version_info; "
             "identity = get_version_info(); "
@@ -496,12 +499,42 @@ def verify_hermes_runtime(directory, profile):
             "Versão/commit do Hermes incompatível ou não identificado. Pesquisa exige "
             "0.23.1 / 3b421578588243f920886e6fe79a6faa87ea026e; confira docs/setup.md."
         ) from None
+    return runtime_command
+
+
+def verify_gateway_registration(directory, home, command):
+    command = list(command)
+    command[3] += (
+        f"; os.environ['HERMES_HOME'] = {str(home)!r}; "
+        "from hermes_constants import set_hermes_home_override; "
+        f"set_hermes_home_override({str(home)!r}); "
+        f"runpy.run_path({str(ROOT / 'src/dona_maria/hermes_gateway_check.py')!r}, "
+        "run_name='__main__')"
+    )
+    try:
+        result = subprocess.run(
+            [command[0], "-B", *command[1:]],
+            cwd=directory,
+            env=environment() | {"HERMES_DISABLE_LAZY_INSTALLS": "1"},
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=60,
+        )
+        if json.loads(result.stdout) != {"gateway_plugin_registration": "PASS"}:
+            raise ValueError
+    except (OSError, ValueError, subprocess.SubprocessError):
+        raise SetupError(
+            "Plugins não registrados no gateway; atendimento bloqueado. "
+            "Confira isolamento e registro conforme docs/setup.md."
+        ) from None
 
 
 def verify_profile(directory):
     data, _ = manifest(directory)
     if data["context_mode"] == "REAL":
-        verify_hermes_runtime(directory, profile_name(data))
+        runtime_command = verify_hermes_runtime(directory, profile_name(data))
     for key, expected in settings(directory, data).items():
         actual = hermes(directory, ["config", "get", key, "--json"], capture=True)
         if json.loads(actual.stdout) != expected:
@@ -515,6 +548,8 @@ def verify_profile(directory):
                 raise SetupError("Plugin divergente do checkout: " + plugin_name)
     if (home / "conversation/.hermes.md").read_text(encoding="utf-8") != conversation_context(data):
         raise SetupError("Orientações desatualizadas; prepare outro atendimento.")
+    if data["context_mode"] == "REAL":
+        verify_gateway_registration(directory, home, runtime_command)
     skills = hermes(directory, ["skills", "list", "--enabled-only"], capture=True)
     if "dona-maria-cardapio" not in skills.stdout:
         raise SetupError("Skill de atendimento não descoberta pelo Hermes.")
@@ -531,6 +566,7 @@ def verify_profile(directory):
         "policy_files": "PASS",
         "skill_discovery": "PASS",
         "hermes_mcp_connection": "PASS",
+        "gateway_plugin_registration": "PASS" if data["context_mode"] == "REAL" else "NOT_RUN",
         "model_configured": model_configured,
         "next_step": "Configure o modelo com a ação model e homologue a conversa no perfil.",
         "credentials": "NOT_CHECKED",

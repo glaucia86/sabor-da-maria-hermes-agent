@@ -75,7 +75,7 @@ Acrescente a ação abaixo e `--directory "artifacts/private/local"`.
 | `check` | Confere MCP stdio, catálogo de seis e recusa de ferramenta não exposta; consulta estado, sem LLM. |
 | `configure` | Solicita termos públicos, cria perfil exclusivo, copia plugins e prepara contexto/skill. Não escolhe modelo. |
 | `model` | Abre o seletor nativo do Hermes no perfil correspondente; você escolhe e autentica. |
-| `verify-profile` | Confere configurações, arquivos copiados, skill e conexão MCP. Não prova autenticação nem conversa. |
+| `verify-profile` | Confere configurações, arquivos, skill, conexão MCP e registro dos plugins no gateway REAL. Não prova autenticação nem conversa. |
 | `desktop` | Repete a verificação e abre o perfil/contexto preparados. Modelo ausente impede lançamento. |
 | `review list/inspect/approve/reject` | Acessa a revisão local com banco/workspace já vinculados. |
 | `doctor` | Diagnostica executáveis e dependências; não configura nem autentica o modelo. |
@@ -96,6 +96,35 @@ carrega instruções de engenharia do repositório.
 `platform_toolsets.cli` é a chave usada pelo backend consultado pelo Desktop
 na versão examinada; não substitua por uma chave `desktop` presumida.
 Conferir a configuração não substitui verificar o catálogo efetivo da sessão.
+
+Os plugins devem usar `plugins.isolation: host`. No Hermes 0.23.1, o gateway
+compartilhado pode já conter `dona_maria` de outra origem; o plugin recusa esse
+conflito em vez de substituir módulos. O isolamento mantém um processo de
+plugins por perfil, sem ampliar a allowlist.
+
+Para atualizar um perfil existente, preserve a planilha e o SQLite. Copie
+`src/dona_maria/hermes_research/__init__.py` e `plugin.yaml` para o diretório
+`plugins/dona-maria-mediated-research` **desse perfil** e execute:
+
+```sh
+hermes -p NOME_DO_PERFIL config set plugins.isolation host
+hermes -p NOME_DO_PERFIL config set agent.disabled_toolsets '["desktop_ui"]'
+```
+
+Recarregue os plugins ou reinicie normalmente o gateway desse perfil e abra
+uma nova conversa. Execute `verify-profile` antes do atendimento; agora ele
+consulta `plugins.list` no gateway que abre a sessão e recusa registro ausente.
+Não reimporte a planilha nem recrie o banco para corrigir esse problema.
+
+`plugins doctor dona-maria-mediated-research --ci` usa um home temporário sem
+os settings do perfil nessa versão. Sua falha `SOURCE_NOT_CONFIGURED` não
+comprova falha do perfil configurado. `SOURCE_CONFLICT` identifica a recusa
+de um módulo de outra origem; os diagnósticos omitem caminhos e mensagens
+internas. Confira a [verificação desta correção](verification-hermes-research.md).
+
+`desktop_ui` fica excluído do catálogo enviado ao modelo, mesmo quando o Hermes
+o acrescenta pela superfície Desktop. Os hooks continuam recusando chamadas
+diretas às ferramentas excluídas; a exclusão não amplia nenhuma permissão.
 
 <a id="pesquisa"></a>
 ## Pesquisa real e termos públicos

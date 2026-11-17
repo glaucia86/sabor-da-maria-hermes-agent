@@ -2,6 +2,7 @@
 # Somente no perfil isolado S17, após conferir versão/commit, binding e catálogo.
 # Substitua localmente PROVIDER_NAME/PROVIDER_PLUGIN e todos os paths/UUIDs.
 plugins:
+  isolation: host
   enabled:
     - dona-maria-attendance-policy
     - dona-maria-mediated-research
@@ -17,6 +18,8 @@ plugins:
         # Exemplos, não uma liberação automática: operador aprova o texto publicável.
         public_terms:
           arroz: arroz
+agent:
+  disabled_toolsets: [desktop_ui]
 platform_toolsets:
   cli: [mcp-dona_maria, culinary_research]
 web:
