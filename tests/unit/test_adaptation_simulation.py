@@ -1266,6 +1266,273 @@ def test_every_committed_version_of_an_arbitrary_recipe_is_recoverable(
     assert state(local, workspace)["ok"]
 
 
+def _review_patch(*patches, version=1, number=1):
+    return _revision(number, version, dict(category_review_changes=list(patches)))
+
+
+def _attend(database, workspace, command):
+    request = dict(operation_id=str(uuid4()), command=command)
+    return request, AttendanceService(database, workspace, "ATTENDANCE").call(
+        "propose_user_change", request
+    )
+
+
+@pytest.mark.parametrize("mode", ["REAL", "SIMULATION"])
+@pytest.mark.parametrize("category", ["EQUIPMENT", "SKILL", "OPERATION"])
+def test_category_review_patch_changes_only_the_addressed_review(
+    tmp_path, inventory_file, mode, category
+):
+    local, workspace, database = _context(tmp_path, inventory_file, mode)
+    recipe = approve(
+        local,
+        workspace,
+        propose(
+            local,
+            workspace,
+            _recipe(
+                "Torta salgada de forno",
+                [("Farinha", "300", "g"), ("Leite", "200", "ml"), ("Ovos", "3", "un")],
+                requirements=[
+                    dict(
+                        category="EQUIPMENT",
+                        key="forno",
+                        condition="PRESENT",
+                        reason="Assar por 40 minutos.",
+                    )
+                ],
+            ),
+        ),
+    )["data"]["candidate"]
+    decide(
+        local, workspace, "record_recipe_feedback", recipe_id=recipe["id"], feedback="INTERESTED"
+    )
+    decide(
+        local,
+        workspace,
+        "set_production_plan",
+        items=[dict(recipe_id=recipe["id"], recipe_version=1, batches=1, position=0)],
+    )
+    historical = _historical(local, workspace, recipe["id"], 1).model_dump(mode="json")
+    before = state(local, workspace)["data"]
+    audit = _audit_rows(database)
+    reason = f"Justificativa revista pela cozinheira para {category}."
+
+    request, view = _attend(
+        database, workspace, _review_patch(dict(category=category, not_applicable_reason=reason))
+    )
+    assert view["ok"], view
+    assert state(local, workspace)["data"] == before
+    proposal = local.list(workspace)[view["data"]["proposal"] - 1]
+    result = approve(local, workspace, proposal)
+    assert result["ok"], result
+    adapted = result["data"]["candidate"]
+
+    assert adapted["version"] == 2
+    assert set(adapted["category_status"].values()) == {"REVIEWED"}
+    for original, review in zip(
+        recipe["category_reviews"], adapted["category_reviews"], strict=True
+    ):
+        if review["category"] != category:
+            assert review == original | {"method_version": 2}
+            continue
+        assert review["not_applicable_reason"] == reason
+        assert review["requirement_keys"] == original["requirement_keys"]
+        assert review["method_version"] == 2
+        source = review["source"]
+        assert source["kind"] == original["source"]["kind"]
+        assert source["local_event_id"] != original["source"]["local_event_id"]
+        assert source["evidence"]["turn_ref"] == "local:" + source["local_event_id"]
+        assert source["information_ref"]["version"] == 2
+    for key in (
+        "title",
+        "sources",
+        "method",
+        "method_source",
+        "yield_per_batch",
+        "operational_context",
+        "context_source",
+        "declared_gaps",
+    ):
+        assert adapted[key] == recipe[key]
+
+    def without(items, key):
+        return [{k: v for k, v in item.items() if k != key} for item in items]
+
+    assert without(adapted["ingredients"], "line_id") == without(recipe["ingredients"], "line_id")
+    assert without(adapted["requirements"], "id") == without(recipe["requirements"], "id")
+
+    after = state(local, workspace)["data"]
+    for key in ("plan", "kitchen_facts", "ingredient_resolutions", "complement_ingredients"):
+        assert after[key] == before[key]
+    rows = _audit_rows(database)
+    assert all(audit[table] <= rows[table] for table in audit)
+    assert _historical(local, workspace, recipe["id"], 1).model_dump(mode="json") == historical
+    assert _same_version(local, workspace, adapted)
+
+    reopened = ApprovalService(SQLiteWorkspaceRepository(database))
+    assert state(reopened, workspace)["data"] == after
+    assert approve(reopened, workspace, proposal) == result
+    replay = AttendanceService(database, workspace, "ATTENDANCE").call(
+        "propose_user_change", request
+    )
+    assert replay["data"]["status"] == "APPLIED_HISTORICAL"
+
+
+def test_category_review_patch_of_web_recipe_needs_human_source_and_keeps_rules(
+    pricing_workspace, tmp_path
+):
+    reader, workspace, original, acceptance, _, database = pricing_workspace()
+    migrate_proposals(reader.repository, tmp_path / "review-patch-backup.sqlite3")
+    local = ApprovalService(reader.repository, clock=reader.clock)
+    reason = "A cozinheira confirma que não há etapa operacional crítica."
+    patch = dict(category="OPERATION", not_applicable_reason=reason)
+    before_bytes = database.read_bytes()
+    with pytest.raises(BusinessRuleError) as refused:
+        local.propose_bound(
+            workspace, dict(operation_id=str(uuid4()), command=_review_patch(patch))
+        )
+    assert refused.value.code == "SOURCE_NOT_LINKED"
+    assert database.read_bytes() == before_bytes
+
+    before = state(local, workspace)["data"]
+    view = local.propose_bound(
+        workspace,
+        dict(operation_id=str(uuid4()), command=_review_patch(patch | dict(source=SOURCE))),
+    )
+    result = approve(local, workspace, local.list(workspace)[view["proposal"] - 1])
+    assert result["ok"], result
+    adapted = result["data"]["candidate"]
+    for previous, review in zip(
+        original["category_reviews"], adapted["category_reviews"], strict=True
+    ):
+        if review["category"] == "OPERATION":
+            assert review["not_applicable_reason"] == reason
+            assert review["source"]["kind"] == "USER_PROVIDED"
+            assert review["source"]["evidence"]["turn_ref"].startswith("local:")
+        else:
+            assert review == previous | {"method_version": 2}
+            assert review["source"]["kind"] == "WEB"
+    assert adapted["ingredients"][0]["quantity"] == original["ingredients"][0]["quantity"]
+    assert adapted["business_version"] == original["business_version"] + 1
+    assert set(adapted["category_status"].values()) == {"REVIEWED"}
+    after = state(local, workspace)["data"]
+    assert after["plan"] == before["plan"]
+    assert result["data"]["invalidated_decisions"] == [acceptance["id"]]
+    assert all(a["validity"] == "INVALIDATED" for a in after["acceptances"])
+
+
+@pytest.mark.parametrize("mode", ["REAL", "SIMULATION"])
+@pytest.mark.parametrize(
+    "patch",
+    [
+        dict(category="SKILL", not_applicable_reason="Outra.", method_version=2),
+        dict(category="SKILL", source=dict(SOURCE, local_event_id=str(uuid4()))),
+        dict(
+            category="SKILL",
+            source=dict(
+                SOURCE,
+                evidence=dict(turn_ref="t", statement="s", captured_at="2026-11-17T12:00:00Z"),
+            ),
+        ),
+        dict(
+            category="SKILL",
+            source=dict(
+                SOURCE,
+                information_ref=dict(entity="RECIPE", entity_id=1, version=1, field="method"),
+            ),
+        ),
+    ],
+    ids=["method_version", "local_event_id", "evidence", "information_ref"],
+)
+def test_category_review_patch_rejects_agent_produced_authority(
+    tmp_path, inventory_file, mode, patch
+):
+    local, workspace, database = _context(tmp_path, inventory_file, mode)
+    approve(local, workspace, propose(local, workspace, _recipe("Purê", [("Batata", "1", "kg")])))
+    before = database.read_bytes()
+    _, view = _attend(database, workspace, _review_patch(patch))
+    assert not view["ok"]
+    with pytest.raises(ValueError, match="Extra inputs are not permitted"):
+        local.propose_bound(
+            workspace, dict(operation_id=str(uuid4()), command=_review_patch(patch))
+        )
+    assert database.read_bytes() == before
+    assert len(local.list(workspace)) == 1
+
+
+@pytest.mark.parametrize("mode", ["REAL", "SIMULATION"])
+@pytest.mark.parametrize(
+    "changes,reason",
+    [
+        (
+            dict(
+                category_review_changes=[dict(category="OPERATION", not_applicable_reason="Nova.")]
+            ),
+            "Categoria sem revisão",
+        ),
+        (
+            dict(
+                category_review_changes=[
+                    dict(category="SKILL", not_applicable_reason="Nova."),
+                    dict(category="SKILL", not_applicable_reason="Outra."),
+                ]
+            ),
+            "duplicada",
+        ),
+        (
+            dict(
+                category_review_changes=[dict(category="SKILL", not_applicable_reason="Nova.")],
+                category_reviews=[],
+            ),
+            "não ambas",
+        ),
+        (
+            dict(
+                category_review_changes=[
+                    dict(
+                        category="SKILL",
+                        not_applicable_reason="Sem requisito declarado na categoria.",
+                    )
+                ]
+            ),
+            "sem efeito",
+        ),
+        (dict(category_review_changes=[dict(category="SKILL")]), "ao menos um campo"),
+        (
+            dict(category_review_changes=[dict(category="SKILL", requirement_keys=["outra"])]),
+            "não corresponde aos requisitos",
+        ),
+        (dict(category_review_changes=[]), "at least 1 item"),
+        (dict(category_review_changes=None), "valid list"),
+    ],
+    ids=[
+        "absent",
+        "duplicate",
+        "with-full-list",
+        "no-op",
+        "empty-patch",
+        "keys-without-requirement",
+        "empty-list",
+        "null",
+    ],
+)
+def test_invalid_category_review_patch_writes_nothing(
+    tmp_path, inventory_file, mode, changes, reason
+):
+    local, workspace, database = _context(tmp_path, inventory_file, mode)
+    recipe = _recipe("Salada de grãos", [("Grão-de-bico", "250", "g")])
+    recipe["category_reviews"] = recipe["category_reviews"][:2]
+    approve(local, workspace, propose(local, workspace, recipe))
+    before = database.read_bytes()
+    _, view = _attend(database, workspace, _revision(1, 1, changes))
+    assert not view["ok"]
+    command = dict(operation_id=str(uuid4()), command=_revision(1, 1, changes))
+    with pytest.raises(ValueError, match=reason):
+        local.propose_bound(workspace, command)
+    assert database.read_bytes() == before
+    assert len(local.list(workspace)) == 1
+
+
 def test_resolution_version_is_not_recovered_from_divergent_audit(local_context):
     local, workspace, database = local_context
     recipe = approve(

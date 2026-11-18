@@ -302,8 +302,11 @@ def _expand_bound_command(command, state, snapshot, revision, now):
     if kind == "register_recipe_candidate":
         if recipe:
             payload["expected_recipe_version"] = recipe.version
-        candidate = payload["candidate"]
-        for review in candidate.get("changes", candidate).get("category_reviews", []) or []:
+        changes = payload["candidate"].get("changes", payload["candidate"])
+        for review in [
+            *(changes.get("category_reviews") or []),
+            *(changes.get("category_review_changes") or []),
+        ]:
             review["method_version"] = recipe.version + 1 if recipe else 1
     if kind in ("confirm_complement_quote", "register_complement_quote") and quote:
         payload[

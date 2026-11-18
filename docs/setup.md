@@ -312,8 +312,10 @@ Acrescente a ação abaixo e `--directory "artifacts/private/local"`.
 | `verify-profile` | Confere configurações, arquivos, skill, conexão MCP e registro dos plugins no gateway REAL. Não prova autenticação nem conversa. |
 | `check-research` | Busca `receita <primeiro termo liberado>` e extrai o primeiro resultado no runtime do perfil REAL, pelo Exa anônimo. Não grava fontes nem decisões e não usa o modelo. |
 | `refresh-research` | Somente em perfil REAL já preparado: copia o plugin de pesquisa do checkout e regrava a configuração de pesquisa (`plugins.enabled`, settings do plugin e `web.*`). Não reimporta a planilha, não altera o banco nem os termos de `research.json`. |
+| `refresh-context` | Somente em perfil REAL já preparado: regrava `conversation/.hermes.md` com as orientações e a skill do checkout. Não abre o SQLite nem altera perfil, credenciais, plugins, pesquisa ou configurações. Veja [como atualizar](#atualizar-orientacoes). |
 | `desktop` | Repete a verificação e abre o perfil/contexto preparados. Modelo ausente impede lançamento. |
 | `review list/inspect/approve/reject` | Acessa a revisão local com banco/workspace já vinculados. |
+| `review reviews NÚMERO_DA_RECEITA` | Somente leitura: mostra o texto integral vigente das revisões de categoria da receita, sem metadados de proveniência. Veja [justificativas vigentes](#justificativa-vigente). |
 | `doctor` | Diagnostica executáveis e dependências; não configura nem autentica o modelo. |
 
 O diretório privado contém `inventory.xlsx`, `workspace.sqlite3`, backups de
@@ -364,6 +366,33 @@ uma nova conversa. Execute `check-research` e `verify-profile` antes do
 atendimento; `verify-profile` consulta `plugins.list` no gateway que abre a
 sessão e recusa registro ausente. Não reimporte a planilha nem recrie o banco
 para corrigir esse problema.
+
+<a id="atualizar-orientacoes"></a>
+### Atualizar as orientações do Desktop REAL
+
+Quando `.hermes.md` ou a skill mudam no checkout, `verify-profile` recusa o
+perfil com "Orientações desatualizadas". `configure` não regrava um perfil já
+preparado. Feche o Desktop desse perfil e, no mesmo diretório, execute:
+
+```sh
+uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding refresh-context --directory "artifacts/private/local"
+uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding verify-profile --directory "artifacts/private/local"
+```
+
+**Esperado:** `conversation_context: UPDATED` e `business_writes: false`; uma
+segunda execução retorna `UNCHANGED` sem regravar. Depois, `verify-profile`
+em `PASS`; abra então uma nova conversa pelo `desktop`.
+
+O comando exige `profile-ready.json` do mesmo perfil REAL, o vínculo MCP com o
+banco e o workspace deste diretório e um `conversation/.hermes.md` regular
+gerado pelo `configure`. Ele recusa, sem alterar nada, symlink, junção ou
+caminho fora do perfil e arquivo sem a estrutura gerenciada: a primeira linha de
+`.hermes.md` e exatamente um cabeçalho da skill `dona-maria-cardapio`. A
+validação é só estrutural; edições manuais internas que preservem essa
+estrutura são sobrescritas. Grava somente esse arquivo, por
+substituição atômica; não abre o SQLite nem toca credenciais, plugins, pesquisa,
+configurações ou decisões. O `verify-profile` seguinte continua consultando o
+banco somente para leitura, como antes.
 
 `plugins doctor dona-maria-mediated-research --ci` usa um home temporário sem
 os settings do perfil nessa versão. Sua falha `SOURCE_NOT_CONFIGURED` não
@@ -450,6 +479,27 @@ Proposta vencida, hash divergente ou premissa alterada exigem consulta do estado
 e nova proposta/revisão. Aprovação repetida não duplica o efeito. Uma decisão
 histórica não recupera validade perdida por alteração posterior.
 
+<a id="justificativa-vigente"></a>
+### Justificativa vigente de uma categoria
+
+Uma alteração por categoria substitui a justificativa inteira, e o agente não
+recebe esse texto. Quando ele pedir a leitura da justificativa vigente, consulte
+no terminal do operador, somente para leitura:
+
+```sh
+uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding review --directory "artifacts/private/local" reviews NÚMERO_DA_RECEITA
+```
+
+O número é a posição da receita na ordem de registro: a mesma referência
+`recipe` do atendimento e a ordem de `recipes` no resumo de `review inspect`.
+A saída mostra a versão da receita e, por categoria, `current`,
+`requirement_keys`, o texto integral de `not_applicable_reason` e o tipo da
+origem, sem eventos, evidências ou referências internas. Nada é gravado.
+Leia o texto completo à cozinheira; ela manifesta a nova justificativa inteira,
+preservando o que quiser manter. Só então o agente prepara a proposta, que você
+inspeciona e aprova como de costume. Não copie trechos para o chat além do
+necessário nem edite o banco.
+
 <a id="recuperacao"></a>
 ## Retomada e recuperação
 
@@ -461,7 +511,7 @@ histórica não recupera validade perdida por alteração posterior.
 | Preparação interrompida antes do manifesto | Preserve a pasta para diagnóstico e use outra pasta nova. Não há limpeza destrutiva automática. |
 | Perfil existe sem marcador de conclusão | Não é sobrescrito. Preserve-o e prepare outro diretório/perfil. |
 | Configuração divergente | O diagnóstico nomeia a chave; revise-a localmente conforme a configuração esperada. Não substitua o YAML inteiro. |
-| Código/skill mudou | Prepare outro atendimento para a avaliação; não alegue que hashes antigos homologam arquivos novos. |
+| Código/skill mudou | No perfil REAL preparado, atualize as orientações com [`refresh-context`](#atualizar-orientacoes) e repita `verify-profile`. Não alegue que hashes antigos homologam arquivos novos. |
 | Pesquisa indisponível ou perfil com provedor anterior | Execute `check-research`; se o perfil REAL foi preparado com o provedor anterior, use `refresh-research`, reabra o Desktop e verifique o perfil. |
 | Aprovação concluída, mas o agente ainda vê `PENDING` | A consulta pode ter ocorrido antes do commit. Aguarde `ok: true` no terminal e peça nova consulta do estado. |
 | Plugin incompatível | Confira versão e commit efetivos. Não desative o bloqueio nem alegue pesquisa a partir do MCP isolado. |

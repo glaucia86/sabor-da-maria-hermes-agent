@@ -278,6 +278,23 @@ class RecipeCandidate(CandidateInput):
         return data
 
 
+class CategoryReviewChange(CandidateModel):
+    """Altera uma revisão existente; campos omitidos vêm da versão histórica."""
+
+    category: Category
+    # Produzido pelo servidor no fluxo do atendimento, como nas revisões completas.
+    method_version: Annotated[StrictInt, Field(gt=0)]
+    requirement_keys: list[ShortText] = None
+    not_applicable_reason: Note | None = None
+    source: PrimaryProvenance = None
+
+    @model_validator(mode="after")
+    def explicit_change(self):
+        if not self.model_fields_set - {"category", "method_version"}:
+            raise ValueError("Alteração de revisão exige ao menos um campo.")
+        return self
+
+
 CandidateChanges = create_model(
     "CandidateChanges",
     __base__=CandidateModel,
@@ -286,6 +303,10 @@ CandidateChanges = create_model(
         for name, field in CandidateInput.model_fields.items()
         if name not in {"origin", "provenance_version", "sources"}
     },
+    category_review_changes=(
+        Annotated[list[CategoryReviewChange], Field(min_length=1, max_length=3)],
+        None,
+    ),
 )
 
 
@@ -297,6 +318,11 @@ class CandidateAdaptation(CandidateModel):
     def historical_changes(self):
         if self.origin.derived_from is None or not self.changes.model_fields_set:
             raise ValueError("Adaptação exige versão histórica e alterações explícitas.")
+        patches = self.changes.category_review_changes or []
+        if patches and "category_reviews" in self.changes.model_fields_set:
+            raise ValueError("Use revisões completas ou alterações por categoria, não ambas.")
+        if len({patch.category for patch in patches}) != len(patches):
+            raise ValueError("Alteração de categoria duplicada.")
         return self
 
     def resolve(self, original):
@@ -312,7 +338,17 @@ class CandidateAdaptation(CandidateModel):
             if source["kind"] != "WEB":
                 for key in ("evidence", "local_event_id", "information_ref"):
                     source.pop(key, None)
-        data.update(self.changes.model_dump(mode="json", exclude_unset=True))
+        changes = self.changes.model_dump(mode="json", exclude_unset=True)
+        patches = changes.pop("category_review_changes", [])
+        data.update(changes)
+        reviews = {review["category"]: review for review in data["category_reviews"]}
+        for patch in patches:
+            review = reviews.get(patch["category"])
+            if review is None:
+                raise ValueError("Categoria sem revisão na versão histórica.")
+            if review == review | patch | {"method_version": review["method_version"]}:
+                raise ValueError("Alteração de revisão sem efeito.")
+            review.update(patch)
         data["origin"] = self.origin.model_dump(mode="json")
         return CandidateInput.model_validate(data)
 

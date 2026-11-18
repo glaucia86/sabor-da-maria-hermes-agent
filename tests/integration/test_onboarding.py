@@ -284,6 +284,19 @@ def test_review_cannot_override_binding_or_migrate(tmp_path):
         assert not other.exists()
 
 
+def test_review_reads_category_reviews_through_bound_directory_without_writes(tmp_path):
+    target = tmp_path / "demo"
+    assert cli("prepare", "--directory", target).returncode == 0
+    database = target / "workspace.sqlite3"
+    before = database.read_bytes()
+    missing = cli("review", "--directory", target, "reviews")
+    assert missing.returncode != 0 and "Argumentos de revisão" in missing.stderr
+    assert "reviews" in missing.stderr
+    absent = cli("review", "--directory", target, "reviews", "999")
+    assert absent.returncode != 0 and "LOCAL_REVIEW_REFUSED" in absent.stderr
+    assert database.read_bytes() == before
+
+
 def test_setup_does_not_install_into_an_ambient_project(monkeypatch, tmp_path):
     from dona_maria.onboarding import main
 
@@ -498,3 +511,173 @@ def test_research_requires_explicit_valid_public_terms_before_touching_hermes(
         main()
     assert not (target / "research.json").exists()
     assert not (target / "profile-ready.json").exists()
+
+
+def refresh_context_profile(tmp_path, inventory_file, monkeypatch):
+    """Perfil REAL sintético já preparado, com Hermes simulado e banco proibido."""
+    from types import SimpleNamespace
+
+    from dona_maria import onboarding
+    from dona_maria.persistence import SQLiteWorkspaceRepository
+
+    directory = tmp_path / "real"
+    onboarding.setup_real(directory, inventory_file)
+    data = onboarding.manifest_data(directory)
+    name = onboarding.profile_name(data)
+    (directory / "profile-ready.json").write_text(json.dumps({"profile": name}), encoding="utf-8")
+    home = tmp_path / "hermes" / "profiles" / name
+    conversation = home / "conversation"
+    conversation.mkdir(parents=True)
+    previous = (onboarding.ROOT / ".hermes.md").read_text(
+        encoding="utf-8"
+    ) + "\n\n---\nname: dona-maria-cardapio\ndescription: versão anterior\n---\n\n# Antiga\n"
+    (conversation / ".hermes.md").write_text(previous, encoding="utf-8")
+    (conversation / "notas-da-operadora.txt").write_text("PRESERVAR", encoding="utf-8")
+    (home / ".env").write_text("PRIVATE-CANARY", encoding="utf-8")
+    plugin = home / "plugins/dona-maria-mediated-research/__init__.py"
+    plugin.parent.mkdir(parents=True)
+    plugin.write_text("plugin do perfil", encoding="utf-8")
+    binding = {
+        "dona_maria": {
+            "env": {
+                "DONA_MARIA_DB_PATH": str(directory / "workspace.sqlite3"),
+                "DONA_MARIA_WORKSPACE_ID": data["workspace_id"],
+                "DONA_MARIA_MODE": "ATTENDANCE",
+            }
+        }
+    }
+    calls = []
+
+    def host(directory, arguments, **kwargs):
+        calls.append(arguments)
+        if arguments == ["config", "path"]:
+            return SimpleNamespace(stdout=str(home / "config.yaml"))
+        if arguments == ["config", "get", "mcp_servers", "--json"]:
+            return SimpleNamespace(stdout=json.dumps(binding))
+        raise AssertionError(arguments)
+
+    def no_database(*args, **kwargs):
+        raise AssertionError("refresh-context não pode abrir o SQLite.")
+
+    monkeypatch.setattr(onboarding, "hermes", host)
+    monkeypatch.setattr(onboarding, "manifest", no_database)
+    monkeypatch.setattr(SQLiteWorkspaceRepository, "_connect", no_database)
+    return directory, data, home, binding, calls
+
+
+def snapshot(*roots):
+    return {
+        str(path): sha256(path.read_bytes()).digest()
+        for root in roots
+        for path in sorted(root.rglob("*"))
+        if path.is_file()
+    }
+
+
+def test_refresh_context_updates_only_managed_desktop_guidance(
+    tmp_path, inventory_file, monkeypatch
+):
+    from dona_maria import onboarding
+
+    directory, data, home, _, calls = refresh_context_profile(tmp_path, inventory_file, monkeypatch)
+    target = home / "conversation/.hermes.md"
+    private = snapshot(directory)
+    preserved = {
+        path: digest for path, digest in snapshot(home).items() if not path.endswith(".hermes.md")
+    }
+    report = onboarding.refresh_context(directory)
+    assert report["conversation_context"] == "UPDATED"
+    assert report["business_writes"] is False
+    assert target.read_text(encoding="utf-8") == onboarding.conversation_context(data)
+    assert "category_review_changes" in target.read_text(encoding="utf-8")
+    assert snapshot(directory) == private
+    assert {
+        path: digest for path, digest in snapshot(home).items() if not path.endswith(".hermes.md")
+    } == preserved
+    assert sorted(p.name for p in target.parent.iterdir()) == [
+        ".hermes.md",
+        "notas-da-operadora.txt",
+    ]
+    assert all(call[:2] == ["config", "path"] or call[:2] == ["config", "get"] for call in calls)
+    updated = target.read_bytes()
+    again = onboarding.refresh_context(directory)
+    assert again == {"conversation_context": "UNCHANGED", "business_writes": False}
+    assert target.read_bytes() == updated
+
+
+@pytest.mark.parametrize("fault", ["unmanaged", "ready", "binding", "missing", "simulation"])
+def test_refresh_context_refuses_unexpected_profile_without_writing(
+    tmp_path, inventory_file, monkeypatch, fault
+):
+    from dona_maria import onboarding
+
+    directory, data, home, binding, _ = refresh_context_profile(
+        tmp_path, inventory_file, monkeypatch
+    )
+    target = home / "conversation/.hermes.md"
+    if fault == "unmanaged":
+        target.write_text("Orientação pessoal da operadora.", encoding="utf-8")
+    elif fault == "ready":
+        (directory / "profile-ready.json").write_text('{"profile": "outro"}', encoding="utf-8")
+    elif fault == "binding":
+        binding["dona_maria"]["env"]["DONA_MARIA_DB_PATH"] = str(tmp_path / "outro.sqlite3")
+    elif fault == "missing":
+        target.unlink()
+    else:
+        manifest = json.loads((directory / "demo.json").read_text(encoding="utf-8"))
+        (directory / "demo.json").write_text(
+            json.dumps(manifest | {"context_mode": "SIMULATION"}), encoding="utf-8"
+        )
+        (directory / "synthetic.xlsx").write_bytes((directory / "inventory.xlsx").read_bytes())
+    before = snapshot(directory, home)
+    with pytest.raises(onboarding.SetupError):
+        onboarding.refresh_context(directory)
+    assert snapshot(directory, home) == before
+
+
+@pytest.mark.parametrize("link", ["file", "directory"])
+def test_refresh_context_refuses_redirected_guidance(tmp_path, inventory_file, monkeypatch, link):
+    from dona_maria import onboarding
+
+    directory, _, home, _, _ = refresh_context_profile(tmp_path, inventory_file, monkeypatch)
+    conversation = home / "conversation"
+    outside = tmp_path / "fora"
+    outside.mkdir()
+    (outside / ".hermes.md").write_text("ALVO EXTERNO", encoding="utf-8")
+    try:
+        if link == "file":
+            (conversation / ".hermes.md").unlink()
+            (conversation / ".hermes.md").symlink_to(outside / ".hermes.md")
+        else:
+            for path in conversation.iterdir():
+                path.unlink()
+            conversation.rmdir()
+            conversation.symlink_to(outside, target_is_directory=True)
+    except OSError:
+        pytest.skip("Criação de symlink indisponível sem privilégio.")
+    with pytest.raises(onboarding.SetupError, match="redirecionadas"):
+        onboarding.refresh_context(directory)
+    assert (outside / ".hermes.md").read_text(encoding="utf-8") == "ALVO EXTERNO"
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Junção de diretório é específica do Windows.")
+def test_refresh_context_refuses_directory_junction(tmp_path, inventory_file, monkeypatch):
+    from dona_maria import onboarding
+
+    directory, _, home, _, _ = refresh_context_profile(tmp_path, inventory_file, monkeypatch)
+    conversation = home / "conversation"
+    outside = tmp_path / "fora"
+    outside.mkdir()
+    (outside / ".hermes.md").write_text("ALVO EXTERNO", encoding="utf-8")
+    for path in conversation.iterdir():
+        path.unlink()
+    conversation.rmdir()
+    subprocess.run(
+        ["cmd", "/c", "mklink", "/J", str(conversation), str(outside)],
+        check=True,
+        capture_output=True,
+    )
+    assert not conversation.is_symlink()
+    with pytest.raises(onboarding.SetupError, match="redirecionadas"):
+        onboarding.refresh_context(directory)
+    assert (outside / ".hermes.md").read_text(encoding="utf-8") == "ALVO EXTERNO"

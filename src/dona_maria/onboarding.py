@@ -10,6 +10,7 @@ import sqlite3
 import subprocess
 import sys
 from pathlib import Path
+from uuid import uuid4
 
 ROOT = Path(__file__).resolve().parents[2]
 TOOLS = (
@@ -75,7 +76,8 @@ def doctor():
     return report
 
 
-def manifest(directory):
+def manifest_data(directory):
+    """Valida manifesto e arquivos sem abrir o banco do atendimento."""
     data = json.loads((directory / "demo.json").read_text(encoding="utf-8"))
     if (
         not isinstance(data, dict)
@@ -92,6 +94,11 @@ def manifest(directory):
         path = directory / name
         if path.is_symlink() or not path.is_file() or path.resolve().parent != directory:
             raise SetupError("Arquivo ausente ou redirecionado; preserve a pasta e use outra demo.")
+    return data
+
+
+def manifest(directory):
+    data = manifest_data(directory)
     from dona_maria.business_state import AttendanceService
     from dona_maria.persistence import SQLiteWorkspaceRepository
 
@@ -243,11 +250,12 @@ def profile_name(data):
     return prefix + data["workspace_id"].replace("-", "")
 
 
-def hermes(directory, arguments, *, capture=False, profile=None, cwd=None):
+def hermes(directory, arguments, *, capture=False, profile=None, cwd=None, data=None):
     executable = shutil.which("hermes")
     if not executable:
         raise SetupError("Hermes ausente do PATH; consulte docs/setup.md.")
-    data, _ = manifest(directory)
+    if data is None:
+        data, _ = manifest(directory)
     return subprocess.run(
         [executable, "-p", profile or profile_name(data), *arguments],
         cwd=cwd or directory,
@@ -356,6 +364,9 @@ def profile_plugins(data):
     return plugins
 
 
+MANAGED_SKILL = "\n\n---\nname: dona-maria-cardapio\n"
+
+
 def conversation_context(data):
     context = (ROOT / ".hermes.md").read_text(encoding="utf-8")
     if data["context_mode"] == "REAL":
@@ -427,10 +438,11 @@ def configure(directory):
     }
 
 
-def profile_home(directory):
-    result = hermes(directory, ["config", "path"], capture=True)
+def profile_home(directory, data=None):
+    if data is None:
+        data, _ = manifest(directory)
+    result = hermes(directory, ["config", "path"], capture=True, data=data)
     home = Path(result.stdout.strip()).parent
-    data, _ = manifest(directory)
     if not home.is_absolute() or home.name != profile_name(data) or home.is_symlink():
         raise SetupError("Caminho do perfil não corresponde à demo.")
     return home
@@ -548,7 +560,7 @@ def verify_profile(directory):
             ).read_bytes():
                 raise SetupError("Plugin divergente do checkout: " + plugin_name)
     if (home / "conversation/.hermes.md").read_text(encoding="utf-8") != conversation_context(data):
-        raise SetupError("Orientações desatualizadas; prepare outro atendimento.")
+        raise SetupError("Orientações desatualizadas; execute refresh-context.")
     if data["context_mode"] == "REAL":
         verify_gateway_registration(directory, home, runtime_command)
     skills = hermes(directory, ["skills", "list", "--enabled-only"], capture=True)
@@ -610,6 +622,62 @@ def refresh_research(directory):
     }
 
 
+def refresh_context(directory):
+    """Regrava só as orientações gerenciadas do Desktop REAL; não abre o banco."""
+    data = manifest_data(directory)
+    ready = directory / "profile-ready.json"
+    if data["context_mode"] != "REAL" or ready.is_symlink() or not ready.is_file():
+        raise SetupError("Atualização exige perfil REAL já preparado; não reimporte a planilha.")
+    if json.loads(ready.read_text(encoding="utf-8")) != {"profile": profile_name(data)}:
+        raise SetupError("Perfil preparado não corresponde a este atendimento.")
+    home = profile_home(directory, data)
+    binding = json.loads(
+        hermes(
+            directory, ["config", "get", "mcp_servers", "--json"], capture=True, data=data
+        ).stdout
+    )
+    environment_binding = (binding.get("dona_maria") or {}).get("env") or {}
+    if (
+        environment_binding.get("DONA_MARIA_DB_PATH") != str(directory / "workspace.sqlite3")
+        or environment_binding.get("DONA_MARIA_WORKSPACE_ID") != data["workspace_id"]
+    ):
+        raise SetupError("Perfil vinculado a outro atendimento; nada foi alterado.")
+    conversation = home / "conversation"
+    target = conversation / ".hermes.md"
+    if (
+        home.parent.name != "profiles"
+        or conversation.is_symlink()
+        or target.is_symlink()
+        or not target.is_file()
+        or target.resolve().parent != conversation.resolve()
+        or conversation.resolve().parent != home.resolve()
+    ):
+        raise SetupError("Orientações ausentes ou redirecionadas; nada foi alterado.")
+    current = target.read_text(encoding="utf-8")
+    expected = conversation_context(data)
+    if current == expected:
+        return {"conversation_context": "UNCHANGED", "business_writes": False}
+    # Só substitui o arquivo produzido por configure: orientações + skill incorporada.
+    if (
+        not current.startswith(expected.split("\n", 1)[0] + "\n")
+        or current.count(MANAGED_SKILL) != 1
+    ):
+        raise SetupError("Orientações com conteúdo não gerenciado; nada foi alterado.")
+    temporary = conversation / f".hermes.md.{uuid4().hex}.tmp"
+    handle = temporary.open("x", encoding="utf-8")
+    try:
+        with handle:
+            handle.write(expected)
+        os.replace(temporary, target)
+    finally:
+        temporary.unlink(missing_ok=True)
+    return {
+        "conversation_context": "UPDATED",
+        "business_writes": False,
+        "next_step": "Feche o Desktop, execute verify-profile e abra uma nova conversa.",
+    }
+
+
 def check_research(directory):
     data, _ = manifest(directory)
     home = profile_home(directory)
@@ -654,6 +722,7 @@ def main():
             "configure",
             "verify-profile",
             "refresh-research",
+            "refresh-context",
             "check-research",
             "model",
             "chat",
@@ -716,6 +785,8 @@ def main():
             result = verify_profile(directory)
         elif args.action == "refresh-research":
             result = refresh_research(directory)
+        elif args.action == "refresh-context":
+            result = refresh_context(directory)
         elif args.action == "check-research":
             result = check_research(directory)
         elif args.action in {"model", "chat", "desktop"}:
@@ -752,7 +823,7 @@ def main():
             data, _ = manifest(directory)
             review_parser = argparse.ArgumentParser(add_help=False, exit_on_error=False)
             review_parser.add_argument(
-                "operation", choices=("list", "inspect", "approve", "reject")
+                "operation", choices=("list", "inspect", "approve", "reject", "reviews")
             )
             review_parser.add_argument("proposal", nargs="?")
             review_parser.add_argument("--hash")
@@ -764,7 +835,8 @@ def main():
                     raise ValueError
             except (ValueError, argparse.ArgumentError):
                 raise SetupError(
-                    "Argumentos de revisão inválidos; use list, inspect, approve ou reject."
+                    "Argumentos de revisão inválidos; "
+                    "use list, inspect, reviews, approve ou reject."
                 ) from None
             subprocess.run(
                 [

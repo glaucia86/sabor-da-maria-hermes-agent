@@ -14,6 +14,28 @@ from dona_maria.persistence import SQLiteWorkspaceRepository
 from dona_maria.planning import BusinessRuleError
 
 
+def category_reviews(state, position: int) -> dict:
+    """Leitura local do texto integral vigente, sem metadados de proveniência."""
+    if not 1 <= position <= len(state.candidates):
+        raise ValueError("Receita ausente.")
+    recipe = state.candidates[position - 1]
+    return {
+        "recipe": position,
+        "title": recipe.title,
+        "version": recipe.version,
+        "category_reviews": [
+            {
+                "category": review.category,
+                "current": review.method_version == recipe.version,
+                "requirement_keys": review.requirement_keys,
+                "not_applicable_reason": review.not_applicable_reason,
+                "source_kind": review.source.kind,
+            }
+            for review in recipe.category_reviews
+        ],
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Atestação local da manifestação da cozinheira.")
     parser.add_argument("--database", type=Path, required=True)
@@ -26,6 +48,8 @@ def main() -> None:
     research_migration.add_argument("--backup", type=Path, required=True)
     inspect = commands.add_parser("inspect")
     inspect.add_argument("proposal", type=UUID)
+    reviews = commands.add_parser("reviews")
+    reviews.add_argument("recipe", type=int)
     for action in ("approve", "reject"):
         command = commands.add_parser(action)
         command.add_argument("proposal", type=UUID)
@@ -35,7 +59,8 @@ def main() -> None:
     service = ApprovalService(repository)
     workspace = str(args.workspace)
     try:
-        if repository.load(workspace) is None:
+        loaded = repository.load(workspace)
+        if loaded is None:
             raise ValueError("Workspace ausente.")
         if args.action == "migrate":
             migrate_proposals(repository, args.backup)
@@ -49,6 +74,8 @@ def main() -> None:
             result = service.list(workspace)
         elif args.action == "inspect":
             result = service.inspect(workspace, str(args.proposal))
+        elif args.action == "reviews":
+            result = category_reviews(loaded[1], args.recipe)
         elif args.action == "reject":
             result = service.reject(workspace, str(args.proposal), args.hash)
         else:

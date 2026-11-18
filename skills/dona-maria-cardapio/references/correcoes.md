@@ -24,6 +24,13 @@ exigidas pelo estado atual. O forno voltar não confirma essas decisões.
   categorias na nova versão. Confirme novamente produção/escala por
   `set_production_plan`; rendimento e quantidades não se ajustam sozinhos.
   Nova avaliação e resumo favorável precedem novo aceite, cálculo e escolha.
+- Para corrigir só a justificativa ou as chaves de uma categoria, use
+  `changes.category_review_changes`, conforme "Corrigir uma revisão de categoria"
+  na skill principal. Nunca reenvie as três revisões nem as reconstrua pelo
+  resumo. A justificativa enviada substitui o texto inteiro; sem o texto
+  vigente completo, peça a leitura local à pessoa operadora e pause. Se o aceite
+  ou o preço deixarem de valer, explique isso e peça somente as reconfirmações
+  indicadas pelo estado.
 - Recusa explícita usa `record_recipe_feedback=REJECTED`, mesmo após preço
   escolhido. Confira retirada do plano e invalidações, preserve histórico e
   ofereça outra pesquisa; não registre automaticamente uma preferência geral

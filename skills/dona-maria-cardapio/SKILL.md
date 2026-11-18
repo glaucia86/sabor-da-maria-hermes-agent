@@ -79,6 +79,83 @@ a versão histórica vem da consulta. O servidor recupera os demais campos e sua
 fontes. Não envie eventos ou dados derivados. Mudanças de método, medidas,
 rendimento, condições ou requisitos exigem nova revisão operacional antes do aceite.
 
+### Corrigir uma revisão de categoria
+
+Para mudar só a justificativa ou as chaves de uma revisão `EQUIPMENT`, `SKILL`
+ou `OPERATION` que já existe na versão consultada, use
+`changes.category_review_changes`: um item por categoria alterada, com
+`category` e apenas o campo que a cozinheira mudou, `not_applicable_reason` ou
+`requirement_keys`. O servidor recupera de `origin.derived_from` os campos
+omitidos e as demais revisões, com valores e fontes literais. Não reenvie as
+outras categorias, não reconstrua revisões a partir de resumos e não use
+`category_reviews` para corrigir uma categoria. A coleção completa serve somente
+quando a versão não tem revisões a corrigir, por exemplo depois de uma mudança
+operacional que as reiniciou, e a cozinheira revisou cada categoria por inteiro.
+
+`not_applicable_reason` substitui a justificativa inteira; não acrescenta, não
+remove nem corrige só um trecho. O estado consultado não mostra o texto vigente.
+Envie-o somente quando a cozinheira manifestar a justificativa completa nova.
+Se ela quiser complementar ou corrigir parte da atual, ou se faltar o texto
+integral, interrompa a proposta e peça à pessoa operadora uma leitura local,
+integral e confiável da justificativa vigente. Use somente o texto lido por ela
+e confirmado pela cozinheira como base da nova manifestação completa. Nunca
+reconstrua, resuma ou complete o texto anterior pela memória, pelas pendências
+ou pelo resumo de uma proposta.
+
+`requirement_keys` precisa repetir exatamente as chaves das `conditions` daquela
+categoria na receita; não cria nem remove requisitos. Mudança de método,
+contexto, rendimento, requisitos ou ingredientes reinicia todas as revisões: faça
+essa mudança antes e corrija as categorias depois, em outra proposta. Envie
+somente valor diferente do atual; categoria ausente, repetida ou alteração sem
+efeito é recusada sem gravar.
+
+Em cada item alterado, declare em `source` a origem da nova manifestação:
+`{"kind":"USER_PROVIDED"}` para o que a cozinheira disse. É obrigatório quando a
+revisão anterior vinha de fonte web, que não sustenta o novo texto. Em
+`SIMULATION`, dado fictício usa `USER_SIMULATION` com `scenario`. `method_version`,
+`evidence`, `local_event_id` e `information_ref` são autoridade do servidor,
+materializada após a aprovação local; nunca os envie nem copie de respostas.
+
+Exemplo genérico que registra uma lacuna e corrige uma justificativa na mesma
+adaptação. Os valores entre `<>` vêm da conversa; `recipe_id` é a referência
+numérica e `version`, a versão atual lidas em `get_business_state`:
+
+```json
+{
+  "operation_id": "<UUID novo para este conteúdo>",
+  "command": {
+    "kind": "register_recipe_candidate",
+    "payload": {
+      "recipe_id": 1,
+      "candidate": {
+        "origin": {
+          "source": {"kind": "USER_PROVIDED"},
+          "derived_from": {"recipe_id": 1, "version": 1}
+        },
+        "changes": {
+          "declared_gaps": ["<lacuna declarada pela cozinheira>"],
+          "category_review_changes": [
+            {
+              "category": "SKILL",
+              "not_applicable_reason": "<justificativa completa dita pela cozinheira>",
+              "source": {"kind": "USER_PROVIDED"}
+            }
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+`declared_gaps` substitui a lista inteira: inclua as lacunas que continuam.
+Justificativa ou lacuna diferente muda a base do prato: o servidor pode aumentar
+a versão de negócio e invalidar aceite, cálculo e escolha de preço daquele prato.
+A proposta não altera nada até a pessoa operadora inspecioná-la e aprová-la
+localmente, com atestação da manifestação exata. Depois, releia
+`get_business_state`, confira versão, pendências, status, `menu` e
+`requires_local_review`, explique os efeitos e peça só as reconfirmações exigidas.
+
 Quando a cozinheira relatar uma medição, use `USER_REPORTED_MEASUREMENT` no
 `source` da medida, rendimento ou conversão, com `method` e `context` relatados.
 Conserve valor/unidade e, se utilizadas, referências `inputs` locais à informação
