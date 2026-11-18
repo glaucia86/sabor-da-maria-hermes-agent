@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Roteiro da demonstração no Hermes Desktop — Sabor da Maria</title>
-<meta name="description" content="Guia interativo do Sabor da Maria no Hermes Desktop: demo rápida de 8 minutos, somente leitura, e jornada completa de validação técnica com prompts copiáveis, revisão humana e recuperação de erros.">
+<meta name="description" content="Guia interativo do Sabor da Maria no Hermes Desktop: demo ao vivo da jornada REAL completa, com aprovações locais, e jornada completa de validação técnica com prompts copiáveis, revisão humana e recuperação de erros.">
 <style>
 @font-face {
   font-family: "Manrope";
@@ -228,7 +228,7 @@ noscript p { padding: 12px 16px; border: 1px solid var(--sim-line); border-radiu
 
 html[data-track="real"] [data-only="sim"], html[data-track="sim"] [data-only="real"] { display: none !important; }
 
-/* Modos: escolha, demo rápida e jornada completa */
+/* Modos: escolha, demo ao vivo e jornada completa */
 .top-center { min-width: 0; }
 .top-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 12px 18px; }
 .mode-switch { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
@@ -273,6 +273,10 @@ html[data-track="real"] [data-only="sim"], html[data-track="sim"] [data-only="re
 .q-timer .actions { display: flex; gap: 8px; }
 .q-timer .btn { max-width: none; }
 .q-timer .btn[aria-pressed="true"] { border-color: var(--real-line); color: var(--real-ink); }
+.op-details { margin: 0 0 22px; }
+.op-details > summary { cursor: pointer; padding: 12px 16px; border: 1px solid var(--research-line); border-radius: var(--radius); background: #1a1626; color: var(--research-ink); font-size: 14.5px; }
+.op-details[open] > summary { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.op-details > .op-channel { margin-top: 0; border-top-left-radius: 0; border-top-right-radius: 0; }
 .op-channel { margin-top: 24px; padding: 22px 24px 24px; border: 1px solid var(--research-line); border-left-width: 5px; border-radius: var(--radius); background: #1a1626; }
 .op-channel > header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 18px; }
 .op-channel > header h3 { font-size: 24px; font-weight: 800; letter-spacing: -.035em; color: #fff; }
@@ -331,14 +335,14 @@ html[data-track="real"] [data-only="sim"], html[data-track="sim"] [data-only="re
       <div class="progress" id="progress" role="progressbar" aria-label="Etapas do roteiro concluídas" aria-valuemin="0" aria-valuemax="14" aria-valuenow="0" aria-valuetext="0 de 14 etapas concluídas"><span></span></div>
     </div>
     <div class="progress-wrap" data-for="quick" hidden>
-      <span class="progress-text" id="q-progress-text"><strong>Cena 1</strong> de 5</span>
-      <div class="progress" id="q-progress" role="progressbar" aria-label="Cenas da demo rápida" aria-valuemin="1" aria-valuemax="5" aria-valuenow="1" aria-valuetext="Cena 1 de 5"><span></span></div>
+      <span class="progress-text" id="q-progress-text"><strong>Cena 1</strong> de 10</span>
+      <div class="progress" id="q-progress" role="progressbar" aria-label="Cenas da demo ao vivo" aria-valuemin="1" aria-valuemax="10" aria-valuenow="1" aria-valuetext="Cena 1 de 10"><span></span></div>
     </div>
     <p class="progress-text" data-for="chooser" hidden>Escolha como conduzir a demonstração.</p>
   </div>
   <div class="top-actions">
     <div class="mode-switch" role="group" aria-label="Modo do roteiro">
-      <button type="button" data-mode="quick" aria-pressed="false">Demo rápida<small>8 min</small></button>
+      <button type="button" data-mode="quick" aria-pressed="false">Demo ao vivo<small>13 min</small></button>
       <button type="button" data-mode="full" aria-pressed="false">Jornada completa<small>14 etapas</small></button>
     </div>
     <fieldset class="track-switch" data-for="full">
@@ -358,20 +362,20 @@ html[data-track="real"] [data-only="sim"], html[data-track="sim"] [data-only="re
 <section class="chooser" id="modos" aria-labelledby="t-modos">
   <p class="kicker">Guia interativo · Hermes Desktop</p>
   <h1 id="t-modos" tabindex="-1">Como você quer <span>conduzir?</span></h1>
-  <p class="lead">O mesmo atendimento pode ser apresentado de duas formas. Para uma avaliação com tempo limitado, use a <strong>Demo rápida</strong>: ela só consulta o workspace REAL já preparado. A <strong>Jornada completa</strong> é o roteiro de validação técnica, com propostas e aprovações locais.</p>
-  <noscript><p>Sem JavaScript, os dois modos aparecem em sequência nesta página: primeiro a demo rápida, depois a jornada completa.</p></noscript>
+  <p class="lead">Para a apresentação, use a <strong>Demo ao vivo</strong>: a jornada REAL completa, da pesquisa ao preço, num atendimento novo, com aprovações locais. A <strong>Jornada completa</strong> é o roteiro de validação técnica detalhada, com trilhas REAL e SIMULATION.</p>
+  <noscript><p>Sem JavaScript, os dois modos aparecem em sequência nesta página: primeiro a demo ao vivo, depois a jornada completa.</p></noscript>
   <div class="mode-cards">
     <article class="mode-card primary" aria-labelledby="t-card-rapida">
       <p class="kicker">Recomendado para apresentações</p>
-      <h2 id="t-card-rapida">Demo rápida <span>— 8 minutos</span></h2>
-      <p>Cinco cenas curtas, somente leitura, sobre o workspace REAL preparado antes da sessão.</p>
+      <h2 id="t-card-rapida">Demo ao vivo <span>— 13 minutos</span></h2>
+      <p>10 cenas, da pesquisa à escolha do preço, num atendimento REAL novo com a planilha original.</p>
       <ul class="facts">
-        <li>Despensa, fonte Exa, adaptação, viabilidade e decisões.</li>
-        <li>Sem PowerShell, sem novas propostas e sem aprovações.</li>
-        <li>Prompt pronto, resultado esperado e frase para o avaliador em cada cena.</li>
-        <li>Cronômetro indicativo por cena.</li>
+        <li>Pesquisa Exa, receita, cozinha, interesse, plano, compras, aceite, CMV e preço.</li>
+        <li>6 aprovações no PowerShell com os atalhos de <code>docs/speaker/demo-terminal.ps1</code>.</li>
+        <li>Prompt pronto, comando, resultado esperado e frase para o avaliador em cada cena.</li>
+        <li>Cronômetro indicativo por cena; validado em 19/11.</li>
       </ul>
-      <div class="cta"><a class="btn primary" href="#demo-1" data-mode-link="quick">Começar a demo rápida →</a><span class="progress-text" id="resume-quick"></span></div>
+      <div class="cta"><a class="btn primary" href="#demo-1" data-mode-link="quick">Começar a demo ao vivo →</a><span class="progress-text" id="resume-quick"></span></div>
     </article>
     <article class="mode-card" aria-labelledby="t-card-completa">
       <p class="kicker">Validação técnica</p>
@@ -388,236 +392,410 @@ html[data-track="real"] [data-only="sim"], html[data-track="sim"] [data-only="re
 </section>
 </div>
 
-<!-- ============================ DEMO RÁPIDA ============================ -->
+<!-- ============================ DEMO AO VIVO ============================ -->
 <div class="layout view" id="view-quick" data-view="quick">
 <aside class="sidebar">
-  <nav aria-label="Cenas da demo rápida">
-    <h2>Demo rápida · 8 min</h2>
+  <nav aria-label="Cenas da demo ao vivo">
+    <h2>Demo ao vivo · 13:00</h2>
     <ol>
-      <li><a href="#demo-1" data-qnav><span class="num">01</span><span>Despensa e orçamento<span class="dur">1:30</span></span><span class="state" aria-hidden="true" hidden></span></a></li>
-      <li><a href="#demo-2" data-qnav><span class="num">02</span><span>Fonte Exa registrada<span class="dur">1:30</span></span><span class="state" aria-hidden="true" hidden></span></a></li>
-      <li><a href="#demo-3" data-qnav><span class="num">03</span><span>Adaptação e plano<span class="dur">1:45</span></span><span class="state" aria-hidden="true" hidden></span></a></li>
-      <li><a href="#demo-4" data-qnav><span class="num">04</span><span>Viabilidade pendente<span class="dur">1:30</span></span><span class="state" aria-hidden="true" hidden></span></a></li>
-      <li><a href="#demo-5" data-qnav><span class="num">05</span><span>Decisões e aprovação externa<span class="dur">1:45</span></span><span class="state" aria-hidden="true" hidden></span></a></li>
+      <li><a href="#demo-1" data-qnav><span class="num">01</span><span>Despensa e pesquisa<span class="dur">1:30</span></span><span class="state" aria-hidden="true" hidden></span></a></li>
+      <li><a href="#demo-2" data-qnav><span class="num">02</span><span>Receita da Dona Maria<span class="dur">2:00</span></span><span class="state" aria-hidden="true" hidden></span></a></li>
+      <li><a href="#demo-3" data-qnav><span class="num">03</span><span>Condições da cozinha<span class="dur">1:15</span></span><span class="state" aria-hidden="true" hidden></span></a></li>
+      <li><a href="#demo-4" data-qnav><span class="num">04</span><span>Interesse<span class="dur">1:00</span></span><span class="state" aria-hidden="true" hidden></span></a></li>
+      <li><a href="#demo-5" data-qnav><span class="num">05</span><span>Plano<span class="dur">1:00</span></span><span class="state" aria-hidden="true" hidden></span></a></li>
+      <li><a href="#demo-6" data-qnav><span class="num">06</span><span>O que tem e o que falta<span class="dur">1:00</span></span><span class="state" aria-hidden="true" hidden></span></a></li>
+      <li><a href="#demo-7" data-qnav><span class="num">07</span><span>Aceite<span class="dur">1:00</span></span><span class="state" aria-hidden="true" hidden></span></a></li>
+      <li><a href="#demo-8" data-qnav><span class="num">08</span><span>CMV e cenários<span class="dur">1:45</span></span><span class="state" aria-hidden="true" hidden></span></a></li>
+      <li><a href="#demo-9" data-qnav><span class="num">09</span><span>Escolha do preço<span class="dur">1:00</span></span><span class="state" aria-hidden="true" hidden></span></a></li>
+      <li><a href="#demo-10" data-qnav><span class="num">10</span><span>Retomada e fechamento<span class="dur">1:30</span></span><span class="state" aria-hidden="true" hidden></span></a></li>
     </ol>
   </nav>
   <div class="side-actions">
     <div class="q-timer" role="group" aria-labelledby="t-timer">
       <h2 id="t-timer">Cronômetro indicativo</h2>
       <div class="clock"><span>Cena</span><strong id="q-scene-clock">0:00</strong><span id="q-scene-target">/ 1:30</span></div>
-      <div class="clock"><span>Total</span><strong id="q-total-clock">0:00</strong><span>/ 8:00</span></div>
+      <div class="clock"><span>Total</span><strong id="q-total-clock">0:00</strong><span>/ 13:00</span></div>
       <div class="actions"><button type="button" class="btn small" id="q-timer-toggle" aria-pressed="false">Iniciar</button><button type="button" class="btn small" id="q-timer-reset">Zerar</button></div>
     </div>
-    <p>Somente leitura: nenhum comando, nenhuma proposta, nenhuma aprovação.</p>
+    <p>6 aprovações no PowerShell: <code>aprovar</code> após cada proposta.</p>
     <p>Atalhos: <kbd>←</kbd> cena anterior · <kbd>→</kbd> próxima.</p>
   </div>
 </aside>
 
 <main class="q-main" id="conteudo-rapido" tabindex="-1">
 
+<details class="op-details">
+  <summary><strong>Canal da operadora</strong> · atalhos do PowerShell e o que fazer se algo sair do roteiro</summary>
+<section class="op-channel" aria-labelledby="t-op-channel">
+    <header>
+      <h3 id="t-op-channel">Canal da operadora <span>— fora do modelo</span></h3>
+      <span class="badge b-op">Prepare antes de iniciar o relógio</span>
+    </header>
+    <p class="op-intro">A aprovação roda num <strong>terminal local, em outro processo</strong>. A CLI <strong>não é ferramenta MCP</strong> e não aparece no catálogo do Hermes: o agente cria propostas, mas <strong>não consegue aprová-las</strong>.</p>
+    <div class="grid-2">
+      <ol class="steps-list">
+        <li>
+          <h3>Carregar os atalhos</h3>
+          <p>Na raiz do checkout, no PowerShell que ficará ao lado do Desktop.</p>
+          <figure class="cmd-block">
+            <figcaption class="prompt-head"><span class="speaker">PowerShell da operadora</span><button type="button" class="copy" data-copy>Copiar comando</button></figcaption>
+            <pre><code>. .\docs\speaker\demo-terminal.ps1 -Directory "artifacts/private/demo-24nov"</code></pre>
+          </figure>
+        </li>
+        <li>
+          <h3>Aprovar <code>aprovar</code></h3>
+          <p>Mostra o resumo, copia <code>ATESTO &lt;hash&gt;</code> e abre a revisão local. Leia, confira com a fala, cole (Ctrl+V) e tecle Enter. Com duas propostas, use <code>aprovar 1</code> ou <code>aprovar 2</code>.</p>
+        </li>
+        <li>
+          <h3>Conferir <code>pend</code> · <code>ver 1</code> · <code>historico</code></h3>
+          <p>Pendentes com tempo para expirar, conteúdo completo e tudo o que já foi decidido.</p>
+        </li>
+      </ol>
+      <div class="stack">
+        <div class="block">
+          <h3>Verificado antes de gravar</h3>
+          <p>A revisão confere conteúdo, hash e prazo de 10 minutos; o domínio revalida estado e regras e grava efeito e auditoria na mesma transação. Se algo falha, nada é aplicado.</p>
+        </div>
+        <div class="block">
+          <h3>Se algo sair do roteiro</h3>
+          <ul class="checks"><li>Duas propostas: aprove a que corresponde à fala e peça “refaça só a outra”.</li><li><code>STALE_REVISION</code>: “a proposta ficou desatualizada; refaça só ela”.</li><li><code>AUTHORIZATION_EXPIRED</code>: “a proposta expirou; refaça”. A pasta está íntegra.</li><li>O agente propôs algo que ela não disse: não aprove.</li></ul>
+        </div>
+        <div class="block">
+          <h3>Se o tempo apertar</h3>
+          <p>Em 8:00 antes da cena 7, encurte as explicações. Em 11:30 antes da cena 9, pule a cena 10. Em 13:00 sem preço, pare e mostre o resultado de 19/11 no slide 11.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</details>
+
 <!-- Cena 1 -->
-<section class="section" id="demo-1" data-qscene data-title="Despensa e orçamento" data-seconds="90" aria-labelledby="tq-1">
+<section class="section" id="demo-1" data-qscene data-title="Despensa e pesquisa" data-seconds="90" aria-labelledby="tq-1">
   <header>
-    <p class="kicker">Demo rápida · Cena 1 de 5</p>
-    <h2 id="tq-1" tabindex="-1">Despensa REAL e orçamento de R$ 80</h2>
+    <p class="kicker">Demo ao vivo · Cena 1 de 10</p>
+    <h2 id="tq-1" tabindex="-1">Despensa e pesquisa</h2>
     <dl class="meta">
       <div><dt>Duração</dt><dd><span class="badge b-none">1 min 30 s</span></dd></div>
-      <div><dt>Trilha</dt><dd><span class="badge b-real">REAL · preparado antes da sessão</span></dd></div>
-      <div><dt>Ferramentas esperadas</dt><dd><span class="tool t-read">get_business_state</span><span class="tool t-read">get_inventory_snapshot</span></dd></div>
-      <div><dt>Aprovação</dt><dd><span class="badge b-none">Nenhuma — somente leitura</span></dd></div>
+      <div><dt>Trilha</dt><dd><span class="badge b-real">REAL · atendimento novo</span></dd></div>
+      <div><dt>Ferramentas esperadas</dt><dd><span class="tool t-read">get_business_state</span><span class="tool t-read">get_inventory_snapshot</span><span class="tool t-research">search_culinary_sources</span><span class="tool t-research">extract_culinary_source</span></dd></div>
+      <div><dt>Aprovação</dt><dd><span class="badge b-none">Nenhuma</span></dd></div>
     </dl>
   </header>
   <div class="callout info">
     <span class="ico" aria-hidden="true">i</span>
     <div>
-      <p><strong>Antes do primeiro prompt.</strong> Abra o Hermes Desktop no perfil REAL já preparado e diga ao avaliador o que foi feito antes da sessão: planilha original importada, pesquisa Exa e cinco decisões aprovadas localmente. Durante a demo não há comandos no terminal. Se o modelo demorar ou falhar, mostre o estado alcançado e siga para a próxima cena, sem completar com hipóteses.</p>
+      <p><strong>Antes de colar:</strong> diga que este é um atendimento REAL novo, criado com a planilha original, em que ninguém conversou; que você faz a Dona Maria no Desktop e a operadora no PowerShell; e que as falas são de demonstração.</p>
     </div>
   </div>
   <div class="grid-2">
     <div class="stack">
       <figure class="prompt">
         <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag real">REAL</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
-        <blockquote class="prompt-text">Oi! Sou a Maria. Hoje é só para eu ver, então não registre nem proponha nada. Me mostre um resumo da minha despensa: quantos ingredientes estão salvos, alguns exemplos com quanto eu tenho e quanto custa cada grama ou mililitro, e quanto ainda posso gastar com complementos.</blockquote>
-      </figure>
-      <div class="block say"><h3>Diga ao avaliador</h3><p>“Esses números vêm do banco, não da memória do modelo. A planilha original foi importada antes, e o agente só consulta.”</p></div>
-    </div>
-    <div class="stack">
-      <div class="block expected"><h3>Resultado esperado</h3><p>O agente consulta o estado e a despensa e informa os <strong>37 ingredientes</strong> da planilha original, com estoque e custo unitário de alguns deles. O saldo para complementos parte do teto de <strong>R$ 80,00</strong>. Custos ausentes ou unidades ambíguas aparecem como pendência, nunca como zero.</p></div>
-      <div class="block done"><h3>Cena concluída quando</h3><ul class="checks"><li>A contagem de 37 ingredientes foi apresentada.</li><li>O saldo para complementos foi informado a partir dos R$ 80,00.</li><li>A resposta não anuncia nada como registrado ou proposto.</li></ul></div>
-    </div>
-  </div>
-</section>
-
-<!-- Cena 2 -->
-<section class="section" id="demo-2" data-qscene data-title="Fonte Exa registrada" data-seconds="90" aria-labelledby="tq-2">
-  <header>
-    <p class="kicker">Demo rápida · Cena 2 de 5</p>
-    <h2 id="tq-2" tabindex="-1">Receita pesquisada via Exa, fonte original e proveniência</h2>
-    <dl class="meta">
-      <div><dt>Duração</dt><dd><span class="badge b-none">1 min 30 s</span></dd></div>
-      <div><dt>Ferramentas esperadas</dt><dd><span class="tool t-read">get_business_state</span></dd></div>
-      <div><dt>Pesquisa</dt><dd><span class="badge b-none">Nenhuma nova busca — registro anterior</span></dd></div>
-      <div><dt>Aprovação</dt><dd><span class="badge b-none">Nenhuma — somente leitura</span></dd></div>
-    </dl>
-  </header>
-  <div class="grid-2">
-    <div class="stack">
-      <figure class="prompt">
-        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag real">REAL</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
-        <blockquote class="prompt-text">Quero rever a receita que já pesquisamos na internet. Não faça uma nova pesquisa. Me mostre o título, o link da fonte, quando ela foi consultada e quais informações vieram da internet, sem mudar nada.</blockquote>
-      </figure>
-      <div class="block say"><h3>Diga ao avaliador</h3><p>“Essa pesquisa foi feita antes da sessão, pelo Exa, só com termos liberados. Estou mostrando o registro da fonte, não uma busca ao vivo.”</p></div>
-    </div>
-    <div class="stack">
-      <div class="block expected"><h3>Resultado esperado</h3><p>O agente lê o estado e apresenta a receita web registrada: título, link, trecho e data da consulta. A origem aparece como pesquisa web registrada, e as condições da cozinha continuam dependendo de confirmação. Nenhuma ferramenta de pesquisa é chamada.</p></div>
-      <div class="block done"><h3>Cena concluída quando</h3><ul class="checks"><li>O link e a data da consulta da fonte aparecem na conversa.</li><li>O agente separa o que veio da internet do que ainda depende da cozinha.</li><li>Se o Desktop exibir as chamadas, nenhuma é <code>search_culinary_sources</code> ou <code>extract_culinary_source</code>.</li></ul></div>
-    </div>
-  </div>
-</section>
-
-<!-- Cena 3 -->
-<section class="section" id="demo-3" data-qscene data-title="Adaptação e plano" data-seconds="105" aria-labelledby="tq-3">
-  <header>
-    <p class="kicker">Demo rápida · Cena 3 de 5</p>
-    <h2 id="tq-3" tabindex="-1">Adaptação da Maria, fonte preservada e plano de 1 lote com 4 porções</h2>
-    <dl class="meta">
-      <div><dt>Duração</dt><dd><span class="badge b-none">1 min 45 s</span></dd></div>
-      <div><dt>Ferramentas esperadas</dt><dd><span class="tool t-read">get_business_state</span></dd></div>
-      <div><dt>Aprovação</dt><dd><span class="badge b-none">Nenhuma — somente leitura</span></dd></div>
-    </dl>
-  </header>
-  <div class="grid-2">
-    <div class="stack">
-      <figure class="prompt">
-        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag real">REAL</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
-        <blockquote class="prompt-text">Agora me mostre a minha versão adaptada dessa receita ao lado da original. Quero saber o que mudou, de onde veio cada informação e como ficou o plano de produção. É só consulta.</blockquote>
-      </figure>
-      <div class="block say"><h3>Diga ao avaliador</h3><p>“A adaptação não apaga a fonte. A receita original continua intacta, e cada campo diz se veio da web ou da Maria.”</p></div>
-    </div>
-    <div class="stack">
-      <div class="block expected"><h3>Resultado esperado</h3><p>Duas receitas separadas: a original da web, intacta, e a adaptação da Maria, indicando de qual receita deriva. A origem de cada informação aparece por campo, distinguindo o que veio da fonte do que ela informou. O plano vigente tem <strong>1 lote e 4 porções</strong>.</p></div>
-      <div class="block done"><h3>Cena concluída quando</h3><ul class="checks"><li>Original e adaptação aparecem como receitas distintas.</li><li>A adaptação indica a receita de origem e a procedência dos campos.</li><li>O plano apresentado é de 1 lote e 4 porções.</li></ul></div>
-    </div>
-  </div>
-</section>
-
-<!-- Cena 4 -->
-<section class="section" id="demo-4" data-qscene data-title="Viabilidade pendente" data-seconds="90" aria-labelledby="tq-4">
-  <header>
-    <p class="kicker">Demo rápida · Cena 4 de 5</p>
-    <h2 id="tq-4" tabindex="-1">Viabilidade ainda pendente: o modelo não inventa o que falta</h2>
-    <dl class="meta">
-      <div><dt>Duração</dt><dd><span class="badge b-none">1 min 30 s</span></dd></div>
-      <div><dt>Ferramentas esperadas</dt><dd><span class="tool t-read">evaluate_recipe_feasibility</span><span class="tool t-read">get_business_state</span></dd></div>
-      <div><dt>Aprovação</dt><dd><span class="badge b-none">Nenhuma — consulta somente leitura</span></dd></div>
-    </dl>
-  </header>
-  <div class="grid-2">
-    <div class="stack">
-      <figure class="prompt">
-        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag real">REAL</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
-        <blockquote class="prompt-text">Com o que eu já contei da minha cozinha, eu consigo fazer esse prato na quantidade do plano? Se faltar alguma informação, só me diga o que falta. Não registre nada agora e não suponha nada.</blockquote>
+        <blockquote class="prompt-text">Oi! Quero montar meu cardápio de delivery. Veja o que tenho na despensa e pesquise uma receita real de frango acebolado que aproveite meus ingredientes.</blockquote>
       </figure>
       <figure class="prompt">
-        <figcaption class="prompt-head"><span class="speaker">Se o agente pedir a informação <span class="tag real">REAL</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
-        <blockquote class="prompt-text">Obrigada. Hoje eu não vou responder nem registrar nada. Só queria entender o que ainda falta confirmar.</blockquote>
-        <p class="prompt-note">Responder com um fato criaria uma proposta, e a demo rápida não cria propostas.</p>
+        <figcaption class="prompt-head"><span class="speaker">Se a pesquisa falhar <span class="tag real">REAL</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">A pesquisa pode ter falhado por instabilidade momentânea. Tente pesquisar de novo uma receita real de frango acebolado.</blockquote>
       </figure>
-      <div class="block say"><h3>Diga ao avaliador</h3><p>“Pendente é o comportamento correto. Sem fato confirmado, o domínio não deixa o agente concluir que ela consegue preparar o prato.”</p></div>
+      <div class="block say"><h3>Diga ao avaliador</h3><p>“Os números da despensa vêm do banco. A pesquisa usa só os termos que a operadora liberou, e o conteúdo da página entra como dado não confiável.”</p></div>
     </div>
     <div class="stack">
-      <div class="block expected"><h3>Resultado esperado</h3><p>A avaliação de viabilidade volta <strong>PENDING</strong>. O agente nomeia, em linguagem simples, as condições que ainda faltam confirmar e pergunta por elas, em vez de completá-las com hipóteses. Ele não declara o prato elegível nem fala em aceite.</p></div>
-      <div class="block done"><h3>Cena concluída quando</h3><ul class="checks"><li>A viabilidade aparece como pendente.</li><li>Pelo menos uma condição faltante foi nomeada.</li><li>Nenhum fato novo foi registrado ou proposto.</li></ul></div>
+      <div class="block expected"><h3>Resultado esperado</h3><p>Despensa com peito de frango, cebola, alho, óleo e sal. Receita <strong>Frango acebolado, TudoGostoso</strong>, 4 porções. O agente aponta que a fonte usa sobrecoxa, e não peito, e lista o que falta. Nenhuma proposta.</p></div>
+      <div class="block done"><h3>Cena concluída quando</h3><ul class="checks"><li>A fonte real aparece com título e link.</li><li>O agente compara a receita com a despensa.</li><li>Nenhuma proposta foi criada.</li></ul></div>
     </div>
   </div>
-</section>
-
-<!-- Cena 5 -->
-<section class="section" id="demo-5" data-qscene data-title="Decisões e aprovação externa" data-seconds="105" aria-labelledby="tq-5">
-  <header>
-    <p class="kicker">Demo rápida · Cena 5 de 5</p>
-    <h2 id="tq-5" tabindex="-1">Proposta do LLM, validação determinística e aprovação humana externa</h2>
-    <dl class="meta">
-      <div><dt>Duração</dt><dd><span class="badge b-none">1 min 45 s</span></dd></div>
-      <div><dt>Ferramentas esperadas</dt><dd><span class="tool t-read">get_business_state</span></dd></div>
-      <div><dt>Aprovação</dt><dd><span class="badge b-none">Nenhuma — somente leitura</span></dd></div>
-      <div><dt>Canal da operadora</dt><dd><span class="badge b-op">Referência visual · sem execução ao vivo</span></dd></div>
-    </dl>
-  </header>
-  <div class="grid-2">
-    <div class="stack">
-      <figure class="prompt">
-        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag real">REAL</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
-        <blockquote class="prompt-text">Para fechar, me diga o que já está decidido no meu atendimento e o que ainda está pendente. Liste as propostas com a situação atual de cada uma, sem criar, repetir ou aprovar nenhuma.</blockquote>
-      </figure>
-      <div class="block say"><h3>Diga ao avaliador</h3><p>“O agente só cria propostas. A aprovação acontece neste canal, fora do modelo: a operadora inspeciona, atesta o hash à mão e o domínio revalida antes de gravar. Hoje não vou executar nenhuma aprovação.”</p></div>
-    </div>
-    <div class="stack">
-      <div class="block expected"><h3>Resultado esperado</h3><p>O agente lista as propostas e a situação de cada uma: <strong>cinco aplicadas</strong> e a adicional com a situação atual. Como propostas expiram em dez minutos, o esperado é que ela esteja expirada. Não há aceite, preço nem cardápio.</p></div>
-      <div class="block done"><h3>Cena concluída quando</h3><ul class="checks"><li>As cinco decisões aplicadas foram listadas.</li><li>A situação da proposta adicional foi lida do estado, sem ser presumida.</li><li>O agente não ofereceu aprovar, repetir ou recriar propostas.</li></ul></div>
-    </div>
-  </div>
-
-  <section class="op-channel" aria-labelledby="t-op-channel">
-    <header>
-      <h3 id="t-op-channel">Canal da pessoa operadora <span>— fora do modelo</span></h3>
-      <span class="badge b-op">Referência técnica · não executar na demo rápida</span>
-    </header>
-    <p class="op-intro">A aprovação roda num <strong>terminal local, em outro processo</strong>. A CLI <strong>não é ferramenta MCP</strong> e não aparece no catálogo do Hermes: o agente cria propostas, mas <strong>não consegue executar a aprovação</strong>.</p>
-
-    <div class="grid-2">
-      <ol class="steps-list">
-        <li>
-          <h3>Listar <code>review list</code></h3>
-          <p>Mostra as propostas e a situação de cada uma.</p>
-          <figure class="cmd-block">
-            <figcaption class="prompt-head"><span class="speaker">Terminal da operadora · exemplo</span></figcaption>
-            <pre><code>uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding review --directory "artifacts/private/local" list</code></pre>
-          </figure>
-        </li>
-        <li>
-          <h3>Inspecionar <code>review inspect</code></h3>
-          <p>Mostra o conteúdo exato da proposta e o hash.</p>
-          <figure class="cmd-block">
-            <figcaption class="prompt-head"><span class="speaker">Terminal da operadora · exemplo</span></figcaption>
-            <pre><code>uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding review --directory "artifacts/private/local" inspect ID_DA_PROPOSTA</code></pre>
-          </figure>
-        </li>
-        <li>
-          <h3>Aprovar <code>review approve</code></h3>
-          <p>Confere hash e validade e exige a <strong>atestação manual</strong>: <code>ATESTO</code> + hash, digitado só se a Dona Maria manifestou aquela decisão.</p>
-          <figure class="cmd-block">
-            <figcaption class="prompt-head"><span class="speaker">Terminal da operadora · exemplo</span></figcaption>
-            <pre><code>uv run --locked --no-sync python -X utf8 -m dona_maria.onboarding review --directory "artifacts/private/local" approve ID_DA_PROPOSTA --hash HASH_DA_INSPECAO</code></pre>
-          </figure>
-        </li>
-      </ol>
-
-      <div class="stack">
-        <div class="block">
-          <h3>Verificado antes de gravar</h3>
-          <p><code>inspect</code> e <code>approve</code> conferem conteúdo exato, hash e validade da proposta. O domínio confere o estado e as regras e grava efeito e auditoria na mesma transação. Se algo falha, nada é aplicado.</p>
-        </div>
-        <div class="block">
-          <h3>Neste atendimento REAL</h3>
-          <div class="op-stats">
-            <div class="op-stat applied"><strong>5</strong><span>propostas aprovadas antes da sessão</span></div>
-            <div class="op-stat open"><strong>1</strong><span>proposta adicional sem aprovação e sem efeito</span></div>
-          </div>
-          <p style="margin-top:12px">Nenhuma aprovação nesta demo. Para executar o fluxo, veja o <a href="#apendice-a">Apêndice A</a>.</p>
-        </div>
-        <div class="block">
-          <h3>Invariantes financeiras</h3>
-          <p><strong>R$ 80</strong> de complementos compartilhados entre todos os pratos. <strong>Taxa didática de 10% sobre o preço de venda</strong>, não sobre o custo.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
   <div class="callout warn">
     <span class="ico" aria-hidden="true">!</span>
     <div>
-      <p><strong>Transição para o slide 12.</strong> A receita REAL não foi aceita nem precificada. CMV, preço e cardápio pertencem ao ensaio <code>SIMULATION</code> de 17/11/2026 e aparecem no slide 12.</p>
+      <p><strong>Se der errado.</strong> Se a pesquisa falhar duas vezes, diga “o Exa anônimo oscila; o agente não inventou receita” e siga para a cena 2: a receita própria é um caminho válido.</p>
+    </div>
+  </div>
+</section>
+<!-- Cena 2 -->
+<section class="section" id="demo-2" data-qscene data-title="Receita da Dona Maria" data-seconds="120" aria-labelledby="tq-2">
+  <header>
+    <p class="kicker">Demo ao vivo · Cena 2 de 10</p>
+    <h2 id="tq-2" tabindex="-1">Receita da Dona Maria</h2>
+    <dl class="meta">
+      <div><dt>Duração</dt><dd><span class="badge b-none">2 min</span></dd></div>
+      <div><dt>Trilha</dt><dd><span class="badge b-real">REAL · atendimento novo</span></dd></div>
+      <div><dt>Ferramentas esperadas</dt><dd><span class="tool t-write">propose_user_change · register_recipe_candidate</span></dd></div>
+      <div><dt>Aprovação</dt><dd><span class="badge b-none">1 de 6 · receita</span></dd></div>
+    </dl>
+  </header>
+  <div class="grid-2">
+    <div class="stack">
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag real">REAL</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Gostei da ideia, mas prefiro a minha versão: frango acebolado na frigideira. Uso 600 g de peito de frango, 200 g de cebola, 10 g de alho, 30 ml de óleo de soja e 6 g de sal; todas as quantidades são dos ingredientes crus, do jeito que vão para a frigideira. Não uso água nem outro ingrediente. Corto o frango em tiras, douro no óleo numa frigideira grande, junto cebola e alho, tempero com sal e cozinho até não ter parte rosada. Rende 4 porções e vendo por porção, não por peso. Revisei as três categorias: equipamento, só fogão e frigideira grande, que tenho; habilidade, só dourar frango, que sei; operação, já fiz muitas vezes, leva 40 minutos do início até porcionar, tenho 60 minutos por cozinhada, faço um lote por vez e a entrega sai logo depois, sem armazenar. Por enquanto, registre só a receita; as condições da cozinha eu confirmo em seguida.</blockquote>
+      </figure>
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Se faltar RAW ou categoria <span class="tag real">REAL</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Faltou registrar que todos os ingredientes são crus e as três categorias. Refaça só a proposta da receita.</blockquote>
+      </figure>
+      <figure class="cmd-block">
+        <figcaption class="prompt-head"><span class="speaker">PowerShell da operadora</span><button type="button" class="copy" data-copy>Copiar comando</button></figcaption>
+        <pre><code>aprovar</code></pre>
+      </figure>
+      <div class="block say"><h3>Diga ao avaliador</h3><p>“A proposta fica pendente, com hash e a revisão do estado. Ela disse que tudo é cru e revisou as três categorias; sem isso, o sistema não aceitaria o prato.”</p></div>
+    </div>
+    <div class="stack">
+      <div class="block expected"><h3>Resultado esperado</h3><p>O resumo do <code>aprovar</code> mostra 5 ingredientes <code>RAW</code>, 4 porções, as categorias EQUIPMENT, SKILL e OPERATION e 0 lacunas. Depois da atestação: <code>Aprovada · revisão 1</code>.</p></div>
+      <div class="block done"><h3>Cena concluída quando</h3><ul class="checks"><li>O resumo foi lido e conferido com a fala.</li><li>A receita foi aprovada no terminal.</li></ul></div>
+    </div>
+  </div>
+  <div class="callout warn">
+    <span class="ico" aria-hidden="true">!</span>
+    <div>
+      <p><strong>Se der errado.</strong> Se o resumo mostrar um ingrediente sem <code>RAW</code> ou faltar categoria, não aprove: use o prompt alternativo.</p>
+    </div>
+  </div>
+</section>
+<!-- Cena 3 -->
+<section class="section" id="demo-3" data-qscene data-title="Condições da cozinha" data-seconds="75" aria-labelledby="tq-3">
+  <header>
+    <p class="kicker">Demo ao vivo · Cena 3 de 10</p>
+    <h2 id="tq-3" tabindex="-1">Condições da cozinha</h2>
+    <dl class="meta">
+      <div><dt>Duração</dt><dd><span class="badge b-none">1 min 15 s</span></dd></div>
+      <div><dt>Trilha</dt><dd><span class="badge b-real">REAL · atendimento novo</span></dd></div>
+      <div><dt>Ferramentas esperadas</dt><dd><span class="tool t-write">propose_user_change · record_kitchen_facts</span></dd></div>
+      <div><dt>Aprovação</dt><dd><span class="badge b-none">2 de 6 · fatos</span></dd></div>
+    </dl>
+  </header>
+  <div class="grid-2">
+    <div class="stack">
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag real">REAL</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">A receita foi aprovada. Agora registre só as condições da minha cozinha: tenho fogão e frigideira grande, sei dourar frango, tenho 60 minutos por cozinhada, faço um lote por vez e a entrega sai logo depois do preparo, sem armazenar.</blockquote>
+      </figure>
+      <figure class="cmd-block">
+        <figcaption class="prompt-head"><span class="speaker">PowerShell da operadora</span><button type="button" class="copy" data-copy>Copiar comando</button></figcaption>
+        <pre><code>aprovar</code></pre>
+      </figure>
+      <div class="block say"><h3>Diga ao avaliador</h3><p>“A receita exige 40 minutos; ela tem 60. Se tivesse 30, o requisito ficaria BLOCKED e não haveria aceite. É o coração do desafio: descobrir antes de deixar comprar.”</p></div>
+    </div>
+    <div class="stack">
+      <div class="block expected"><h3>Resultado esperado</h3><p>Seis fatos: fogão, frigideira grande, dourar frango, 60 min por cozinhada, um lote por vez e entrega logo após o preparo. <code>Aprovada · revisão 2</code>.</p></div>
+      <div class="block done"><h3>Cena concluída quando</h3><ul class="checks"><li>Os seis fatos foram aprovados.</li></ul></div>
+    </div>
+  </div>
+</section>
+<!-- Cena 4 -->
+<section class="section" id="demo-4" data-qscene data-title="Interesse" data-seconds="60" aria-labelledby="tq-4">
+  <header>
+    <p class="kicker">Demo ao vivo · Cena 4 de 10</p>
+    <h2 id="tq-4" tabindex="-1">Interesse</h2>
+    <dl class="meta">
+      <div><dt>Duração</dt><dd><span class="badge b-none">1 min</span></dd></div>
+      <div><dt>Trilha</dt><dd><span class="badge b-real">REAL · atendimento novo</span></dd></div>
+      <div><dt>Ferramentas esperadas</dt><dd><span class="tool t-write">propose_user_change · record_recipe_feedback</span></dd></div>
+      <div><dt>Aprovação</dt><dd><span class="badge b-none">3 de 6 · interesse</span></dd></div>
+    </dl>
+  </header>
+  <div class="grid-2">
+    <div class="stack">
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag real">REAL</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">As condições foram aprovadas. Quero fazer esse prato. Registre só o meu interesse; a quantidade eu confirmo depois.</blockquote>
+      </figure>
+      <figure class="cmd-block">
+        <figcaption class="prompt-head"><span class="speaker">PowerShell da operadora</span><button type="button" class="copy" data-copy>Copiar comando</button></figcaption>
+        <pre><code>aprovar</code></pre>
+      </figure>
+      <div class="block say"><h3>Diga ao avaliador</h3><p>“Gostar não é aceitar. O interesse é um registro separado; o aceite vem só no fim.”</p></div>
+    </div>
+    <div class="stack">
+      <div class="block expected"><h3>Resultado esperado</h3><p>Proposta <code>INTERESTED</code>. <code>Aprovada · revisão 3</code>.</p></div>
+      <div class="block done"><h3>Cena concluída quando</h3><ul class="checks"><li>O interesse foi aprovado.</li></ul></div>
+    </div>
+  </div>
+  <div class="callout warn">
+    <span class="ico" aria-hidden="true">!</span>
+    <div>
+      <p><strong>Se der errado.</strong> Se aparecer também uma proposta de plano, não a aprove: a Dona Maria ainda não disse a quantidade. Aprove só o interesse (<code>aprovar 1</code> ou <code>aprovar 2</code>).</p>
+    </div>
+  </div>
+</section>
+<!-- Cena 5 -->
+<section class="section" id="demo-5" data-qscene data-title="Plano" data-seconds="60" aria-labelledby="tq-5">
+  <header>
+    <p class="kicker">Demo ao vivo · Cena 5 de 10</p>
+    <h2 id="tq-5" tabindex="-1">Plano</h2>
+    <dl class="meta">
+      <div><dt>Duração</dt><dd><span class="badge b-none">1 min</span></dd></div>
+      <div><dt>Trilha</dt><dd><span class="badge b-real">REAL · atendimento novo</span></dd></div>
+      <div><dt>Ferramentas esperadas</dt><dd><span class="tool t-write">propose_user_change · set_production_plan</span></dd></div>
+      <div><dt>Aprovação</dt><dd><span class="badge b-none">4 de 6 · plano</span></dd></div>
+    </dl>
+  </header>
+  <div class="grid-2">
+    <div class="stack">
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag real">REAL</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">O interesse foi aprovado. Confirmo 1 lote, 4 porções.</blockquote>
+      </figure>
+      <figure class="cmd-block">
+        <figcaption class="prompt-head"><span class="speaker">PowerShell da operadora</span><button type="button" class="copy" data-copy>Copiar comando</button></figcaption>
+        <pre><code>aprovar</code></pre>
+      </figure>
+      <div class="block say"><h3>Diga ao avaliador</h3><p>“A quantidade é decisão dela. É o plano que faz o sistema somar a demanda e comparar com a despensa.”</p></div>
+    </div>
+    <div class="stack">
+      <div class="block expected"><h3>Resultado esperado</h3><p>Plano de 1 lote e 4 porções. <code>Aprovada · revisão 4</code>.</p></div>
+      <div class="block done"><h3>Cena concluída quando</h3><ul class="checks"><li>O plano foi aprovado.</li></ul></div>
+    </div>
+  </div>
+</section>
+<!-- Cena 6 -->
+<section class="section" id="demo-6" data-qscene data-title="O que tem e o que falta" data-seconds="60" aria-labelledby="tq-6">
+  <header>
+    <p class="kicker">Demo ao vivo · Cena 6 de 10</p>
+    <h2 id="tq-6" tabindex="-1">O que tem e o que falta</h2>
+    <dl class="meta">
+      <div><dt>Duração</dt><dd><span class="badge b-none">1 min</span></dd></div>
+      <div><dt>Trilha</dt><dd><span class="badge b-real">REAL · atendimento novo</span></dd></div>
+      <div><dt>Ferramentas esperadas</dt><dd><span class="tool t-read">evaluate_recipe_feasibility</span><span class="tool t-read">evaluate_purchase_plan</span></dd></div>
+      <div><dt>Aprovação</dt><dd><span class="badge b-none">Nenhuma</span></dd></div>
+    </dl>
+  </header>
+  <div class="grid-2">
+    <div class="stack">
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag real">REAL</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">O plano foi aprovado. O que eu já tenho e o que falta comprar? Cabe nos R$ 80?</blockquote>
+      </figure>
+      <div class="block say"><h3>Diga ao avaliador</h3><p>“O orçamento de R$ 80 é um só para o cardápio inteiro. Estoque não é custo zero: o CMV usa o que ela já pagou.”</p></div>
+    </div>
+    <div class="stack">
+      <div class="block expected"><h3>Resultado esperado</h3><p>Tabela com os 5 ingredientes, tudo em estoque, <strong>R$ 0,00</strong> a comprar e saldo de <strong>R$ 80,00</strong>.</p></div>
+      <div class="block done"><h3>Cena concluída quando</h3><ul class="checks"><li>Desembolso e saldo apareceram.</li></ul></div>
+    </div>
+  </div>
+</section>
+<!-- Cena 7 -->
+<section class="section" id="demo-7" data-qscene data-title="Aceite" data-seconds="60" aria-labelledby="tq-7">
+  <header>
+    <p class="kicker">Demo ao vivo · Cena 7 de 10</p>
+    <h2 id="tq-7" tabindex="-1">Aceite</h2>
+    <dl class="meta">
+      <div><dt>Duração</dt><dd><span class="badge b-none">1 min</span></dd></div>
+      <div><dt>Trilha</dt><dd><span class="badge b-real">REAL · atendimento novo</span></dd></div>
+      <div><dt>Ferramentas esperadas</dt><dd><span class="tool t-write">propose_user_change · accept_recipe</span></dd></div>
+      <div><dt>Aprovação</dt><dd><span class="badge b-none">5 de 6 · aceite</span></dd></div>
+    </dl>
+  </header>
+  <div class="grid-2">
+    <div class="stack">
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag real">REAL</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Aceito este prato conforme este resumo.</blockquote>
+      </figure>
+      <figure class="cmd-block">
+        <figcaption class="prompt-head"><span class="speaker">PowerShell da operadora</span><button type="button" class="copy" data-copy>Copiar comando</button></figcaption>
+        <pre><code>aprovar</code></pre>
+      </figure>
+      <div class="block say"><h3>Diga ao avaliador</h3><p>“O aceite precisa ser inequívoco e só sai com a receita ELIGIBLE, as compras CONFIRMED, o custo completo e o interesse registrado.”</p></div>
+    </div>
+    <div class="stack">
+      <div class="block expected"><h3>Resultado esperado</h3><p>Proposta de aceite vinculada à avaliação atual. <code>Aprovada · revisão 5</code>.</p></div>
+      <div class="block done"><h3>Cena concluída quando</h3><ul class="checks"><li>O aceite foi aprovado.</li></ul></div>
+    </div>
+  </div>
+  <div class="callout warn">
+    <span class="ico" aria-hidden="true">!</span>
+    <div>
+      <p><strong>Se der errado.</strong> Use a frase exata; um “parece bom” não vira aceite.</p>
+    </div>
+  </div>
+</section>
+<!-- Cena 8 -->
+<section class="section" id="demo-8" data-qscene data-title="CMV e cenários" data-seconds="105" aria-labelledby="tq-8">
+  <header>
+    <p class="kicker">Demo ao vivo · Cena 8 de 10</p>
+    <h2 id="tq-8" tabindex="-1">CMV e cenários</h2>
+    <dl class="meta">
+      <div><dt>Duração</dt><dd><span class="badge b-none">1 min 45 s</span></dd></div>
+      <div><dt>Trilha</dt><dd><span class="badge b-real">REAL · atendimento novo</span></dd></div>
+      <div><dt>Ferramentas esperadas</dt><dd><span class="tool t-calc">calculate_pricing_scenarios</span></dd></div>
+      <div><dt>Aprovação</dt><dd><span class="badge b-none">Nenhuma: o cálculo é gravado pelo Python</span></dd></div>
+    </dl>
+  </header>
+  <div class="grid-2">
+    <div class="stack">
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag real">REAL</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Me mostre o CMV e os cenários de preço, com a conta.</blockquote>
+      </figure>
+      <div class="block say"><h3>Diga ao avaliador</h3><p>“A taxa de 10% é sobre a venda: ela recebe 90%. O piso é o CMV dividido por 0,90, arredondado para cima. A conta é do Python, com Decimal; o modelo só explica.”</p></div>
+    </div>
+    <div class="stack">
+      <div class="block expected"><h3>Resultado esperado</h3><p>Lote de R$ 9,6811 (frango R$ 8,40, cebola R$ 0,80, alho R$ 0,20, óleo R$ 0,27, sal R$ 0,0111). CMV de <strong>R$ 2,42</strong> por porção, piso de <strong>R$ 2,69</strong>, e M10, M20 e M30 de <strong>R$ 3,03, R$ 3,46 e R$ 4,04</strong>.</p></div>
+      <div class="block done"><h3>Cena concluída quando</h3><ul class="checks"><li>A conta por ingrediente e os três cenários apareceram.</li><li>Nenhum preço foi salvo ainda.</li></ul></div>
+    </div>
+  </div>
+</section>
+<!-- Cena 9 -->
+<section class="section" id="demo-9" data-qscene data-title="Escolha do preço" data-seconds="60" aria-labelledby="tq-9">
+  <header>
+    <p class="kicker">Demo ao vivo · Cena 9 de 10</p>
+    <h2 id="tq-9" tabindex="-1">Escolha do preço</h2>
+    <dl class="meta">
+      <div><dt>Duração</dt><dd><span class="badge b-none">1 min</span></dd></div>
+      <div><dt>Trilha</dt><dd><span class="badge b-real">REAL · atendimento novo</span></dd></div>
+      <div><dt>Ferramentas esperadas</dt><dd><span class="tool t-write">propose_user_change · save_menu_decision</span></dd></div>
+      <div><dt>Aprovação</dt><dd><span class="badge b-none">6 de 6 · preço</span></dd></div>
+    </dl>
+  </header>
+  <div class="grid-2">
+    <div class="stack">
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag real">REAL</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Escolho o cenário M20.</blockquote>
+      </figure>
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Se os códigos não aparecerem <span class="tag real">REAL</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">Escolho o preço de R$ 3,46.</blockquote>
+      </figure>
+      <figure class="cmd-block">
+        <figcaption class="prompt-head"><span class="speaker">PowerShell da operadora</span><button type="button" class="copy" data-copy>Copiar comando</button></figcaption>
+        <pre><code>aprovar</code></pre>
+      </figure>
+      <div class="block say"><h3>Diga ao avaliador</h3><p>“A escolha é dela, entre os cenários ou um preço próprio acima do piso, e passa pela mesma aprovação.”</p></div>
+    </div>
+    <div class="stack">
+      <div class="block expected"><h3>Resultado esperado</h3><p>Proposta com o cenário M20. <code>Aprovada · revisão 7</code> (a revisão 6 é o cálculo).</p></div>
+      <div class="block done"><h3>Cena concluída quando</h3><ul class="checks"><li>O preço foi aprovado.</li></ul></div>
+    </div>
+  </div>
+</section>
+<!-- Cena 10 -->
+<section class="section" id="demo-10" data-qscene data-title="Retomada e fechamento" data-seconds="90" aria-labelledby="tq-10">
+  <header>
+    <p class="kicker">Demo ao vivo · Cena 10 de 10</p>
+    <h2 id="tq-10" tabindex="-1">Retomada e fechamento</h2>
+    <dl class="meta">
+      <div><dt>Duração</dt><dd><span class="badge b-none">1 min 30 s</span></dd></div>
+      <div><dt>Trilha</dt><dd><span class="badge b-real">REAL · atendimento novo</span></dd></div>
+      <div><dt>Ferramentas esperadas</dt><dd><span class="tool t-read">get_business_state</span></dd></div>
+      <div><dt>Aprovação</dt><dd><span class="badge b-none">Nenhuma</span></dd></div>
+    </dl>
+  </header>
+  <div class="grid-2">
+    <div class="stack">
+      <figure class="prompt">
+        <figcaption class="prompt-head"><span class="speaker">Dona Maria diz <span class="tag real">REAL</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
+        <blockquote class="prompt-text">A escolha foi aprovada. Como ficou meu cardápio?</blockquote>
+      </figure>
+      <figure class="cmd-block">
+        <figcaption class="prompt-head"><span class="speaker">PowerShell da operadora</span><button type="button" class="copy" data-copy>Copiar comando</button></figcaption>
+        <pre><code>historico</code></pre>
+      </figure>
+      <div class="block say"><h3>Diga ao avaliador</h3><p>“Seis decisões, todas propostas pelo agente e aplicadas só depois da atestação. A sobra de R$ 0,69 não é lucro: embalagem, gás e trabalho não estão na planilha.”</p></div>
+    </div>
+    <div class="stack">
+      <div class="block expected"><h3>Resultado esperado</h3><p>Frango acebolado na frigideira a <strong>R$ 3,46</strong> por porção, CMV de R$ 2,42, taxa de R$ 0,35, sobra de R$ 0,69 e saldo de R$ 80,00. O <code>historico</code> mostra 6 <code>APPROVED</code>.</p></div>
+      <div class="block done"><h3>Cena concluída quando</h3><ul class="checks"><li>O cardápio foi recuperado do estado.</li><li>Volte aos slides e avance para o slide 15.</li></ul></div>
     </div>
   </div>
 </section>
@@ -629,7 +807,7 @@ html[data-track="real"] [data-only="sim"], html[data-track="sim"] [data-only="re
 </nav>
 
 <footer class="site-foot">
-  <p>Demo rápida: somente leitura sobre o workspace REAL preparado antes da sessão. Para reproduzir a jornada com propostas e aprovações, use a <a href="#inicio">Jornada completa</a>.</p>
+  <p>Demo ao vivo: jornada REAL completa num atendimento novo, com aprovações locais. Roteiro completo, preparação da máquina e plano B em <a href="../speaker/demo-hermes.md">docs/speaker/demo-hermes.md</a>. Para a validação técnica detalhada, use a <a href="#inicio">Jornada completa</a>.</p>
 </footer>
 </main>
 </div>
@@ -748,7 +926,7 @@ html[data-track="real"] [data-only="sim"], html[data-track="sim"] [data-only="re
     <span class="ico" aria-hidden="true">i</span>
     <div>
       <p><strong>Como usar.</strong> Comece pela <a href="#preparo">Etapa 0</a>. Em cada etapa, copie o prompt da trilha escolhida, cole no Desktop e espere a resposta antes do próximo. O agente pode fazer perguntas em ordem diferente: responda o que ele perguntar com dados verdadeiros (REAL) ou com as hipóteses declaradas do ensaio (SIMULATION). Marque a etapa como concluída só quando todos os critérios forem atendidos.</p>
-      <p>Esta jornada é a validação técnica completa. Para uma apresentação de 8 minutos, use a <a href="#demo-1">Demo rápida</a> e o <a href="../speaker/demo-hermes.md">roteiro de demonstração</a>. As fontes de verdade deste guia são o <a href="../../README.md#executar">README</a>, o <a href="../setup.md">guia de instalação e recuperação</a>, o <a href="../verification-desktop-e2e.md">registro da jornada E2E</a>, as <a href="../../.hermes.md">orientações do Hermes</a> e a <a href="../../skills/dona-maria-cardapio/SKILL.md">skill de atendimento</a>.</p>
+      <p>Esta jornada é a validação técnica completa. Para a apresentação, use a <a href="#demo-1">Demo ao vivo</a> e o <a href="../speaker/demo-hermes.md">roteiro de demonstração</a>. As fontes de verdade deste guia são o <a href="../../README.md#executar">README</a>, o <a href="../setup.md">guia de instalação e recuperação</a>, o <a href="../verification-desktop-e2e.md">registro da jornada E2E</a>, as <a href="../../.hermes.md">orientações do Hermes</a> e a <a href="../../skills/dona-maria-cardapio/SKILL.md">skill de atendimento</a>.</p>
     </div>
   </div>
 </section>
@@ -1995,7 +2173,7 @@ sobra após taxa e ingr. = 0,90 × preço − CMV por porção
   });
   document.getElementById("show-evidence").addEventListener("change", (e) => setEvidence(e.target.checked));
 
-  /* Demo rápida: cenas, progresso e cronômetro indicativo */
+  /* Demo ao vivo: cenas, progresso e cronômetro indicativo */
   const qLinks = [...document.querySelectorAll("a[data-qnav]")];
   const qPrev = document.getElementById("q-prev");
   const qNext = document.getElementById("q-next");
@@ -2055,7 +2233,7 @@ sobra após taxa e ingr. = 0,90 × preço − CMV por porção
     qBar.setAttribute("aria-valuenow", String(n));
     qBar.setAttribute("aria-valuetext", "Cena " + n + " de " + scenes.length);
     document.getElementById("q-progress-text").innerHTML = "<strong>Cena " + n + "</strong> de " + scenes.length;
-    document.title = label(scene) + " — Demo rápida · Sabor da Maria";
+    document.title = label(scene) + " — Demo ao vivo · Sabor da Maria";
     persist();
     renderClock();
     window.scrollTo(0, 0);
@@ -2069,7 +2247,7 @@ sobra após taxa e ingr. = 0,90 × preço − CMV por porção
     else location.hash = id;
   }
 
-  /* Modos: escolha, demo rápida e jornada completa */
+  /* Modos: escolha, demo ao vivo e jornada completa */
   const views = {
     chooser: document.getElementById("view-chooser"),
     quick: document.getElementById("view-quick"),

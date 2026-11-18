@@ -50,9 +50,9 @@ No Windows, se o temporário padrão do pytest recusar acesso (`WinError 5`),
 acrescente `-p no:cacheprovider --basetemp artifacts/private/<pasta-nova>`, sem
 apagar pastas anteriores.
 
-Última execução completa: **948 aprovados e 2 ignorados em 17/11/2026**, em
-5 min 38 s com `-n 2`. Os ignorados são a criação de symlink sem privilégio no
-Windows e o probe opcional do Hermes instalado, que exige
+Última execução completa: **998 aprovados e 4 ignorados em 19/11/2026**, em
+5 min 54 s com `-n 2`. Os ignorados são três casos de criação de symlink sem
+privilégio no Windows e o probe opcional do Hermes instalado, que exige
 `DONA_MARIA_HERMES_TEST_PROFILE`. A CI executa a mesma suíte em Windows, Ubuntu
 e macOS.
 

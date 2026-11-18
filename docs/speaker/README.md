@@ -1,11 +1,12 @@
 # Apresentação técnica — Sabor da Maria
 
-- [Slides Reveal.js](slides/index.html): 15 slides (~17 minutos) + 5 de apêndice, notas em português.
+- [Slides Reveal.js](slides/index.html): 15 slides (~17 minutos, com folga até 20) + 5 de apêndice, notas em português. A demonstração ao vivo entra no slide 14, depois da teoria.
 - [Guia para Lucas Rolim](guia-apresentacao-lucas.md): fala de cada slide, ritmo,
   cortes e perguntas difíceis ligadas ao código.
-- [Demo Hermes](demo-hermes.md): demo rápida de 8 minutos, somente leitura, no perfil REAL preparado.
-- [Guia interativo da Dona Maria](../demo/hermes-desktop-walkthrough.html): prompts
-  naturais da demonstração, também acessível pelo slide 11.
+- [Demo Hermes](demo-hermes.md): roteiro da demo ao vivo (~13 minutos): preparação da máquina, 10 cenas, 6 aprovações, plano B e perguntas.
+- [Atalhos do terminal](demo-terminal.ps1): `pend`, `aprovar`, `ver` e `historico` para a operadora; a atestação continua manual.
+- [Guia interativo da Dona Maria](../demo/hermes-desktop-walkthrough.html): modo Demo ao vivo, com prompts e comandos copiáveis e cronômetro, também acessível pelo slide 14.
+- [Jornada REAL completa](../verification-desktop-real-complete.md): planilha original até o preço escolhido, no Desktop e no CLI (19/11).
 - [Jornada REAL no Desktop](../verification-desktop-real.md): planilha original até a viabilidade `PENDING`, decisões aprovadas e retomada em conversa nova (17/11).
 - [Jornada E2E assistida no Desktop](../verification-desktop-e2e.md): ensaio `SIMULATION` concluído até o preço, com intervenções operacionais.
 - [Verificação do percurso REAL](verification-local-real.md): registro histórico de 16/11.
@@ -31,7 +32,7 @@ python -m http.server 8765 --bind 127.0.0.1 --directory docs
 ```
 
 Abra [a apresentação local](http://127.0.0.1:8765/speaker/slides/). Sirva somente
-a pasta `docs`, para que o link do slide 11 abra o guia interativo; não sirva a
+a pasta `docs`, para que o link do slide 14 abra o guia interativo; não sirva a
 raiz do projeto nem `artifacts/private`. Encerre com Ctrl+C.
 No GitHub Pages, que publica apenas a pasta dos slides, o mesmo link abre o
 arquivo do guia no GitHub.
@@ -55,7 +56,7 @@ espaçamento e componentes ficam em `slides/src/deck.css`; os rodapés distingue
 os 15 slides principais do material de apoio. A apresentação mantém os arquivos
 locais do Reveal.js e funciona offline.
 
-Em `#/13`, a linha do tempo apresenta cinco etapas propostas, sem inventar
+Em `#/12`, a linha do tempo apresenta cinco etapas propostas, sem inventar
 prazos ou tratar trabalho futuro como concluído. As setas destacam uma etapa
 por vez, mantendo a sequência inteira visível. A impressão não duplica o slide
 para cada destaque; animações são desativadas com redução de movimento.
@@ -97,10 +98,11 @@ Funcionamento das notas: [documentação oficial Reveal.js](https://revealjs.com
 
 ## Antes da entrevista
 
-A demo rápida consulta o atendimento REAL registrado em
-[verification-desktop-real.md](../verification-desktop-real.md). Antes da
-entrevista, confira se o estado continua o mesmo: perfil, receitas, plano,
-viabilidade e propostas. Não apresente a demo como evidência de autonomia geral
-nem os números da SIMULATION como resultado da planilha original. Se a pesquisa
-falhar ao vivo, registre a limitação sem apresentar uma receita própria como essa prova.
+A demo ao vivo usa um atendimento REAL novo, em que ninguém conversou antes.
+Siga a preparação D-1 e D-0 do [roteiro](demo-hermes.md#antes-da-terça) e ensaie
+em outra pasta REAL, nunca na pasta da demo. Diga que as falas da Dona Maria são
+de demonstração. Não apresente a demo como evidência de autonomia geral nem os
+números da SIMULATION como resultado da planilha original. Se a pesquisa falhar
+ao vivo, diga isso e siga com a receita própria, sem apresentá-la como resultado
+da pesquisa.
 A apresentação local continua disponível independentemente do GitHub Pages.

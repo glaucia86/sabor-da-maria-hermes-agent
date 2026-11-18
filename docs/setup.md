@@ -287,7 +287,9 @@ Para retomar, feche a interface normalmente, repita o comando `desktop` do passo
 | Aprovação concluída, mas o agente ainda vê `PENDING` | A consulta pode ter ocorrido antes do commit. Aguarde `ok: true` no terminal e peça nova consulta do estado. |
 | Termo desejado não foi liberado | Siga [como revisar termos](#pesquisa); não peça ao modelo para contornar a restrição. |
 | Desktop mostra outro perfil ou ferramentas extras | Interrompa o atendimento e confira perfil/contexto. O catálogo esperado é seis MCP e duas de pesquisa. |
-| Proposta expirada ou hash divergente | Consulte novamente o estado; peça uma proposta atual e faça nova inspeção. |
+| Proposta expirada ou hash divergente | Consulte novamente o estado; peça uma proposta atual e faça nova inspeção. A mensagem final "use outra pasta nova" não se aplica: a pasta continua íntegra. |
+| Duas propostas pendentes criadas no mesmo turno | Aprove uma; a outra fica `STALE_REVISION`. Peça ao agente que refaça somente a outra. |
+| `verify-profile` recusa com "Plugins não registrados no gateway" logo após `configure` | O gateway compartilhado do Hermes iniciou antes do perfil novo. Feche o Desktop, execute `hermes gateway restart` e repita `verify-profile`. |
 | Modelo afirma que salvou, mas o estado não mudou | Confira a revisão local e consulte `get_business_state`; texto do modelo não prova persistência. |
 
 Para retomar sem reimportar, veja [Retomada e recuperação](#recuperacao).

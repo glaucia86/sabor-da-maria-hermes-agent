@@ -34,8 +34,8 @@
  <aside class="notes">
 <p>Olá, Lucas e Hildebrando. Obrigada pelo tempo de vocês.</p>
 <p>Hoje vou apresentar o Sabor da Maria, a solução que desenvolvi para o desafio de Senior AI Engineer do iFood.</p>
-<p>Vou começar pelo problema e pelas decisões de engenharia. Depois mostro a arquitetura e os fluxos principais.</p>
-<p>Em seguida, faço a demonstração no Hermes Desktop. Para fechar, falo das melhorias e dos próximos passos e abro para perguntas.</p>
+<p>Vou começar pelo problema e pelas decisões de engenharia. Depois mostro a arquitetura, os fluxos principais, as evidências, as melhorias e os próximos passos.</p>
+<p>No fim, faço a demonstração completa ao vivo no Hermes Desktop, da pesquisa ao preço, e abro para perguntas.</p>
 <p>Se quiserem interromper em algum momento, fiquem à vontade. Vamos começar pela Dona Maria.</p>
  </aside>
 </section>
@@ -254,7 +254,7 @@
 <p>O Hermes transforma essa frase numa proposta, pela ferramenta <code>propose_user_change</code>. A proposta fica pendente no banco, com um hash do conteúdo e a revisão do estado em que foi criada. Nada muda no negócio ainda.</p>
 <p>Em seguida entra a operadora, num processo separado. Ela abre a proposta pela CLI, lê o resumo e confere se aquilo corresponde ao que a Dona Maria disse. Se corresponder, ela atesta usando o hash.</p>
 <p>A operadora não decide pela Dona Maria. Ela confirma que o registro é fiel à manifestação.</p>
-<p>Mesmo atestada, a proposta volta ao domínio. Ele verifica se o prazo de dez minutos expirou, se o estado mudou desde a proposta e se as regras de negócio continuam válidas. No ensaio em SIMULATION, um aceite chegou sem o interesse registrado, e o domínio recusou.</p>
+<p>Mesmo atestada, a proposta volta ao domínio. Ele verifica se o prazo de dez minutos expirou, se o estado mudou desde a proposta e se as regras de negócio continuam válidas. No ensaio REAL, o agente chegou a propor o plano de produção antes de a Dona Maria confirmar a quantidade. Como ela não tinha dito aquilo, a proposta não foi atestada e nada mudou. Na SIMULATION, um aceite sem o interesse registrado foi recusado pelo domínio.</p>
 <p>Se algo falha, nada é aplicado. Se tudo está certo, a decisão e a auditoria são gravadas na mesma transação.</p>
 <p>Esse caminho vale para todas as decisões, dos fatos da cozinha à escolha do preço.</p>
 <p>O custo é operacional, porque cada decisão exige uma ida ao terminal. Eu aceitei esse custo porque, com ele, o modelo nunca aprova a si mesmo. Com o prato aceito, o próximo passo é o preço.</p>
@@ -286,111 +286,94 @@
  </aside>
 </section>
 
-<!-- 11 · Demonstração -->
-<section data-timing="65">
- <div class="slide demo-slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="11 / 15">
-  <div class="demo-heading"><div><p class="kicker">Da arquitetura à experiência</p><h2>Demonstração<span class="text-coral">.</span></h2><p>Demo rápida no Hermes Desktop, somente leitura.<br>Perfil REAL, planilha original e aprovação fora do modelo.</p></div><div class="play-mark" aria-hidden="true"><svg class="lucide lucide-play" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z" /></svg></div></div>
-  <ol class="demo-steps">
-   <li><span>01</span>Despensa e orçamento</li>
-   <li><span>02</span>Fonte Exa registrada</li>
-   <li><span>03</span>Adaptação e plano</li>
-   <li><span>04</span>Viabilidade pendente</li>
-   <li><span>05</span>Aprovação humana externa</li>
-   <li><span>→</span>Preço e cardápio: ensaio SIMULATION, slide 12</li>
-  </ol>
-  <p class="demo-guide"><a href="../../demo/hermes-desktop-walkthrough.html" data-pages-href="https://github.com/glaucia86/sabor-da-maria-hermes-agent/blob/main/docs/demo/hermes-desktop-walkthrough.html" target="_blank" rel="noopener"><svg class="lucide lucide-map" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z" /><path d="M15 5.764v15" /><path d="M9 3.236v15" /></svg>Guia interativo da Dona Maria · docs/demo/hermes-desktop-walkthrough.html <svg class="lucide lucide-arrow-up-right" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="M7 7h10v10" /><path d="M7 17 17 7" /></svg></a></p>
- </div>
- <aside class="notes">
-<p>Até aqui, mostrei as decisões de arquitetura e os controles do sistema. Agora quero mostrar como isso aparece para a Dona Maria, que não precisa saber o que é MCP, SQLite ou hash.</p>
-<p>No Hermes Desktop, eu sou a Dona Maria. Vou seguir a demo rápida do guia interativo, com cinco cenas só de consulta sobre o perfil REAL, preparado antes com a planilha original. Não vou criar propostas nem aprovar nada ao vivo.</p>
-<p>Vamos ver a despensa, a fonte Exa registrada, a adaptação com o plano, a viabilidade que ainda está pendente e as decisões que passaram pela aprovação externa.</p>
-<p>Um esclarecimento sobre as evidências. No REAL, com a planilha original, a jornada foi até a viabilidade e parou em PENDING. O agente pediu tempo de preparo, se as quantidades eram cruas ou cozidas, a capacidade útil da panela e o peso da porção. Eu não inventei esses valores, e o domínio não aceitou o prato sem eles. Para mim, esse é o comportamento certo para o coração do desafio.</p>
-<p>Preço e cardápio aparecem no próximo slide, como resultado do ensaio em SIMULATION. Durante a demonstração, vou confirmar cada passo pelo estado gravado, e não pela resposta do modelo.</p>
-<p>Vamos começar pela despensa.</p>
- </aside>
-</section>
-
-<!-- 12 · Ensaio E2E -->
-<section data-timing="70">
- <div class="slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="12 / 15">
-  <p class="kicker"><svg class="lucide lucide-clipboard-check" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><rect width="8" height="4" x="8" y="2" rx="1" ry="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="m9 14 2 2 4-4" /></svg>11 · Evidência · Ensaio E2E no Desktop</p>
-  <h2 class="title-sm">O ensaio completo: o que os controles seguraram<br>e onde precisei intervir.</h2>
-  <p class="mt-3 text-[16px] text-muted">17/11/2026 · Hermes Desktop · workspace <span class="font-mono text-mint">SIMULATION</span> com planilha sintética de 6 itens · não são resultados da planilha original</p>
-  <div class="mt-5 grid flex-1 grid-cols-[1.12fr_1fr] gap-6">
-   <ol class="card flex flex-col justify-between px-5 py-4 text-[17px] leading-snug">
-    <li class="flex gap-3"><svg class="lucide lucide-circle-check size-5 flex-none text-mint mt-0.5" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><circle cx="12" cy="12" r="10" /><path d="m16 9-5.5 5.5L8 12" /></svg><span>Despensa sintética consultada</span></li>
-    <li class="flex gap-3"><svg class="lucide lucide-circle-check size-5 flex-none text-mint mt-0.5" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><circle cx="12" cy="12" r="10" /><path d="m16 9-5.5 5.5L8 12" /></svg><span>Receita real pesquisada e extraída via Exa</span></li>
-    <li class="flex gap-3"><svg class="lucide lucide-circle-check size-5 flex-none text-mint mt-0.5" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><circle cx="12" cy="12" r="10" /><path d="m16 9-5.5 5.5L8 12" /></svg><span>Receita original <span class="font-mono text-[15px] text-mint">WEB</span> preservada intacta</span></li>
-    <li class="flex gap-3"><svg class="lucide lucide-circle-check size-5 flex-none text-mint mt-0.5" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><circle cx="12" cy="12" r="10" /><path d="m16 9-5.5 5.5L8 12" /></svg><span>Adaptação hipotética separada · <span class="font-mono text-[15px] text-mint">USER_SIMULATION</span></span></li>
-    <li class="flex gap-3"><svg class="lucide lucide-circle-check size-5 flex-none text-mint mt-0.5" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><circle cx="12" cy="12" r="10" /><path d="m16 9-5.5 5.5L8 12" /></svg><span>Condições da cozinha registradas e aprovadas</span></li>
-    <li class="flex gap-3"><svg class="lucide lucide-circle-check size-5 flex-none text-mint mt-0.5" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><circle cx="12" cy="12" r="10" /><path d="m16 9-5.5 5.5L8 12" /></svg><span>Plano de 1 lote e 2 porções · viabilidade <span class="font-mono text-[15px] text-mint">ELIGIBLE</span></span></li>
-    <li class="flex gap-3"><svg class="lucide lucide-circle-check size-5 flex-none text-mint mt-0.5" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><circle cx="12" cy="12" r="10" /><path d="m16 9-5.5 5.5L8 12" /></svg><span>Compras <span class="font-mono text-[15px] text-mint">CONFIRMED</span>, sem complementos · saldo R$ 80,00</span></li>
-    <li class="flex gap-3"><svg class="lucide lucide-circle-check size-5 flex-none text-mint mt-0.5" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><circle cx="12" cy="12" r="10" /><path d="m16 9-5.5 5.5L8 12" /></svg><span>Interesse registrado e aceite humano aprovado</span></li>
-    <li class="flex gap-3"><svg class="lucide lucide-circle-check size-5 flex-none text-mint mt-0.5" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><circle cx="12" cy="12" r="10" /><path d="m16 9-5.5 5.5L8 12" /></svg><span>Cenários M10, M20 e M30 calculados; M30 escolhido</span></li>
-    <li class="flex gap-3"><svg class="lucide lucide-circle-check size-5 flex-none text-mint mt-0.5" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><circle cx="12" cy="12" r="10" /><path d="m16 9-5.5 5.5L8 12" /></svg><span>Cardápio em <span class="font-mono text-[15px] text-mint">MENU_SELECTED</span> · nenhuma proposta pendente</span></li>
-   </ol>
-   <div class="flex flex-col gap-4">
-    <div class="card px-5 py-4">
-     <p class="text-sm font-bold tracking-widest text-amber">PREÇO PERSISTIDO · M30</p>
-     <p class="mt-1 text-[44px] font-bold leading-tight text-mint">R$ 2,03 <span class="text-[18px] font-semibold text-muted">por porção</span></p>
-     <div class="mt-3 grid grid-cols-3 gap-3 text-[15px]">
-      <p><span class="block text-muted">CMV ingredientes</span><span class="font-mono text-[17px]">R$ 1,218</span></p>
-      <p><span class="block text-muted">Taxa 10%</span><span class="font-mono text-[17px]">R$ 0,20</span></p>
-      <p><span class="block text-muted">Sobra</span><span class="font-mono text-[17px]">≈ R$ 0,61</span></p>
+<!-- 11 · Evidências -->
+<section data-timing="90">
+ <div class="slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="11 / 15">
+  <p class="kicker"><svg class="lucide lucide-clipboard-check" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><rect width="8" height="4" x="8" y="2" rx="1" ry="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="m9 14 2 2 4-4" /></svg>10 · Evidência · Jornadas completas no Desktop</p>
+  <h2 class="title-sm">Da pesquisa ao preço: o que os controles seguraram<br>e onde houve intervenção.</h2>
+  <div class="mt-5 grid flex-1 grid-cols-[1.25fr_1fr] gap-6">
+   <div class="card flex flex-col px-5 py-4">
+    <p class="text-sm font-bold tracking-widest text-mint">REAL · 19/11 · PLANILHA ORIGINAL · DESKTOP E CLI</p>
+    <ol class="mt-3 flex flex-col gap-2 text-[16px] leading-snug">
+     <li class="flex gap-3"><svg class="lucide lucide-circle-check size-5 flex-none text-mint mt-0.5" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><circle cx="12" cy="12" r="10" /><path d="m16 9-5.5 5.5L8 12" /></svg><span>Receita real pesquisada e extraída via Exa (TudoGostoso)</span></li>
+     <li class="flex gap-3"><svg class="lucide lucide-circle-check size-5 flex-none text-mint mt-0.5" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><circle cx="12" cy="12" r="10" /><path d="m16 9-5.5 5.5L8 12" /></svg><span>Versão da cozinheira: 5 ingredientes crus e 3 categorias revisadas</span></li>
+     <li class="flex gap-3"><svg class="lucide lucide-circle-check size-5 flex-none text-mint mt-0.5" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><circle cx="12" cy="12" r="10" /><path d="m16 9-5.5 5.5L8 12" /></svg><span>Viabilidade <span class="font-mono text-[15px] text-mint">ELIGIBLE</span> · compras <span class="font-mono text-[15px] text-mint">CONFIRMED</span> · R$ 0,00 · saldo R$ 80,00</span></li>
+     <li class="flex gap-3"><svg class="lucide lucide-circle-check size-5 flex-none text-mint mt-0.5" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><circle cx="12" cy="12" r="10" /><path d="m16 9-5.5 5.5L8 12" /></svg><span>6 aprovações fora do modelo, do registro ao preço</span></li>
+    </ol>
+    <div class="mt-4 grid grid-cols-[auto_1fr] items-end gap-6">
+     <p class="text-[44px] font-bold leading-tight text-mint">R$ 3,46 <span class="block text-[16px] font-semibold text-muted">M20 · por porção</span></p>
+     <div class="grid grid-cols-3 gap-3 text-[15px]">
+      <p><span class="block text-muted">CMV</span><span class="font-mono text-[17px]">R$ 2,42</span></p>
+      <p><span class="block text-muted">Piso</span><span class="font-mono text-[17px]">R$ 2,69</span></p>
+      <p><span class="block text-muted">Sobra</span><span class="font-mono text-[17px]">R$ 0,69</span></p>
      </div>
-     <p class="mt-3 text-[15px] leading-snug text-muted">Sobra não é lucro líquido: embalagem, gás/energia e trabalho não foram informados.</p>
     </div>
-    <div class="card flex-1 border-coral/50 px-5 py-4">
-     <p class="text-sm font-bold tracking-widest text-coral">O QUE NÃO FOI AUTÔNOMO</p>
-     <ul class="mt-3 flex flex-col gap-3 text-[16px] leading-snug text-muted">
-      <li>2 propostas corretivas da adaptação foram preparadas pela operação, fora da conversa, após recusas <span class="font-mono text-ink">SOURCE_NOT_LINKED</span>.</li>
-      <li>O 1º aceite foi recusado: o interesse ainda não estava registrado.</li>
-      <li>A pesquisa do perfil SIMULATION foi configurada manualmente.</li>
-     </ul>
-    </div>
+    <p class="mt-4 text-sm font-bold tracking-widest text-coral">O QUE NÃO FOI AUTÔNOMO</p>
+    <ul class="mt-2 flex flex-col gap-1.5 text-[15px] leading-snug text-muted">
+     <li>Falas da Dona Maria interpretadas por mim, com dados de demonstração.</li>
+     <li>Exa oscilou: nova tentativa pedida na conversa.</li>
+     <li>Propostas no mesmo turno ficaram desatualizadas e foram refeitas.</li>
+     <li>Plano proposto antes da confirmação: a atestação não o aplicou.</li>
+    </ul>
+   </div>
+   <div class="card flex flex-col px-5 py-4">
+    <p class="text-sm font-bold tracking-widest text-amber">SIMULATION · 17/11 · PLANILHA SINTÉTICA</p>
+    <ol class="mt-3 flex flex-col gap-2 text-[16px] leading-snug">
+     <li class="flex gap-3"><svg class="lucide lucide-circle-check size-5 flex-none text-mint mt-0.5" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><circle cx="12" cy="12" r="10" /><path d="m16 9-5.5 5.5L8 12" /></svg><span>Receita <span class="font-mono text-[15px] text-mint">WEB</span> intacta e adaptação <span class="font-mono text-[15px] text-mint">USER_SIMULATION</span> separada</span></li>
+     <li class="flex gap-3"><svg class="lucide lucide-circle-check size-5 flex-none text-mint mt-0.5" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><circle cx="12" cy="12" r="10" /><path d="m16 9-5.5 5.5L8 12" /></svg><span>1 lote, 2 porções · <span class="font-mono text-[15px] text-mint">ELIGIBLE</span> · sem complementos</span></li>
+     <li class="flex gap-3"><svg class="lucide lucide-circle-check size-5 flex-none text-mint mt-0.5" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><circle cx="12" cy="12" r="10" /><path d="m16 9-5.5 5.5L8 12" /></svg><span>M30 escolhido: R$ 2,03 por porção (CMV R$ 1,218)</span></li>
+    </ol>
+    <p class="mt-4 text-sm font-bold tracking-widest text-coral">O QUE NÃO FOI AUTÔNOMO</p>
+    <ul class="mt-2 flex flex-col gap-1.5 text-[15px] leading-snug text-muted">
+     <li>2 correções da adaptação preparadas pela operação após <span class="font-mono text-ink">SOURCE_NOT_LINKED</span>.</li>
+     <li>1º aceite recusado: faltava o interesse.</li>
+     <li>Pesquisa do perfil configurada manualmente.</li>
+    </ul>
+    <p class="mt-auto pt-4 text-[15px] leading-snug text-muted">Bancos separados: nenhum dado de simulação vira fato REAL.</p>
    </div>
   </div>
  </div>
  <aside class="notes">
-<p>De volta aos slides, quero mostrar rapidamente o que o ensaio em SIMULATION deixou registrado. É nele que aparecem o preço e o cardápio que a demo REAL não mostrou. É uma evidência separada da demonstração, com dados sintéticos.</p>
-<p>Numa conversa contínua, o Hermes pesquisou uma receita real pelo Exa, preservou a versão original e registrou a adaptação como hipótese. O plano ficou com um lote de duas porções, a receita ficou elegível e as compras foram confirmadas sem complemento.</p>
-<p>No preço, o CMV foi de R$ 1,218 por porção. A escolha foi o M30, e o valor gravado foi R$ 2,03. Depois da taxa e dos ingredientes, sobram uns 61 centavos, que também não são lucro líquido.</p>
-<p>O que não foi autônomo precisa ser dito. Duas correções na receita adaptada foram preparadas pela operação, fora da conversa. O primeiro aceite foi recusado porque faltava o interesse. E a pesquisa desse perfil foi configurada manualmente.</p>
-<p>Os controles funcionaram. A experiência ainda tem pontos a melhorar, e é por eles que começo o próximo slide.</p>
+<p>Antes da demonstração, quero mostrar o que já ficou registrado. São duas evidências separadas.</p>
+<p>À esquerda, o REAL de 19 de novembro, com a planilha original, feito no Desktop e também pelo CLI. O Hermes pesquisou uma receita real pelo Exa, eu registrei a minha versão, com tudo cru e as três categorias revisadas, e a receita ficou elegível. O estoque cobria tudo, então o desembolso foi zero e o saldo continuou em R$ 80.</p>
+<p>Depois do aceite, o CMV deu R$ 2,42 por porção, o piso R$ 2,69, e o cenário M20, de R$ 3,46, foi escolhido. Foram seis aprovações fora do modelo.</p>
+<p>O que não foi autônomo precisa ser dito. As falas da Dona Maria fui eu que fiz, com dados de demonstração. O Exa oscilou e precisei pedir de novo. Propostas criadas juntas ficaram desatualizadas e foram refeitas. E o agente chegou a propor o plano antes de eu confirmar a quantidade; a atestação não aplicou.</p>
+<p>À direita, o ensaio em SIMULATION de 17 de novembro, com planilha sintética, que já tinha chegado ao preço. Ali houve correções preparadas pela operação. Os bancos são separados, então nada da simulação vira fato real.</p>
+<p>Os controles funcionaram nos dois. Esses atritos viraram a minha lista de melhorias.</p>
  </aside>
 </section>
 
-<!-- 13 · Melhorias -->
-<section data-timing="80">
- <div class="slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="13 / 15">
-  <p class="kicker"><svg class="lucide lucide-sparkles" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" /><path d="M20 2v4" /><path d="M22 4h-4" /><circle cx="4" cy="20" r="2" /></svg>12 · O que pode virar melhoria?</p>
+<!-- 12 · Melhorias -->
+<section data-timing="85">
+ <div class="slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="12 / 15">
+  <p class="kicker"><svg class="lucide lucide-sparkles" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" /><path d="M20 2v4" /><path d="M22 4h-4" /><circle cx="4" cy="20" r="2" /></svg>11 · O que pode virar melhoria?</p>
   <h2 class="title">Mais valor na jornada.<br>Menos atrito na operação.</h2>
   <div class="improvement-grid">
-   <div class="improvement"><span class="improvement-number">01</span><div><h3>Adaptação sem correção manual</h3><p>Ferramenta e skill preservando os requisitos da fonte ao adaptar.</p><small>Hoje: 2 propostas corretivas no ensaio E2E.</small></div></div>
-   <div class="improvement"><span class="improvement-number">02</span><div><h3>Pesquisa mais rica</h3><p>Termos derivados da despensa e 2–3 candidatas por busca.</p><small>Hoje: 1 resultado e termos liberados pelo operador.</small></div></div>
-   <div class="improvement"><span class="improvement-number">03</span><div><h3>Aprovação mais fluida</h3><p>Revisão na interface, fora do catálogo do modelo.</p><small>Hoje: um terminal separado.</small></div></div>
+   <div class="improvement"><span class="improvement-number">01</span><div><h3>Uma decisão por turno</h3><p>Skill propondo uma mudança por vez, só depois da confirmação.</p><small>19/11: propostas desatualizadas e plano antecipado.</small></div></div>
+   <div class="improvement"><span class="improvement-number">02</span><div><h3>Pesquisa mais robusta</h3><p>Termos de prato, 2–3 candidatas e nova tentativa guiada.</p><small>19/11: termo genérico acima do limite; Exa oscilou.</small></div></div>
+   <div class="improvement"><span class="improvement-number">03</span><div><h3>Aprovação mais fluida</h3><p>Revisão na interface, fora do catálogo, com avisos de prazo claros.</p><small>Hoje: terminal separado e prazo de 10 min.</small></div></div>
    <div class="improvement"><span class="improvement-number">04</span><div><h3>Lucro de verdade</h3><p>Embalagem, gás, energia e trabalho no cálculo.</p><small>Hoje: sobra após ingredientes e taxa.</small></div></div>
    <div class="improvement"><span class="improvement-number">05</span><div><h3>Evals entre modelos</h3><p>Comparar qualidade, latência e custo com os 18 roteiros integrados.</p><small>Hoje: um modelo observado.</small></div></div>
-   <div class="improvement"><span class="improvement-number">06</span><div><h3>Preferências semânticas</h3><p>Relacionar “não gosto de fritura” a “empanado”, com confirmação.</p><small>Hoje: correspondência literal.</small></div></div>
+   <div class="improvement"><span class="improvement-number">06</span><div><h3>Adaptação sem correção manual</h3><p>Ferramenta e skill preservando os requisitos da fonte ao adaptar.</p><small>SIMULATION: 2 propostas corretivas.</small></div></div>
   </div>
  </div>
  <aside class="notes">
 <p>Separei as melhorias em dois grupos. Algumas apareceram nos testes. Outras são evoluções que eu já planejava.</p>
-<p>Nos testes, ao adaptar uma receita, o Hermes tentou uma revisão que perdia o vínculo com a fonte web. O domínio recusou, como deveria, mas o modelo não conseguiu se corrigir sozinho. Eu melhoraria o contrato da ferramenta e as orientações da skill para que essa correção não dependa da operação.</p>
+<p>A primeira veio do ensaio REAL completo. Quando o agente cria duas propostas no mesmo turno, só a primeira aprovada vale; a outra fica desatualizada e precisa ser refeita. Ele também chegou a propor o plano antes da confirmação. Os controles seguraram, mas a skill deve propor uma decisão por vez, sempre depois da confirmação.</p>
+<p>Na pesquisa, o termo genérico “frango” trouxe uma página de lista acima do limite de extração, e o Exa anônimo oscilou. Termos de prato e duas ou três candidatas por busca deixam essa etapa mais robusta, sem abrir busca livre.</p>
 <p>O ensaio REAL também achou um problema de UX, que eu já corrigi com um teste. A consulta de compras pedia para "esclarecer a medida e a unidade" de oito ingredientes, quando a causa real era não saber se as quantidades eram cruas ou cozidas. A regra estava certa; a pergunta para a Dona Maria estava errada.</p>
-<p>A aprovação pela CLI também mostrou atrito. Ela evoluiria para uma interface de revisão segura, ainda fora do catálogo do modelo.</p>
-<p>Entre as evoluções, a pesquisa traria duas ou três candidatas por busca, e não apenas uma, com os mesmos controles.</p>
+<p>A aprovação pela CLI também mostrou atrito: o prazo de dez minutos expirou uma vez e a mensagem não explicava bem o que fazer. Ela evoluiria para uma interface de revisão segura, ainda fora do catálogo do modelo.</p>
 <p>No preço, faltam embalagem, gás, energia e mão de obra para chegar a um lucro de verdade.</p>
 <p>Nos evals, existem 18 casos integrados. Eles foram executados de forma assistida pela CLI, com dados sintéticos e revisão delegada. Ainda não comparam modelos, e esse é o próximo passo, medindo qualidade, latência e custo.</p>
-<p>Por fim, as preferências. Hoje a correspondência é literal. Se ela disser “não gosto de fritura”, o agente deveria perguntar se isso inclui empanados, em vez de presumir.</p>
+<p>Por fim, a adaptação de receitas web. Na SIMULATION, o Hermes tentou uma revisão que perdia o vínculo com a fonte; o domínio recusou, mas a correção dependeu da operação. Eu melhoraria o contrato da ferramenta e a skill para isso.</p>
 <p>Para transformar o protótipo em produto, porém, a prioridade é outra.</p>
  </aside>
 </section>
 
-<!-- 14 · Próximos passos -->
+<!-- 13 · Próximos passos -->
 <section data-timing="65">
- <div class="slide roadmap-slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="14 / 15">
-  <div class="flex items-center justify-between"><p class="kicker"><svg class="lucide lucide-route" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="M9 5h8.5a1 1 0 010 7h-11a1 1 0 000 7H15" /><circle cx="18" cy="19" r="3" /><circle cx="6" cy="5" r="3" /></svg>13 · Próximos passos</p><span class="roadmap-status">EVOLUÇÃO PROPOSTA</span></div>
+ <div class="slide roadmap-slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="13 / 15">
+  <div class="flex items-center justify-between"><p class="kicker"><svg class="lucide lucide-route" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="M9 5h8.5a1 1 0 010 7h-11a1 1 0 000 7H15" /><circle cx="18" cy="19" r="3" /><circle cx="6" cy="5" r="3" /></svg>12 · Próximos passos</p><span class="roadmap-status">EVOLUÇÃO PROPOSTA</span></div>
   <h2 class="title">Do protótipo ao produto.<br>Uma decisão de cada vez.</h2>
   <p class="roadmap-subtitle">Cinco etapas para levar a confiança do núcleo à operação.</p>
   <ol class="roadmap" aria-label="Sequência proposta de evolução, sem prazos definidos">
@@ -410,6 +393,28 @@
 <p>Em seguida, os evals de conversa entram na CI. Hoje a CI cobre o núcleo e o MCP, mas não o agente.</p>
 <p>Só depois disso faria sentido integrar com o delivery, publicando cardápios e preços aprovados.</p>
 <p>Em todas as etapas, o contrato continua o mesmo. O modelo propõe, e o domínio decide o que pode virar estado.</p>
+ </aside>
+</section>
+
+<!-- 14 · Demonstração -->
+<section data-timing="45">
+ <div class="slide demo-slide" data-footer="Sabor da Maria / Glaucia Lemos" data-folio="14 / 15">
+  <div class="demo-heading"><div><p class="kicker">Da arquitetura à experiência</p><h2>Demonstração<span class="text-coral">.</span></h2><p>Jornada REAL completa, ao vivo, no Hermes Desktop.<br>Atendimento novo, planilha original e 6 aprovações fora do modelo.</p></div><div class="play-mark" aria-hidden="true"><svg class="lucide lucide-play" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z" /></svg></div></div>
+  <ol class="demo-steps">
+   <li><span>01</span>Despensa e pesquisa Exa ao vivo</li>
+   <li><span>02</span>Receita da Dona Maria e categorias</li>
+   <li><span>03</span>Cozinha, interesse e plano</li>
+   <li><span>04</span>O que tem, o que falta e R$ 80</li>
+   <li><span>05</span>Aceite explícito e CMV</li>
+   <li><span>06</span>Três cenários e a escolha do preço</li>
+  </ol>
+  <p class="demo-guide"><a href="../../demo/hermes-desktop-walkthrough.html" data-pages-href="https://github.com/glaucia86/sabor-da-maria-hermes-agent/blob/main/docs/demo/hermes-desktop-walkthrough.html" target="_blank" rel="noopener"><svg class="lucide lucide-map" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z" /><path d="M15 5.764v15" /><path d="M9 3.236v15" /></svg>Guia da demo ao vivo · docs/demo/hermes-desktop-walkthrough.html <svg class="lucide lucide-arrow-up-right" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="M7 7h10v10" /><path d="M7 17 17 7" /></svg></a></p>
+ </div>
+ <aside class="notes">
+<p>Agora quero mostrar como tudo isso aparece para a Dona Maria, que não precisa saber o que é MCP, SQLite ou hash.</p>
+<p>Este é um atendimento REAL novo, preparado antes com a planilha original. Ninguém conversou nele ainda. Eu faço o papel da Dona Maria no Desktop e o da operadora no terminal ao lado.</p>
+<p>Vamos da pesquisa à escolha do preço. A cada decisão, o agente cria uma proposta; eu confiro e atesto fora do modelo, e só então o estado muda. Vou confirmar cada passo pelo estado gravado, e não pela resposta do modelo.</p>
+<p>Se a pesquisa ou o modelo oscilar, vou dizer o que aconteceu, sem completar de memória.</p>
  </aside>
 </section>
 
@@ -521,12 +526,12 @@
    <table class="w-full text-[18px] leading-snug">
     <thead class="bg-white/5 text-left text-[15px] uppercase tracking-widest text-amber"><tr><th class="px-5 py-3">Camada</th><th class="px-5 py-3">O que verifica</th><th class="px-5 py-3">O que não cobre</th></tr></thead>
     <tbody class="divide-y divide-line">
-     <tr><td class="px-5 py-3">948 testes pytest + Hypothesis</td><td class="px-5 py-3 text-muted">Regras, limites, persistência, concorrência (17/11)</td><td class="px-5 py-3 text-muted">Qualidade da conversa</td></tr>
+     <tr><td class="px-5 py-3">998 testes pytest + Hypothesis</td><td class="px-5 py-3 text-muted">Regras, limites, persistência, concorrência (19/11)</td><td class="px-5 py-3 text-muted">Qualidade da conversa</td></tr>
      <tr><td class="px-5 py-3">Integração MCP stdio</td><td class="px-5 py-3 text-muted">Contrato, catálogo e dispatch reais</td><td class="px-5 py-3 text-muted">Interface do Hermes</td></tr>
      <tr><td class="px-5 py-3">18 Agent Evals integrados</td><td class="px-5 py-3 text-muted">CLI assistido, ferramentas e estado</td><td class="px-5 py-3 text-muted">Autonomia geral ou Desktop</td></tr>
-     <tr><td class="px-5 py-3">Jornada REAL no Desktop (17/11)</td><td class="px-5 py-3 text-muted">Planilha original, Exa real, 5 aprovações locais, retomada em conversa nova</td><td class="px-5 py-3 text-muted">Aceite e preço REAL (parou em <span class="font-mono text-[16px]">PENDING</span>)</td></tr>
+     <tr><td class="px-5 py-3">Jornada REAL completa (19/11)</td><td class="px-5 py-3 text-muted">Planilha original, Exa real, Desktop e CLI, 6 aprovações, aceite e preço M20</td><td class="px-5 py-3 text-muted">Cozinheira real e medição física</td></tr>
      <tr><td class="px-5 py-3">Ensaio E2E no Desktop (17/11)</td><td class="px-5 py-3 text-muted">Jornada SIMULATION completa, Exa real, preço persistido</td><td class="px-5 py-3 text-muted">Perfil REAL e autonomia total</td></tr>
-     <tr><td class="px-5 py-3">CI em Windows, Ubuntu e macOS</td><td class="px-5 py-3 text-muted">Núcleo e MCP, verde no commit atual</td><td class="px-5 py-3 text-muted">Host e modelo reais</td></tr>
+     <tr><td class="px-5 py-3">CI em Windows, Ubuntu e macOS</td><td class="px-5 py-3 text-muted">Núcleo e MCP, verde no commit <span class="font-mono text-[16px]">95a0e51</span></td><td class="px-5 py-3 text-muted">Host e modelo reais</td></tr>
     </tbody>
    </table>
   </div>
@@ -534,9 +539,9 @@
  </div>
  <aside class="notes">
 <p>Eu separei as evidências por camada, porque cada uma prova uma coisa diferente.</p>
-<p>Os testes determinísticos cobrem regras, limites, persistência e concorrência. O Hypothesis gera sequências de operações para achar casos extremos. A última regressão completa foi em 17 de novembro, com 948 aprovados e 2 ignorados, e a CI passou em Windows, Ubuntu e macOS. Os testes de integração exercitam o servidor MCP real por stdio.</p>
+<p>Os testes determinísticos cobrem regras, limites, persistência e concorrência. O Hypothesis gera sequências de operações para achar casos extremos. A última regressão completa foi em 19 de novembro, com 998 aprovados e 4 ignorados, e a CI passou em Windows, Ubuntu e macOS. Os testes de integração exercitam o servidor MCP real por stdio.</p>
 <p>Nos evals do agente, eu não olho só a resposta escrita: confiro as ferramentas chamadas e o estado persistido. São 18 casos no recorte CLI assistido, com a revisão delegada declarada.</p>
-<p>Em 17 de novembro, conversei no Desktop com o perfil REAL e a planilha original. Foram pesquisa Exa real, receita web e adaptação, fatos da cozinha, plano e cinco aprovações locais, além de uma conversa nova que retomou tudo pelo SQLite. A jornada parou antes do aceite por falta de dados medidos. O ensaio completo até o preço foi em SIMULATION. Eu separo as duas evidências.</p>
+<p>Em 19 de novembro, a jornada REAL foi completa no Desktop e no CLI, com a planilha original: pesquisa Exa real, receita, fatos, interesse, plano, aceite e preço, com seis aprovações locais. As falas da cozinheira eram de demonstração. Em 17 de novembro, uma jornada REAL anterior tinha parado em PENDING por falta de dados, e a SIMULATION tinha chegado ao preço. Eu separo as três evidências.</p>
 <p>A CI roda o núcleo em Windows, Ubuntu e macOS, mas não instala o Hermes nem um modelo.</p>
  </aside>
 </section>

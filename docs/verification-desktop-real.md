@@ -6,6 +6,9 @@ da despensa até a avaliação de viabilidade e parou, por decisão do domínio,
 antes do aceite e da precificação: faltavam dados que ninguém havia medido e
 que não seriam inventados.
 
+A jornada REAL completa até o preço, de 19/11/2026, está em
+[verification-desktop-real-complete.md](verification-desktop-real-complete.md).
+
 O registro separa o que a avaliadora relatou do que foi **conferido no banco
 por leitura** (`mode=ro`, sem propostas nem aprovações), depois da sessão.
 Preço e cardápio finalizados existem somente no [ensaio

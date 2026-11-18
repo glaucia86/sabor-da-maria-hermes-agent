@@ -1,8 +1,8 @@
 # Sabor da Maria — guia para a conversa com Lucas Rolim & Hildebrando Azevedo
 
-**Glaucia Lemos · ~17 minutos de apresentação + demonstração ao vivo.**
-Compartilhe o deck e deixe este guia, o Hermes Desktop e o guia interativo, no
-modo Demo rápida, na outra tela. A fala de cada slide também está nas notas
+**Glaucia Lemos · ~17 minutos de slides (com folga até 20) + 13 a 15 minutos de demonstração ao vivo.**
+Compartilhe o deck e deixe este guia, o [roteiro da demo](demo-hermes.md) e o guia
+interativo, no modo Demo ao vivo, na outra tela. A fala de cada slide também está nas notas
 (tecla **S**). Ela é um apoio para explicar como o sistema funciona, não um
 texto para ler.
 
@@ -20,17 +20,19 @@ texto para ler.
 | 8 · Fluxo 2 · Elicitação e viabilidade | 07:30–08:50 | 80 s | Descobrir antes de aceitar; R$ 80 compartilhado |
 | 9 · Fluxo 3 · Proposta e aprovação | 08:50–10:25 | 95 s | Um exemplo: manifestação, proposta, atestação, revalidação |
 | 10 · Fluxo 4 · CMV e preço | 10:25–11:55 | 90 s | CMV, piso de R$ 11,12, cenários, sobra ≠ lucro |
-| 11 · Demonstração | 11:55–13:00 | 65 s | Demo rápida REAL em cinco cenas; preço no slide 12 |
-| 12 · Ensaio E2E no Desktop | após a demo | 70 s | Evidência SIMULATION e intervenções |
-| 13 · O que pode virar melhoria? | após a demo | 80 s | Achados dos testes e evoluções |
-| 14 · Próximos passos | após a demo | 65 s | Confiança antes da escala |
-| 15 · Agradecimentos | após a demo | 30 s | Frase de síntese e perguntas |
+| 11 · Evidências | 11:55–13:25 | 90 s | REAL 19/11 até o preço × SIMULATION 17/11; o que não foi autônomo |
+| 12 · O que pode virar melhoria? | 13:25–14:50 | 85 s | Achados de 19/11 e evoluções |
+| 13 · Próximos passos | 14:50–15:55 | 65 s | Confiança antes da escala |
+| 14 · Demonstração | 15:55–16:40 | 45 s | Transição para a demo ao vivo |
+| Demo ao vivo | 16:40–~30:00 | 13–15 min | 10 cenas, 6 aprovações ([roteiro](demo-hermes.md)) |
+| 15 · Agradecimentos | depois da demo | 30 s | Frase de síntese e perguntas |
 | A1–A5 · Apêndice | sob demanda | — | Invariantes, persistência, segurança, verificação, trade-offs |
 
-Total sugerido: ~17 minutos de fala, mais cerca de 8 minutos da demo rápida após o slide 11. A estimativa considera cerca de 150 palavras por minuto e é uma sugestão, não um requisito do desafio. Sem o slide 12, a fala cai para cerca de 16 minutos.
+Total sugerido: 17 min 10 s de slides (os 20 minutos teóricos deixam cerca de 3 minutos para interrupções), mais 13 a 15 minutos de demo ao vivo e o slide final. A estimativa considera cerca de 150 palavras por minuto.
 
 Priorize os slides 4, 6, 8, 9 e 10, que sustentam a arquitetura. Se o tempo apertar,
-resuma o slide 12 em uma frase e encurte os slides 5 e 7. Nunca corte os fluxos 2 e 3.
+encurte os slides 5, 7 e 12 e diga só a primeira frase do slide 11. Nunca corte os fluxos 2 e 3.
+Se a demo passar de 13 minutos, use os atalhos de tempo do [roteiro](demo-hermes.md#se-o-tempo-apertar).
 
 As linhas em itálico dentro das falas são notas de revisão, não texto para falar.
 
@@ -42,9 +44,9 @@ As linhas em itálico dentro das falas são notas de revisão, não texto para f
 
 > Hoje vou apresentar o Sabor da Maria, a solução que desenvolvi para o desafio de Senior AI Engineer do iFood.
 
-> Vou começar pelo problema e pelas decisões de engenharia. Depois mostro a arquitetura e os fluxos principais.
+> Vou começar pelo problema e pelas decisões de engenharia. Depois mostro a arquitetura, os fluxos principais, as evidências, as melhorias e os próximos passos.
 
-> Em seguida, faço a demonstração no Hermes Desktop. Para fechar, falo das melhorias e dos próximos passos e abro para perguntas.
+> No fim, faço a demonstração completa ao vivo no Hermes Desktop, da pesquisa ao preço, e abro para perguntas.
 
 > Se quiserem interromper em algum momento, fiquem à vontade. Vamos começar pela Dona Maria.
 
@@ -206,7 +208,7 @@ As linhas em itálico dentro das falas são notas de revisão, não texto para f
 
 > A operadora não decide pela Dona Maria. Ela confirma que o registro é fiel à manifestação.
 
-> Mesmo atestada, a proposta volta ao domínio. Ele verifica se o prazo de dez minutos expirou, se o estado mudou desde a proposta e se as regras de negócio continuam válidas. No ensaio em SIMULATION, um aceite chegou sem o interesse registrado, e o domínio recusou.
+> Mesmo atestada, a proposta volta ao domínio. Ele verifica se o prazo de dez minutos expirou, se o estado mudou desde a proposta e se as regras de negócio continuam válidas. No ensaio REAL, o agente chegou a propor o plano de produção antes de a Dona Maria confirmar a quantidade. Como ela não tinha dito aquilo, a proposta não foi atestada e nada mudou. Na SIMULATION, um aceite sem o interesse registrado foi recusado pelo domínio.
 
 > Se algo falha, nada é aplicado. Se tudo está certo, a decisão e a auditoria são gravadas na mesma transação.
 
@@ -238,63 +240,45 @@ As linhas em itálico dentro das falas são notas de revisão, não texto para f
 
 > A Dona Maria escolhe um cenário ou um preço próprio acima do piso, e essa escolha passa pela mesma aprovação. Agora quero mostrar como tudo isso aparece na prática.
 
-## 11 — Demonstração · 65 s
+## 11 — Evidências · Jornadas completas · 90 s
 
 **Fala:**
 
-> Até aqui, mostrei as decisões de arquitetura e os controles do sistema. Agora quero mostrar como isso aparece para a Dona Maria, que não precisa saber o que é MCP, SQLite ou hash.
+> Antes da demonstração, quero mostrar o que já ficou registrado. São duas evidências separadas.
 
-> No Hermes Desktop, eu sou a Dona Maria. Vou seguir a demo rápida do guia interativo, com cinco cenas só de consulta sobre o perfil REAL, preparado antes com a planilha original. Não vou criar propostas nem aprovar nada ao vivo.
+> À esquerda, o REAL de 19 de novembro, com a planilha original, feito no Desktop e também pelo CLI. O Hermes pesquisou uma receita real pelo Exa, eu registrei a minha versão, com tudo cru e as três categorias revisadas, e a receita ficou elegível. O estoque cobria tudo, então o desembolso foi zero e o saldo continuou em R$ 80.
 
-> Vamos ver a despensa, a fonte Exa registrada, a adaptação com o plano, a viabilidade que ainda está pendente e as decisões que passaram pela aprovação externa.
+> Depois do aceite, o CMV deu R$ 2,42 por porção, o piso R$ 2,69, e o cenário M20, de R$ 3,46, foi escolhido. Foram seis aprovações fora do modelo.
 
-> Um esclarecimento sobre as evidências. No REAL, com a planilha original, a jornada foi até a viabilidade e parou em PENDING. O agente pediu tempo de preparo, se as quantidades eram cruas ou cozidas, a capacidade útil da panela e o peso da porção. Eu não inventei esses valores, e o domínio não aceitou o prato sem eles. Para mim, esse é o comportamento certo para o coração do desafio.
+> O que não foi autônomo precisa ser dito. As falas da Dona Maria fui eu que fiz, com dados de demonstração. O Exa oscilou e precisei pedir de novo. Propostas criadas juntas ficaram desatualizadas e foram refeitas. E o agente chegou a propor o plano antes de eu confirmar a quantidade; a atestação não aplicou.
 
-> Preço e cardápio aparecem no próximo slide, como resultado do ensaio em SIMULATION. Durante a demonstração, vou confirmar cada passo pelo estado gravado, e não pela resposta do modelo.
+> À direita, o ensaio em SIMULATION de 17 de novembro, com planilha sintética, que já tinha chegado ao preço. Ali houve correções preparadas pela operação. Os bancos são separados, então nada da simulação vira fato real.
 
-> Vamos começar pela despensa.
+> Os controles funcionaram nos dois. Esses atritos viraram a minha lista de melhorias.
 
-**Demo rápida (~8 min, somente leitura):** abra o guia pelo link do slide, no modo Demo rápida. Cenas: 1 · despensa e orçamento (1:30) · 2 · fonte Exa registrada (1:30) · 3 · adaptação e plano (1:45) · 4 · viabilidade pendente (1:30) · 5 · aprovação humana externa (1:45). Sem comandos no terminal, sem novas propostas e sem aprovações. Ao fim da cena 5, volte ao slide 12 para preço e cardápio do ensaio SIMULATION.
+**Cuidado:** os números da direita são de planilha sintética. Não os misture com os da planilha original nem chame a sobra de lucro.
 
-## 12 — Ensaio E2E no Desktop · 70 s
-
-**Fala:**
-
-> De volta aos slides, quero mostrar rapidamente o que o ensaio em SIMULATION deixou registrado. É nele que aparecem o preço e o cardápio que a demo REAL não mostrou. É uma evidência separada da demonstração, com dados sintéticos.
-
-> Numa conversa contínua, o Hermes pesquisou uma receita real pelo Exa, preservou a versão original e registrou a adaptação como hipótese. O plano ficou com um lote de duas porções, a receita ficou elegível e as compras foram confirmadas sem complemento.
-
-> No preço, o CMV foi de R$ 1,218 por porção. A escolha foi o M30, e o valor gravado foi R$ 2,03. Depois da taxa e dos ingredientes, sobram uns 61 centavos, que também não são lucro líquido.
-
-> O que não foi autônomo precisa ser dito. Duas correções na receita adaptada foram preparadas pela operação, fora da conversa. O primeiro aceite foi recusado porque faltava o interesse. E a pesquisa desse perfil foi configurada manualmente.
-
-> Os controles funcionaram. A experiência ainda tem pontos a melhorar, e é por eles que começo o próximo slide.
-
-**Cuidado:** números de SIMULATION com planilha sintética. Não os apresente como resultado da planilha original nem chame a sobra de lucro.
-
-## 13 — O que pode virar melhoria? · 80 s
+## 12 — O que pode virar melhoria? · 85 s
 
 **Fala:**
 
 > Separei as melhorias em dois grupos. Algumas apareceram nos testes. Outras são evoluções que eu já planejava.
 
-> Nos testes, ao adaptar uma receita, o Hermes tentou uma revisão que perdia o vínculo com a fonte web. O domínio recusou, como deveria, mas o modelo não conseguiu se corrigir sozinho. Eu melhoraria o contrato da ferramenta e as orientações da skill para que essa correção não dependa da operação.
+> A primeira veio do ensaio REAL completo. Quando o agente cria duas propostas no mesmo turno, só a primeira aprovada vale; a outra fica desatualizada e precisa ser refeita. Ele também chegou a propor o plano antes da confirmação. Os controles seguraram, mas a skill deve propor uma decisão por vez, sempre depois da confirmação.
 
-> O ensaio REAL também achou um problema de UX, que eu já corrigi com um teste. A consulta de compras pedia para "esclarecer a medida e a unidade" de oito ingredientes, quando a causa real era não saber se as quantidades eram cruas ou cozidas. A regra estava certa; a pergunta para a Dona Maria estava errada.
+> Na pesquisa, o termo genérico “frango” trouxe uma página de lista acima do limite de extração, e o Exa anônimo oscilou. Termos de prato e duas ou três candidatas por busca deixam essa etapa mais robusta, sem abrir busca livre.
 
-> A aprovação pela CLI também mostrou atrito. Ela evoluiria para uma interface de revisão segura, ainda fora do catálogo do modelo.
-
-> Entre as evoluções, a pesquisa traria duas ou três candidatas por busca, e não apenas uma, com os mesmos controles.
+> A aprovação pela CLI também mostrou atrito: o prazo de dez minutos expirou uma vez e a mensagem não explicava bem o que fazer. Ela evoluiria para uma interface de revisão segura, ainda fora do catálogo do modelo.
 
 > No preço, faltam embalagem, gás, energia e mão de obra para chegar a um lucro de verdade.
 
 > Nos evals, existem 18 casos integrados. Eles foram executados de forma assistida pela CLI, com dados sintéticos e revisão delegada. Ainda não comparam modelos, e esse é o próximo passo, medindo qualidade, latência e custo.
 
-> Por fim, as preferências. Hoje a correspondência é literal. Se ela disser “não gosto de fritura”, o agente deveria perguntar se isso inclui empanados, em vez de presumir.
+> Por fim, a adaptação de receitas web. Na SIMULATION, o Hermes tentou uma revisão que perdia o vínculo com a fonte; o domínio recusou, mas a correção dependeu da operação. Eu melhoraria o contrato da ferramenta e a skill para isso.
 
 > Para transformar o protótipo em produto, porém, a prioridade é outra.
 
-## 14 — Próximos passos · 65 s
+## 13 — Próximos passos · 65 s
 
 **Fala:**
 
@@ -311,6 +295,20 @@ As linhas em itálico dentro das falas são notas de revisão, não texto para f
 > Só depois disso faria sentido integrar com o delivery, publicando cardápios e preços aprovados.
 
 > Em todas as etapas, o contrato continua o mesmo. O modelo propõe, e o domínio decide o que pode virar estado.
+
+## 14 — Demonstração · 45 s + demo ao vivo (13–15 min)
+
+**Fala:**
+
+> Agora quero mostrar como tudo isso aparece para a Dona Maria, que não precisa saber o que é MCP, SQLite ou hash.
+
+> Este é um atendimento REAL novo, preparado antes com a planilha original. Ninguém conversou nele ainda. Eu faço o papel da Dona Maria no Desktop e o da operadora no terminal ao lado.
+
+> Vamos da pesquisa à escolha do preço. A cada decisão, o agente cria uma proposta; eu confiro e atesto fora do modelo, e só então o estado muda. Vou confirmar cada passo pelo estado gravado, e não pela resposta do modelo.
+
+> Se a pesquisa ou o modelo oscilar, vou dizer o que aconteceu, sem completar de memória.
+
+**Demo ao vivo:** siga o [roteiro da demo](demo-hermes.md) ou o modo **Demo ao vivo** do [guia interativo](../demo/hermes-desktop-walkthrough.html). São 10 cenas e 6 aprovações. Ao fim, volte ao slide 15.
 
 ## 15 — Agradecimentos · 30 s
 
@@ -366,11 +364,11 @@ As linhas em itálico dentro das falas são notas de revisão, não texto para f
 
 > Eu separei as evidências por camada, porque cada uma prova uma coisa diferente.
 
-> Os testes determinísticos cobrem regras, limites, persistência e concorrência. O Hypothesis gera sequências de operações para achar casos extremos. A última regressão completa foi em 17 de novembro, com 948 aprovados e 2 ignorados, e a CI passou em Windows, Ubuntu e macOS. Os testes de integração exercitam o servidor MCP real por stdio.
+> Os testes determinísticos cobrem regras, limites, persistência e concorrência. O Hypothesis gera sequências de operações para achar casos extremos. A última regressão completa foi em 19 de novembro, com 998 aprovados e 4 ignorados, e a CI passou em Windows, Ubuntu e macOS. Os testes de integração exercitam o servidor MCP real por stdio.
 
 > Nos evals do agente, eu não olho só a resposta escrita: confiro as ferramentas chamadas e o estado persistido. São 18 casos no recorte CLI assistido, com a revisão delegada declarada.
 
-> Em 17 de novembro, conversei no Desktop com o perfil REAL e a planilha original. Foram pesquisa Exa real, receita web e adaptação, fatos da cozinha, plano e cinco aprovações locais, além de uma conversa nova que retomou tudo pelo SQLite. A jornada parou antes do aceite por falta de dados medidos. O ensaio completo até o preço foi em SIMULATION. Eu separo as duas evidências.
+> Em 19 de novembro, a jornada REAL foi completa no Desktop e no CLI, com a planilha original: pesquisa Exa real, receita, fatos, interesse, plano, aceite e preço, com seis aprovações locais. As falas da cozinheira eram de demonstração. Em 17 de novembro, uma jornada REAL anterior tinha parado em PENDING por falta de dados, e a SIMULATION tinha chegado ao preço. Eu separo as três evidências.
 
 > A CI roda o núcleo em Windows, Ubuntu e macOS, mas não instala o Hermes nem um modelo.
 
@@ -395,13 +393,14 @@ As linhas em itálico dentro das falas são notas de revisão, não texto para f
 | Uma nova sessão esquece as restrições? | A abertura consulta o mesmo workspace; revisão e decisões vêm do SQLite. Memória do LLM não é autoridade. [business_state.py](../../src/dona_maria/business_state.py). |
 | Como escalar para multiusuário? | Seria outra fronteira: autenticação, autorização por recurso, armazenamento concorrente, observabilidade e gestão de segredos. Não alegar que trocar SQLite por PostgreSQL resolve tudo. |
 | Qual modelo teve melhor resultado? | Não há comparação controlada suficiente para declarar vencedor. Registre modelo/provider/versão e assistência de cada execução; não derive ranking de uma demo. |
-| Por que não mostrar tudo do zero em oito minutos? | A jornada completa exige várias manifestações e atestações e, no ensaio, levou mais de uma hora. A demo rápida consulta um atendimento REAL preparado antes, sem novas propostas nem aprovações ao vivo. A jornada completa continua no guia interativo para validação técnica. |
-| O que ainda não está homologado? | Aceite, CMV e preço com a planilha original. A jornada REAL de 17/11 foi até a viabilidade `PENDING`; o ensaio completo até o preço foi em `SIMULATION`. CI não instala o Hermes nem um modelo. [Jornada REAL](../verification-desktop-real.md), [jornada SIMULATION](../verification-desktop-e2e.md). |
-| Por que o REAL parou? | Base cru/cozido `UNKNOWN` nas 9 linhas (o plano só soma linhas `RAW`), água sem custo, quatro lacunas declaradas na receita (tempo, peso da porção, requisitos, base) e interesse não registrado. Nenhum desses dados podia ser inventado. [planning.py](../../src/dona_maria/planning.py). |
+| Por que fazer a jornada inteira ao vivo? O que pode falhar? | Porque é a prova mais direta de que o fluxo funciona com a planilha original e de que cada decisão passa pela aprovação local. Pode falhar a pesquisa (Exa anônimo oscila), o modelo pode demorar ou criar duas propostas juntas, e uma proposta pode expirar em 10 minutos. O roteiro trata cada caso; nada é completado de memória. [Roteiro](demo-hermes.md). |
+| O que ainda não está homologado? | Uma jornada com cozinheira real e medições físicas; outros modelos e sistemas operacionais no Hermes; receitas com água incorporada no REAL. A jornada REAL completa de 19/11 usou falas de demonstração. CI não instala o Hermes nem um modelo. [Jornada REAL completa](../verification-desktop-real-complete.md). |
+| Por que o REAL de 17/11 parou? | Base cru/cozido `UNKNOWN` nas 9 linhas (o plano só soma linhas `RAW`), água sem custo, quatro lacunas declaradas na receita (tempo, peso da porção, requisitos, base) e interesse não registrado. Nenhum desses dados podia ser inventado. [planning.py](../../src/dona_maria/planning.py). |
 | Por que o agente não mostrou o saldo de R$ 80? | Com demanda incompleta, `remaining_budget` é `null`. Mostrar R$ 80 seria afirmar que nada precisa ser comprado. O agente disse que não conseguia confirmar o saldo, que é o comportamento esperado. |
-| Quanto daria o prato REAL? | Uma estimativa manual com os custos da planilha dá cerca de R$ 1,98 de ingredientes por porção e piso de R$ 2,21. Não é evidência: só a ferramenta, depois do aceite, calcula o valor oficial. O número também mostra por que chamo a diferença de sobra, e não de lucro. |
+| Quanto deu o prato REAL? | No frango acebolado de 19/11, a ferramenta calculou depois do aceite: lote de R$ 9,6811 (600 g de frango × R$ 0,014 + 200 g de cebola × R$ 0,004 + 10 g de alho × R$ 0,02 + 30 ml de óleo × R$ 0,009 + 6 g de sal × R$ 0,00185), CMV de R$ 2,420275 por porção, piso de R$ 2,69 e M20 de R$ 3,46, com sobra de R$ 0,69, que não é lucro. |
 | Como você avalia o agente, e não só o código? | Agent Evals com cenário, tools chamadas e estado persistido; a resposta escrita sozinha não aprova. Falhas e tentativas ficam preservadas. O próximo passo é rodar os mesmos casos em outros modelos e na CI. [evals/README.md](../../evals/README.md). |
 | E custo e latência? | Não medi de forma controlada. A arquitetura reduz o que o modelo precisa fazer (a matemática e as regras ficam no Python), mas o agente consulta o estado muitas vezes: 26 `get_business_state` no ensaio SIMULATION. Eu instrumentaria tokens, chamadas por etapa e tempo até a decisão. |
 | Como observar isso em produção? | Logs estruturados já registram tool, resultado e duração por chamada MCP, sem dados privados. Faltam traces por atendimento, métricas de travamento por etapa e custo por conversa. |
-| O que faria com mais duas semanas? | Concluir o REAL até o preço com dados medidos; simplificar o contrato de revisão de receita, que causou as recusas `SOURCE_NOT_LINKED`; trazer duas ou três candidatas por busca; comparar modelos nos evals; trocar o terminal por uma revisão autenticada. |
-| O E2E foi autônomo? | Não. Duas propostas corretivas da adaptação foram preparadas pela operação, fora da conversa, depois de recusas `SOURCE_NOT_LINKED`; o primeiro aceite foi recusado por falta de interesse registrado; a pesquisa do perfil `SIMULATION` foi configurada manualmente. Nenhuma aprovação foi feita pelo agente. [Intervenções](../verification-desktop-e2e.md#intervenções-operacionais). |
+| O que faria com mais duas semanas? | Repetir o REAL com uma cozinheira real; fazer a skill propor uma decisão por vez; simplificar o contrato de revisão de receita, que causou as recusas `SOURCE_NOT_LINKED`; trazer duas ou três candidatas por busca; comparar modelos nos evals; trocar o terminal por uma revisão autenticada. |
+| O E2E foi autônomo? | Não. No REAL de 19/11, as falas da cozinheira foram minhas, pedi nova pesquisa quando o Exa falhou, propostas desatualizadas foram refeitas a pedido e o plano antecipado não foi atestado. Na SIMULATION, duas propostas corretivas foram preparadas pela operação depois de recusas `SOURCE_NOT_LINKED`, e a pesquisa do perfil foi configurada manualmente. Nenhuma aprovação foi feita pelo agente. [REAL 19/11](../verification-desktop-real-complete.md), [SIMULATION](../verification-desktop-e2e.md#intervenções-operacionais). |
+| As falas da Dona Maria são reais? | Não. Eu interpretei a cozinheira com dados de demonstração declarados na conversa. O que é real é a planilha original, a pesquisa Exa, o modelo, as tools, o banco REAL e as aprovações locais. O sistema registra essas falas como declarações (`USER_PROVIDED`), não como medições. |

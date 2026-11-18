@@ -43,12 +43,13 @@ central é uma divisão de responsabilidades:
 
 | Evidência | Resultado | Registro |
 | --- | --- | --- |
+| Jornada **REAL completa** no Hermes Desktop e no Hermes CLI, planilha original, 19/11/2026 | Pesquisa Exa real (TudoGostoso), receita declarada, fatos da cozinha, interesse, plano, aceite, CMV de R$ 2,42 por porção, três cenários e preço escolhido (M20, R$ 3,46), com 6 aprovações fora do modelo em cada ensaio. Falas da cozinheira interpretadas no ensaio, com dados declarados | [Jornada REAL completa](docs/verification-desktop-real-complete.md) |
 | Jornada **REAL** no Hermes Desktop, planilha original, 17/11/2026 | Pesquisa Exa real, receita web e adaptação registradas, fatos da cozinha, plano, 5 decisões aprovadas fora do modelo e retomada em conversa nova. **Parou em `PENDING` antes do aceite:** faltavam tempo, peso da porção e base cru/cozido, e o domínio não aceitou suposições. | [Jornada REAL](docs/verification-desktop-real.md) |
 | Jornada **SIMULATION** completa no Desktop, 17/11/2026 | Da pesquisa ao preço escolhido (cenário M30, R$ 2,03 por porção), com planilha sintética e intervenções operacionais registradas | [Jornada SIMULATION](docs/verification-desktop-e2e.md) |
-| Testes determinísticos, 17/11/2026 | 948 aprovados e 2 ignorados: pytest, Hypothesis e MCP stdio real. CI verde em Windows, Ubuntu e macOS | [Evidências](#validar) |
+| Testes determinísticos, 19/11/2026 | 998 aprovados e 4 ignorados: pytest, Hypothesis e MCP stdio real. CI verde em Windows, Ubuntu e macOS no commit `95a0e51` | [Evidências](#validar) |
 
 > [!NOTE]
-> **Não há vídeo gravado.** A demonstração é feita ao vivo no Hermes Desktop, sobre o atendimento REAL. Para reproduzir por conta própria, use o [Quick Start](#quick-start) e o [guia interativo](docs/demo/hermes-desktop-walkthrough.html), com prompts copiáveis. O guia é uma página HTML estática: depois de clonar, abra com `start docs\demo\hermes-desktop-walkthrough.html` (Windows), `open …` (macOS) ou `xdg-open …` (Linux).
+> **Não há vídeo gravado.** A demonstração é feita ao vivo no Hermes Desktop: a jornada REAL completa, da pesquisa ao preço, em um atendimento REAL novo preparado com a planilha original ([roteiro da demo](docs/speaker/demo-hermes.md)). Para reproduzir por conta própria, use o [Quick Start](#quick-start) e o [guia interativo](docs/demo/hermes-desktop-walkthrough.html), com prompts copiáveis. O guia é uma página HTML estática: depois de clonar, abra com `start docs\demo\hermes-desktop-walkthrough.html` (Windows), `open …` (macOS) ou `xdg-open …` (Linux).
 
 ## 📑 Sumário
 
@@ -298,6 +299,14 @@ Maria. Com o plano de 4 porções registrado, a viabilidade ficou `PENDING` e o
 agente perguntou, uma coisa por vez, tempo efetivo, base cru/cozido, capacidade
 útil da panela e peso da porção.
 
+**Exemplo da jornada REAL completa (19/11):** a pesquisa trouxe o frango
+acebolado do TudoGostoso, com sobrecoxa; a cozinheira registrou a própria versão
+com peito, tudo cru, e as três categorias revisadas. Com 60 minutos declarados
+para 40 exigidos, a viabilidade ficou `ELIGIBLE`; o estoque cobriu tudo (R$ 0,00,
+saldo R$ 80,00) e, depois do aceite, o cálculo deu CMV de R$ 2,42 por porção e o
+cenário M20 de R$ 3,46 foi escolhido. Quando o agente propôs o plano antes de a
+quantidade ser confirmada, a atestação local não o aplicou.
+
 ### Catálogo do modelo
 
 | Tool | Quando o agente usa | Efeito |
@@ -375,7 +384,7 @@ Cada camada prova uma coisa diferente. Nenhuma substitui as outras.
 
 | Camada | O que prova | O que não prova | Registro |
 | --- | --- | --- | --- |
-| Testes determinísticos | 948 aprovados e 2 ignorados em 17/11/2026 (5 min 38 s com `-n 2`; os ignorados são symlink sem privilégio no Windows e o probe opcional do Hermes instalado): importação, viabilidade, orçamento agregado, aprovação, concorrência, rollback, replay, invalidação e retomada. Hypothesis explora sequências de alterações | Qualidade da conversa ou pesquisa real | Comandos abaixo |
+| Testes determinísticos | 998 aprovados e 4 ignorados em 19/11/2026 (5 min 54 s com `-n 2`; os ignorados são três casos de symlink sem privilégio no Windows e o probe opcional do Hermes instalado): importação, viabilidade, orçamento agregado, aprovação, concorrência, rollback, replay, invalidação e retomada. Hypothesis explora sequências de alterações | Qualidade da conversa ou pesquisa real | Comandos abaixo |
 | Integração MCP stdio | Servidor real por stdio, limites de frame, catálogo de 6 tools, reinício e replay | Comportamento do modelo | [tests/integration](tests/integration) |
 | CI | Lint, formatação e suíte em Windows, Ubuntu e macOS, verde no commit `95a0e51` | Hermes, modelo ou Desktop (não instala o host) | [ci.yml](.github/workflows/ci.yml) |
 | Jornada REAL no Desktop | Planilha original, pesquisa Exa real, 5 decisões aprovadas fora do modelo, retomada em conversa nova e bloqueio honesto de viabilidade | Aceite, CMV e preço com a planilha original | [verification-desktop-real.md](docs/verification-desktop-real.md) |
@@ -398,7 +407,9 @@ uv run --locked --no-sync ruff format --check src tests/conftest.py tests/unit t
 
 | Limitação | Próximo passo |
 | --- | --- |
-| A jornada REAL parou antes do aceite: faltam tempo medido, peso da porção, base cru/cozido e custo da água | Completar com dados medidos ou declarados, sempre rotulados como declaração |
+| A jornada REAL completa usou falas de demonstração e uma receita sem água; não há cozinheira real nem medição física independente | Repetir com a cozinheira e, quando necessário, com medições rotuladas |
+| Duas propostas no mesmo turno: só a primeira aprovada vale e a outra fica desatualizada; o modelo chegou a propor o plano antes da confirmação da quantidade | Skill mais explícita: uma proposta por vez, sempre depois da confirmação |
+| Aprovação expirada no `onboarding review` termina com "use outra pasta nova", embora a pasta esteja íntegra | Mensagem específica para `AUTHORIZATION_EXPIRED` |
 | Água da rede pública não está na planilha. Sem identidade e custo, a linha fica `MISSING_INFORMATION`, a demanda não fecha e aceite e CMV ficam bloqueados. Não há regra especial nem custo zero presumido | Decidir no domínio, com aprovação local, se a água entra no CMV com custo declarado pela cozinheira ou se fica como insumo operacional fora do CMV de ingredientes |
 | A aprovação local atesta o conteúdo exato, mas não autentica a cozinheira | Interface de revisão autenticada, ainda fora do catálogo do modelo |
 | A jornada completa leva mais de uma hora; na SIMULATION, duas revisões da adaptação foram recusadas (`SOURCE_NOT_LINKED`) e exigiram a operação | Contrato de revisão de receita mais simples e skill mais explícita |
