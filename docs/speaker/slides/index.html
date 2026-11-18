@@ -304,9 +304,9 @@
 <p>Até aqui, mostrei as decisões de arquitetura e os controles do sistema. Agora quero mostrar como isso aparece para a Dona Maria, que não precisa saber o que é MCP, SQLite ou hash.</p>
 <p>No Hermes Desktop, eu sou a Dona Maria. Vou seguir a demo rápida do guia interativo, com cinco cenas só de consulta sobre o perfil REAL, preparado antes com a planilha original. Não vou criar propostas nem aprovar nada ao vivo.</p>
 <p>Vamos ver a despensa, a fonte Exa registrada, a adaptação com o plano, a viabilidade que ainda está pendente e as decisões que passaram pela aprovação externa.</p>
-<p>Um esclarecimento sobre as evidências. A receita REAL ainda não foi aceita nem precificada, e a jornada REAL completa vai passar por uma nova validação de ponta a ponta. Preço e cardápio aparecem no próximo slide, como resultado do ensaio em SIMULATION. Durante a demonstração, vou confirmar cada passo pelo estado gravado, e não pela resposta do modelo.</p>
+<p>Um esclarecimento sobre as evidências. No REAL, com a planilha original, a jornada foi até a viabilidade e parou em PENDING. O agente pediu tempo de preparo, se as quantidades eram cruas ou cozidas, a capacidade útil da panela e o peso da porção. Eu não inventei esses valores, e o domínio não aceitou o prato sem eles. Para mim, esse é o comportamento certo para o coração do desafio.</p>
+<p>Preço e cardápio aparecem no próximo slide, como resultado do ensaio em SIMULATION. Durante a demonstração, vou confirmar cada passo pelo estado gravado, e não pela resposta do modelo.</p>
 <p>Vamos começar pela despensa.</p>
-<p><em>[Revisar após a validação REAL: substituir o esclarecimento sobre as evidências pelo resultado comprovado.]</em></p>
  </aside>
 </section>
 
@@ -357,7 +357,6 @@
 <p>No preço, o CMV foi de R$ 1,218 por porção. A escolha foi o M30, e o valor gravado foi R$ 2,03. Depois da taxa e dos ingredientes, sobram uns 61 centavos, que também não são lucro líquido.</p>
 <p>O que não foi autônomo precisa ser dito. Duas correções na receita adaptada foram preparadas pela operação, fora da conversa. O primeiro aceite foi recusado porque faltava o interesse. E a pesquisa desse perfil foi configurada manualmente.</p>
 <p>Os controles funcionaram. A experiência ainda tem pontos a melhorar, e é por eles que começo o próximo slide.</p>
-<p><em>[Revisar após a validação REAL: avaliar mover este slide para o apêndice e trazer os resultados REAL para a apresentação principal.]</em></p>
  </aside>
 </section>
 
@@ -378,6 +377,7 @@
  <aside class="notes">
 <p>Separei as melhorias em dois grupos. Algumas apareceram nos testes. Outras são evoluções que eu já planejava.</p>
 <p>Nos testes, ao adaptar uma receita, o Hermes tentou uma revisão que perdia o vínculo com a fonte web. O domínio recusou, como deveria, mas o modelo não conseguiu se corrigir sozinho. Eu melhoraria o contrato da ferramenta e as orientações da skill para que essa correção não dependa da operação.</p>
+<p>O ensaio REAL também achou um problema de UX, que eu já corrigi com um teste. A consulta de compras pedia para "esclarecer a medida e a unidade" de oito ingredientes, quando a causa real era não saber se as quantidades eram cruas ou cozidas. A regra estava certa; a pergunta para a Dona Maria estava errada.</p>
 <p>A aprovação pela CLI também mostrou atrito. Ela evoluiria para uma interface de revisão segura, ainda fora do catálogo do modelo.</p>
 <p>Entre as evoluções, a pesquisa traria duas ou três candidatas por busca, e não apenas uma, com os mesmos controles.</p>
 <p>No preço, faltam embalagem, gás, energia e mão de obra para chegar a um lucro de verdade.</p>
@@ -521,12 +521,12 @@
    <table class="w-full text-[18px] leading-snug">
     <thead class="bg-white/5 text-left text-[15px] uppercase tracking-widest text-amber"><tr><th class="px-5 py-3">Camada</th><th class="px-5 py-3">O que verifica</th><th class="px-5 py-3">O que não cobre</th></tr></thead>
     <tbody class="divide-y divide-line">
-     <tr><td class="px-5 py-3">804 testes pytest + Hypothesis</td><td class="px-5 py-3 text-muted">Regras, limites, persistência, concorrência (16/11)</td><td class="px-5 py-3 text-muted">Qualidade da conversa</td></tr>
+     <tr><td class="px-5 py-3">948 testes pytest + Hypothesis</td><td class="px-5 py-3 text-muted">Regras, limites, persistência, concorrência (17/11)</td><td class="px-5 py-3 text-muted">Qualidade da conversa</td></tr>
      <tr><td class="px-5 py-3">Integração MCP stdio</td><td class="px-5 py-3 text-muted">Contrato, catálogo e dispatch reais</td><td class="px-5 py-3 text-muted">Interface do Hermes</td></tr>
      <tr><td class="px-5 py-3">18 Agent Evals integrados</td><td class="px-5 py-3 text-muted">CLI assistido, ferramentas e estado</td><td class="px-5 py-3 text-muted">Autonomia geral ou Desktop</td></tr>
-     <tr><td class="px-5 py-3">Preparação REAL (17/11)</td><td class="px-5 py-3 text-muted">Planilha original: 37 itens, <span class="font-mono text-[16px]">check</span> em PASS</td><td class="px-5 py-3 text-muted">Conversa REAL no Desktop</td></tr>
+     <tr><td class="px-5 py-3">Jornada REAL no Desktop (17/11)</td><td class="px-5 py-3 text-muted">Planilha original, Exa real, 5 aprovações locais, retomada em conversa nova</td><td class="px-5 py-3 text-muted">Aceite e preço REAL (parou em <span class="font-mono text-[16px]">PENDING</span>)</td></tr>
      <tr><td class="px-5 py-3">Ensaio E2E no Desktop (17/11)</td><td class="px-5 py-3 text-muted">Jornada SIMULATION completa, Exa real, preço persistido</td><td class="px-5 py-3 text-muted">Perfil REAL e autonomia total</td></tr>
-     <tr><td class="px-5 py-3">CI em Windows, Ubuntu e macOS</td><td class="px-5 py-3 text-muted">Núcleo e MCP, em versão anterior</td><td class="px-5 py-3 text-muted">Host e modelo reais</td></tr>
+     <tr><td class="px-5 py-3">CI em Windows, Ubuntu e macOS</td><td class="px-5 py-3 text-muted">Núcleo e MCP, verde no commit atual</td><td class="px-5 py-3 text-muted">Host e modelo reais</td></tr>
     </tbody>
    </table>
   </div>
@@ -534,9 +534,9 @@
  </div>
  <aside class="notes">
 <p>Eu separei as evidências por camada, porque cada uma prova uma coisa diferente.</p>
-<p>Os testes determinísticos cobrem regras, limites, persistência e concorrência. O Hypothesis gera sequências de operações para achar casos extremos. A última regressão completa foi em 16 de novembro, com 804 aprovados. Depois da troca para o Exa, rodei 77 testes direcionados de pesquisa, não a suíte inteira. Os testes de integração exercitam o servidor MCP real por stdio.</p>
+<p>Os testes determinísticos cobrem regras, limites, persistência e concorrência. O Hypothesis gera sequências de operações para achar casos extremos. A última regressão completa foi em 17 de novembro, com 948 aprovados e 2 ignorados, e a CI passou em Windows, Ubuntu e macOS. Os testes de integração exercitam o servidor MCP real por stdio.</p>
 <p>Nos evals do agente, eu não olho só a resposta escrita: confiro as ferramentas chamadas e o estado persistido. São 18 casos no recorte CLI assistido, com a revisão delegada declarada.</p>
-<p>Em 17 de novembro, preparei o REAL com a planilha original até o <code>check</code>, e fiz o ensaio completo no Desktop em SIMULATION. A conversa REAL completa no Desktop ainda falta, e eu não a apresento como feita.</p>
+<p>Em 17 de novembro, conversei no Desktop com o perfil REAL e a planilha original. Foram pesquisa Exa real, receita web e adaptação, fatos da cozinha, plano e cinco aprovações locais, além de uma conversa nova que retomou tudo pelo SQLite. A jornada parou antes do aceite por falta de dados medidos. O ensaio completo até o preço foi em SIMULATION. Eu separo as duas evidências.</p>
 <p>A CI roda o núcleo em Windows, Ubuntu e macOS, mas não instala o Hermes nem um modelo.</p>
  </aside>
 </section>

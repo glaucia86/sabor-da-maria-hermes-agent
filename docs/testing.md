@@ -41,10 +41,20 @@ de referência:
 
 ```text
 uv sync --locked --python 3.13
-uv run --locked --no-sync python -X utf8 -B -m pytest tests/unit tests/integration -q
-uv run --locked --no-sync ruff check src tests/unit tests/integration
-uv run --locked --no-sync ruff format --check src tests/unit tests/integration
+uv run --locked --no-sync python -X utf8 -B -m pytest tests/unit tests/integration -q -n 2 --dist worksteal
+uv run --locked --no-sync ruff check src tests/conftest.py tests/unit tests/integration evals scripts
+uv run --locked --no-sync ruff format --check src tests/conftest.py tests/unit tests/integration evals scripts
 ```
+
+No Windows, se o temporário padrão do pytest recusar acesso (`WinError 5`),
+acrescente `-p no:cacheprovider --basetemp artifacts/private/<pasta-nova>`, sem
+apagar pastas anteriores.
+
+Última execução completa: **948 aprovados e 2 ignorados em 17/11/2026**, em
+5 min 38 s com `-n 2`. Os ignorados são a criação de symlink sem privilégio no
+Windows e o probe opcional do Hermes instalado, que exige
+`DONA_MARIA_HERMES_TEST_PROFILE`. A CI executa a mesma suíte em Windows, Ubuntu
+e macOS.
 
 A suíte cobre importação e diagnósticos, leitura sem mutação, candidatas,
 viabilidade, aceite, cotações e confirmação, orçamento agregado, custos por
@@ -59,9 +69,9 @@ uv run --locked --no-sync python -X utf8 -B -m pytest tests/unit tests/integrati
 ```
 
 Coleta não comprova execução. Pytest não executa Agent Evals nem comprova
-pesquisa web real ou qualidade do diálogo no Hermes. A planilha original não
-é distribuída; a suíte usa fixtures sintéticas e indica como ignorada a
-conferência adicional do anexo quando ele não está disponível.
+pesquisa web real ou qualidade do diálogo no Hermes. A planilha original é
+versionada em `doc-specs/despensa_dona_maria.xlsx` e lida somente como fixture
+de conferência; os demais testes usam fixtures sintéticas.
 
 Execute as verificações pertinentes à alteração e registre comando,
 versões, resultados reais e limitações no handoff. Para evals, use `PASS`,

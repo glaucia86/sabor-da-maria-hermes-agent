@@ -2,9 +2,15 @@
 
 Contrato operacional e roteador primário de contexto para agentes de coding AI.
 Use como entrada: **RULES.md + slice atual + handoffs necessários + Source IDs +
-código/testes diretamente relacionados**. A retomada global está em
-[.harness/handoff.md](.harness/handoff.md). Este arquivo orienta a consulta das
-fontes; não substitui seus contratos nem autoriza implementar outras fatias.
+código/testes diretamente relacionados**. A retomada global fica em
+`.harness/handoff.md`, quando o Harness local estiver presente. Este arquivo
+orienta a consulta das fontes; não substitui seus contratos nem autoriza
+implementar outras fatias.
+
+Itens marcados como *local* não são versionados: `.harness/`,
+`docs/s00-smoke.md`, `tests/harness/`, `tools/harness_check.py` e os documentos
+de origem em `doc-specs/` fora de PRD, SPEC, plano e planilha. Na ausência
+deles, siga as fontes versionadas e registre a limitação.
 
 ## 1. Fontes e precedência
 
@@ -17,14 +23,14 @@ Para requisitos, use a autoridade definida no projeto:
 
 | Fonte | Papel / quando consultar |
 | --- | --- |
-| [Desafio oficial](doc-specs/desafio-senior-ai-engineer.md) | Prevalece sobre interpretações locais das obrigações do desafio; consultar se houver dúvida de origem ou conflito |
+| Desafio oficial, `doc-specs/desafio-senior-ai-engineer.md` (*local*) | Prevalece sobre interpretações locais das obrigações do desafio; consultar se houver dúvida de origem ou conflito |
 | [SPEC](doc-specs/spec.md) | Fonte técnica canônica: definição dos IDs, contratos, estado, erros e verificação afetados |
 | [PRD](doc-specs/PRD.md) | Proveniência de negócio ou fallback quando a SPEC não esclarecer a necessidade |
 | [Plano](doc-specs/implementation-slices.md) | Slice autorizado, Context Retrieval Contract, dependências, bloqueios, critérios e handoff |
 | [Desenvolvimento](docs/development.md) | Convenções, execução da fatia e registro da entrega |
-| [Arquitetura](docs/architecture.md) | Alterações de responsabilidades, contratos ou persistência |
+| [Arquitetura](docs/architecture.md) | Módulos, dados, fronteiras e onde cada invariante é aplicado |
 | [Testes](docs/testing.md) | Escolha de testes, isolamento, comandos e evidências |
-| [README](README.md) | Visão do projeto e instruções de reprodução, distinguindo proposta de execução comprovada |
+| [README](README.md) | Visão do produto, decisões, evidências e Quick Start, distinguindo proposta de execução comprovada |
 
 Guias, skills e padrões do código não redefinem contratos canônicos. Preserve
 decisões GRILL aprovadas e os rótulos de proposta, premissa e pendência. Diante
@@ -138,13 +144,14 @@ Execute as verificações proporcionais ao slice e aos contratos alterados.
 Fixtures controladas não provam pesquisa web ou integração Hermes reais.
 Não invente meta de cobertura, SLA ou threshold herdado do template.
 
-**Comandos executáveis S00:** manifesto e lock disponíveis; testes locais,
-lint e launcher stdio comprovados em [docs/s00-smoke.md](docs/s00-smoke.md).
-Isso não comprova host Hermes, web ou conclusão do slice. O Harness local
-possui `python -X utf8 -B .harness/check.py` e
-`python -X utf8 -B -m unittest discover -s tests/harness -v`, documentados em
-[.harness/tools.md](.harness/tools.md); seu sucesso não valida a aplicação.
-Confirme comandos novos no código/configuração e registre-os após execução.
+**Comandos da aplicação:** os mesmos do [README](README.md#validar) e da
+[CI](.github/workflows/ci.yml): pytest em `tests/unit tests/integration` e Ruff
+`check`/`format --check` em `src tests/conftest.py tests/unit tests/integration
+evals scripts`. Eles não comprovam host Hermes, web ou conclusão do slice. Quando
+o Harness *local* estiver presente, `python -X utf8 -B .harness/check.py` e
+`python -X utf8 -B -m unittest discover -s tests/harness -v` verificam seus
+registros; seu sucesso não valida a aplicação. Confirme comandos novos no
+código/configuração e registre-os após execução.
 
 Registre comando exato, ambiente/versões relevantes, resultado observado,
 falha principal, impacto no aceite e próximo passo. Para evals, diferencie
@@ -155,7 +162,7 @@ não alegue execução da aplicação.
 
 ## 6. Harness Engineering e continuidade
 
-O Harness adotado está em [.harness/README.md](.harness/README.md), com índice,
+O Harness adotado (*local*) está em `.harness/README.md`, com índice,
 progresso, verificação, Handoff global e ferramentas. O [plano](doc-specs/implementation-slices.md)
 continua canônico para status, dependências, critérios e Handoff por fatia,
 conforme AGENTS.md. S00 prepara o Harness uma vez por entrega; confira o que

@@ -4,11 +4,11 @@ Consulte ao executar uma fatia, alterar código ou preparar seu handoff.
 Este guia complementa o [AGENTS.md](../AGENTS.md); o procedimento canônico
 está no [plano](../doc-specs/implementation-slices.md), em **Context Retrieval
 Contract**, **Condições comuns** e no contrato da fatia. Retomada global e
-comandos do Harness: [.harness/README.md](../.harness/README.md).
+comandos do Harness ficam em `.harness/README.md`, local e não versionado.
 
 ## Recuperação de contexto
 
-1. Use RULES.md como roteador, confira [.harness/handoff.md](../.harness/handoff.md),
+1. Use RULES.md como roteador, confira `.harness/handoff.md` quando presente,
    o contrato de contexto, a fatia pedida e somente os handoffs necessários.
 2. Extraia os Source IDs e localizadores indicados pela fatia.
 3. Busque cada definição literalmente, por exemplo:
@@ -32,10 +32,11 @@ não comportar a mudança, reduza o incremento e registre o ponto de retomada.
 - Consulte [testes](testing.md) ao implementar comportamento e
   [arquitetura](architecture.md) quando alterar responsabilidades.
 
-O recorte local S00 possui `pyproject.toml`, `uv.lock`, servidor stdio e
-configuração de lint. Comandos executados e limites estão em
-[s00-smoke.md](s00-smoke.md). Não apresente comandos futuros ou integração
-Hermes/web como comprovados pelos testes locais.
+O mapa atual de módulos e o local de cada invariante estão na
+[arquitetura](architecture.md). Dependências ficam fixadas em `pyproject.toml` e
+`uv.lock`; os comandos de verificação estão no [guia de testes](testing.md).
+Testes locais não comprovam integração Hermes, pesquisa web ou qualidade da
+conversa: essas evidências vêm das jornadas registradas em `docs/verification-*.md`.
 
 ## Entrega e continuidade
 

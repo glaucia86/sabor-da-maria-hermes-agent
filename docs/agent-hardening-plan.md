@@ -1,7 +1,24 @@
 # Plano de implementação — domínio agnóstico, UX acessível e segurança
 
 > Base: `main` no commit `fcdf98bb4329c15de1f7b948764f6a542d70f568`.
-> Escopo: desafio Senior AI Engineer / Hermes Agent. Esta especificação não comprova implementação.
+> Escopo: desafio Senior AI Engineer / Hermes Agent.
+
+> [!NOTE]
+> **Status em 17/11/2026: implementado nas fatias S13–S19.** O texto abaixo é o plano original, preservado como histórico. Onde cada item foi implementado:
+>
+> | Item do plano | Implementação | Testes |
+> | --- | --- | --- |
+> | Proveniência por informação (WEB, humana, simulação, medição reportada) | [provenance.py](../src/dona_maria/provenance.py), [candidates.py](../src/dona_maria/candidates.py) | [test_recipe_provenance.py](../tests/unit/test_recipe_provenance.py) |
+> | Receita própria e adaptação sem regra por prato | `register_recipe_candidate` com `origin.derived_from` e `changes` | [test_human_recipe_stdio.py](../tests/integration/test_human_recipe_stdio.py), [test_adaptation_simulation.py](../tests/unit/test_adaptation_simulation.py) |
+> | Simulação isolada | `context_mode` imutável por banco | [test_adaptation_simulation_stdio.py](../tests/integration/test_adaptation_simulation_stdio.py) |
+> | Custo desconhecido bloqueia decisão definitiva | [cost_readiness.py](../src/dona_maria/cost_readiness.py) | [test_cost_readiness.py](../tests/unit/test_cost_readiness.py) |
+> | Binding confiável, sem IDs na conversa | [`AttendanceService`](../src/dona_maria/business_state.py), [launcher.py](../src/dona_maria/launcher.py) | [test_attendance.py](../tests/unit/test_attendance.py), [test_attendance_stdio.py](../tests/integration/test_attendance_stdio.py) |
+> | Decisão humana fora do LLM | [approvals.py](../src/dona_maria/approvals.py), [approval_cli.py](../src/dona_maria/approval_cli.py) | [test_local_approval.py](../tests/unit/test_local_approval.py) |
+> | Privilégio mínimo no host | [hermes_policy](../src/dona_maria/hermes_policy/__init__.py) | [test_hermes_attendance_policy.py](../tests/unit/test_hermes_attendance_policy.py) |
+> | Pesquisa sem consulta ou URL livre | [research.py](../src/dona_maria/research.py), [research_network.py](../src/dona_maria/research_network.py) | [test_mediated_research.py](../tests/unit/test_mediated_research.py), [test_research_network.py](../tests/unit/test_research_network.py) |
+> | Evals conversacionais e adversariais | [evals/integrated-cases.json](../evals/integrated-cases.json) | [test_integrated_evals.py](../tests/integration/test_integrated_evals.py), [s19-results.json](../evals/s19-results.json) |
+>
+> Limites que continuam valendo: STDIO local e UUID não oferecem isolamento multiusuário, e a aprovação local não autentica a cozinheira. As jornadas no Desktop estão em [verification-desktop-real.md](verification-desktop-real.md) e [verification-desktop-e2e.md](verification-desktop-e2e.md).
 
 ## Objetivo
 Evoluir o Sabor da Maria sem regras específicas para arroz com frango, escondidinho ou qualquer outro prato. Preservar o motor determinístico de compras, viabilidade, aceite e preço e separar conversação amigável da infraestrutura interna.

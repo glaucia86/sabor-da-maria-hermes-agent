@@ -1,5 +1,8 @@
 # Verificação e reprodução integrada
 
+> [!NOTE]
+> **Registro histórico.** O estado atual está em [Evidências e limites do README](../README.md#validar), na [jornada REAL no Desktop](verification-desktop-real.md) e na [jornada SIMULATION](verification-desktop-e2e.md), todas de 17/11/2026. Última suíte completa: 948 aprovados e 2 ignorados.
+
 S11 e S19 foram concluídos no recorte CLI assistido, com a revisão atual
 explicitamente delegada pela pessoa. As respostas reais EV-07 e EV-09 passaram
 na revisão de clareza: preço cobrado, sobra após ingredientes/taxa e lucro

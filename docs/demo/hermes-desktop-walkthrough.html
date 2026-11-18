@@ -1724,7 +1724,7 @@ sobra após taxa e ingr. = 0,90 × preço − CMV por porção
   <header>
     <p class="kicker">Apêndice C · Reprodutibilidade</p>
     <h2 id="t-c" tabindex="-1">O que o avaliador executa e o que é só evidência</h2>
-    <p class="lead">O percurso <strong>REAL</strong> é o caminho oficial e reproduzível. A jornada <strong>SIMULATION</strong> foi concluída de forma assistida em 17/11/2026 e é <strong>evidência</strong>: ela não homologa o perfil REAL com a planilha original, que continua a validar pelo avaliador.</p>
+    <p class="lead">O percurso <strong>REAL</strong> é o caminho oficial e reproduzível. Em 17/11/2026, a trilha REAL foi exercitada no Desktop com a planilha original até a viabilidade <code>PENDING</code>, sem aceite nem preço (<a href="../verification-desktop-real.md">registro REAL</a>). A jornada <strong>SIMULATION</strong> foi concluída de forma assistida no mesmo dia e é <strong>evidência</strong>: ela não homologa o perfil REAL.</p>
   </header>
 
   <div class="table-wrap">
@@ -1738,8 +1738,8 @@ sobra após taxa e ingr. = 0,90 × preço − CMV por porção
         <tr><td>Dados da cozinha</td><td>Verdadeiros, com origem humana.</td><td>Hipotéticos, marcados como simulação.</td></tr>
         <tr><td>Revisão da receita</td><td>Pelo agente na conversa, sujeita à <a href="#rec-source-not-linked">recusa observada</a>.</td><td>Duas propostas corretivas preparadas pela operação, fora da conversa.</td></tr>
         <tr><td>Compras</td><td>Depende dos faltantes; o ramo de cotação pode ser exercido.</td><td>Desembolso R$ 0,00; sem cotação.</td></tr>
-        <tr><td>Preço</td><td>Depende dos seus custos. Não há resultado garantido.</td><td>M30, R$ 2,03 por porção; CMV R$ 1,218; taxa R$ 0,20; sobra R$ 0,61.</td></tr>
-        <tr><td>Retomada</td><td>Comando <code>desktop</code> no mesmo diretório; não validada no ensaio Desktop.</td><td>Não exercitada; uma conversa contínua das 03:14 às 03:59 (BRT).</td></tr>
+        <tr><td>Preço</td><td>Depende dos seus custos. Não há resultado garantido; no ensaio REAL de 17/11, a jornada parou antes do aceite.</td><td>M30, R$ 2,03 por porção; CMV R$ 1,218; taxa R$ 0,20; sobra R$ 0,61.</td></tr>
+        <tr><td>Retomada</td><td>Comando <code>desktop</code> no mesmo diretório; no ensaio REAL, uma conversa nova recuperou receitas, fatos, plano e pendências.</td><td>Não exercitada; uma conversa contínua das 03:14 às 03:59 (BRT).</td></tr>
       </tbody>
     </table>
   </div>
@@ -1788,6 +1788,7 @@ sobra após taxa e ingr. = 0,90 × preço − CMV por porção
     <h3>Fontes conferidas para este guia</h3>
     <ul>
       <li><a href="../../README.md">README</a> e <a href="../setup.md">docs/setup.md</a> — percurso, comandos e recuperação.</li>
+      <li><a href="../verification-desktop-real.md">docs/verification-desktop-real.md</a> — jornada REAL, bloqueios e limites.</li>
       <li><a href="../verification-desktop-e2e.md">docs/verification-desktop-e2e.md</a> — ensaio, intervenções e limites.</li>
       <li><a href="../speaker/demo-hermes.md">docs/speaker/demo-hermes.md</a> — roteiro cronometrado.</li>
       <li><a href="../../.hermes.md">.hermes.md</a> e <a href="../../skills/dona-maria-cardapio/SKILL.md">skill dona-maria-cardapio</a> — conduta do agente.</li>

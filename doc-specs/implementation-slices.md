@@ -9,7 +9,9 @@ já iniciado autorizadas em `C:/Labs/sabor-da-maria-s20`, branch
 `feat/s20-portable-onboarding`, com S19/PR #18 integrado na origem em `8e4c765`.
 As autorizações e pendências abaixo são registros históricos de cada etapa;
 o encerramento S19 vale somente no recorte CLI assistido/delegado documentado.
-S20 permanece EM REVISÃO; Desktop/LLM/planilha original continuam NOT_RUN.
+S20 permanecia EM REVISÃO nessa data; Desktop/LLM/planilha original estavam NOT_RUN.
+**Encerramento S20 — 17/11/2026:** CONCLUÍDO por aceite humano da pessoa; ver o
+handoff de encerramento ao fim do bloco S20.
 Não repetir os 18 evals reais nem finalizar merge, commit, push ou PR.
 Resultados desta integração no handoff próprio abaixo, para revisão HITL.
 
@@ -2000,7 +2002,7 @@ RULES §5 mantém experimentação Hermes conduzida pela pessoa, um passo por ve
 Nenhuma configuração pessoal, credencial, banco ou sessão Hermes foi alterada
 durante os testes; integração do lançamento usa processo externo controlado.
 
-**Status:** EM REVISÃO — P0. **Objetivo / Resultado observável:** avaliador
+**Status:** CONCLUÍDO — P0, por aceite humano da pessoa em 17/11/2026. **Objetivo / Resultado observável:** avaliador
 prepara SQLite sintético SIMULATION e perfil isolado sem copiar segredos; consulta
 catálogo e estado; dispõe de apresentação técnica de 20 minutos e demo assistida
 de 10 minutos, com limites e passos HITL explícitos.
@@ -2085,6 +2087,18 @@ orientações S19, novo perfil/preflight e ensaio humano. Próximo passo exato:
 revisão HITL do diff/slides/guia, configurar modelo no perfil vazio e ensaiar
 manifestações/atestações reais do cenário hipotético. Desktop não homologado.
 Sem commit, push, merge ou publicação; aceite final permanece pendente.
+
+**Handoff — encerramento S20, 17/11/2026:** a pessoa declarou a entrega concluída
+e aprovou o encerramento ("foi concluída a entrega"). Evidências na data:
+[jornada REAL no Desktop](../docs/verification-desktop-real.md), com a planilha
+original, até a viabilidade `PENDING`, 5 propostas aprovadas localmente e
+retomada em conversa nova; [jornada SIMULATION](../docs/verification-desktop-e2e.md)
+completa até o preço; regressão 948 PASS/2 SKIPPED (5 min 38 s, `-n 2`); Ruff
+check/format PASS; CI verde em Windows, Ubuntu e macOS no commit `95a0e51`.
+README, arquitetura, guias e slides foram atualizados. Limites preservados:
+aceite, CMV e preço com a planilha original não foram executados; Hermes e Desktop
+não foram testados em macOS/Linux; S12 (vídeo) segue sem entrega, por decisão da
+pessoa. Sem commit, push ou PR automáticos.
 
 ## Integração S19/S20 — 16/11/2026
 

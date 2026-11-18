@@ -357,6 +357,27 @@ def test_purchase_read_explains_shortage_without_internal_references(pricing_wor
     assert "ingredient_id" not in json.dumps(result)
 
 
+@pytest.mark.parametrize("basis", ["UNKNOWN", "COOKED"])
+def test_purchase_read_asks_raw_or_cooked_basis_instead_of_unit(
+    pricing_workspace, recipe_candidate, basis
+):
+    recipe_candidate["ingredients"][0]["preparation_basis"] = basis
+    _, workspace, _, _, _, database = pricing_workspace(accept=False)
+
+    result = AttendanceService(database, workspace, "ATTENDANCE").call("evaluate_purchase_plan", {})
+
+    assert result["ok"]
+    assert result["data"]["remaining_budget"] is None
+    assert result["data"]["questions"][0] == {
+        "message": (
+            "Precisamos saber se a quantidade da receita é do ingrediente cru "
+            "ou já preparado antes de avaliar a compra."
+        ),
+        "ingredients": ["Arroz"],
+    }
+    assert "medida e a unidade" not in json.dumps(result["data"]["questions"], ensure_ascii=False)
+
+
 def test_stdio_launcher_does_not_pass_provider_secrets_to_business_process(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "SYNTHETIC-ENV-CANARY")
     monkeypatch.setenv("UNRELATED_PRIVATE_SETTING", "SYNTHETIC-ENV-CANARY")

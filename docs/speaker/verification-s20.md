@@ -1,5 +1,8 @@
 # Verificação S20 — 16/11/2026
 
+> [!NOTE]
+> **S20 concluída em 17/11/2026, por aceite humano.** Este é o registro de 16/11. O estado atual está nas [Evidências do README](../../README.md#validar) e na [jornada REAL no Desktop](../verification-desktop-real.md).
+
 Entrega preparada na branch `feat/s20-portable-onboarding`, sem commit, push,
 merge ou publicação. S19/PR #18 e seus dados/perfis não foram alterados.
 Este relatório separa provas executadas de pendências humanas; não é aceite HITL.

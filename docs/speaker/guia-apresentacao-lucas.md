@@ -248,11 +248,11 @@ As linhas em itálico dentro das falas são notas de revisão, não texto para f
 
 > Vamos ver a despensa, a fonte Exa registrada, a adaptação com o plano, a viabilidade que ainda está pendente e as decisões que passaram pela aprovação externa.
 
-> Um esclarecimento sobre as evidências. A receita REAL ainda não foi aceita nem precificada, e a jornada REAL completa vai passar por uma nova validação de ponta a ponta. Preço e cardápio aparecem no próximo slide, como resultado do ensaio em SIMULATION. Durante a demonstração, vou confirmar cada passo pelo estado gravado, e não pela resposta do modelo.
+> Um esclarecimento sobre as evidências. No REAL, com a planilha original, a jornada foi até a viabilidade e parou em PENDING. O agente pediu tempo de preparo, se as quantidades eram cruas ou cozidas, a capacidade útil da panela e o peso da porção. Eu não inventei esses valores, e o domínio não aceitou o prato sem eles. Para mim, esse é o comportamento certo para o coração do desafio.
+
+> Preço e cardápio aparecem no próximo slide, como resultado do ensaio em SIMULATION. Durante a demonstração, vou confirmar cada passo pelo estado gravado, e não pela resposta do modelo.
 
 > Vamos começar pela despensa.
-
-*Revisar após a validação REAL: substituir o esclarecimento sobre as evidências pelo resultado comprovado.*
 
 **Demo rápida (~8 min, somente leitura):** abra o guia pelo link do slide, no modo Demo rápida. Cenas: 1 · despensa e orçamento (1:30) · 2 · fonte Exa registrada (1:30) · 3 · adaptação e plano (1:45) · 4 · viabilidade pendente (1:30) · 5 · aprovação humana externa (1:45). Sem comandos no terminal, sem novas propostas e sem aprovações. Ao fim da cena 5, volte ao slide 12 para preço e cardápio do ensaio SIMULATION.
 
@@ -270,8 +270,6 @@ As linhas em itálico dentro das falas são notas de revisão, não texto para f
 
 > Os controles funcionaram. A experiência ainda tem pontos a melhorar, e é por eles que começo o próximo slide.
 
-*Revisar após a validação REAL: avaliar mover este slide para o apêndice e trazer os resultados REAL para a apresentação principal.*
-
 **Cuidado:** números de SIMULATION com planilha sintética. Não os apresente como resultado da planilha original nem chame a sobra de lucro.
 
 ## 13 — O que pode virar melhoria? · 80 s
@@ -281,6 +279,8 @@ As linhas em itálico dentro das falas são notas de revisão, não texto para f
 > Separei as melhorias em dois grupos. Algumas apareceram nos testes. Outras são evoluções que eu já planejava.
 
 > Nos testes, ao adaptar uma receita, o Hermes tentou uma revisão que perdia o vínculo com a fonte web. O domínio recusou, como deveria, mas o modelo não conseguiu se corrigir sozinho. Eu melhoraria o contrato da ferramenta e as orientações da skill para que essa correção não dependa da operação.
+
+> O ensaio REAL também achou um problema de UX, que eu já corrigi com um teste. A consulta de compras pedia para "esclarecer a medida e a unidade" de oito ingredientes, quando a causa real era não saber se as quantidades eram cruas ou cozidas. A regra estava certa; a pergunta para a Dona Maria estava errada.
 
 > A aprovação pela CLI também mostrou atrito. Ela evoluiria para uma interface de revisão segura, ainda fora do catálogo do modelo.
 
@@ -366,11 +366,11 @@ As linhas em itálico dentro das falas são notas de revisão, não texto para f
 
 > Eu separei as evidências por camada, porque cada uma prova uma coisa diferente.
 
-> Os testes determinísticos cobrem regras, limites, persistência e concorrência. O Hypothesis gera sequências de operações para achar casos extremos. A última regressão completa foi em 16 de novembro, com 804 aprovados. Depois da troca para o Exa, rodei 77 testes direcionados de pesquisa, não a suíte inteira. Os testes de integração exercitam o servidor MCP real por stdio.
+> Os testes determinísticos cobrem regras, limites, persistência e concorrência. O Hypothesis gera sequências de operações para achar casos extremos. A última regressão completa foi em 17 de novembro, com 948 aprovados e 2 ignorados, e a CI passou em Windows, Ubuntu e macOS. Os testes de integração exercitam o servidor MCP real por stdio.
 
 > Nos evals do agente, eu não olho só a resposta escrita: confiro as ferramentas chamadas e o estado persistido. São 18 casos no recorte CLI assistido, com a revisão delegada declarada.
 
-> Em 17 de novembro, preparei o REAL com a planilha original até o `check`, e fiz o ensaio completo no Desktop em SIMULATION. A conversa REAL completa no Desktop ainda falta, e eu não a apresento como feita.
+> Em 17 de novembro, conversei no Desktop com o perfil REAL e a planilha original. Foram pesquisa Exa real, receita web e adaptação, fatos da cozinha, plano e cinco aprovações locais, além de uma conversa nova que retomou tudo pelo SQLite. A jornada parou antes do aceite por falta de dados medidos. O ensaio completo até o preço foi em SIMULATION. Eu separo as duas evidências.
 
 > A CI roda o núcleo em Windows, Ubuntu e macOS, mas não instala o Hermes nem um modelo.
 
@@ -396,5 +396,12 @@ As linhas em itálico dentro das falas são notas de revisão, não texto para f
 | Como escalar para multiusuário? | Seria outra fronteira: autenticação, autorização por recurso, armazenamento concorrente, observabilidade e gestão de segredos. Não alegar que trocar SQLite por PostgreSQL resolve tudo. |
 | Qual modelo teve melhor resultado? | Não há comparação controlada suficiente para declarar vencedor. Registre modelo/provider/versão e assistência de cada execução; não derive ranking de uma demo. |
 | Por que não mostrar tudo do zero em oito minutos? | A jornada completa exige várias manifestações e atestações e, no ensaio, levou mais de uma hora. A demo rápida consulta um atendimento REAL preparado antes, sem novas propostas nem aprovações ao vivo. A jornada completa continua no guia interativo para validação técnica. |
-| O que ainda não está homologado? | A jornada completa no Desktop com a planilha original no perfil REAL. O ensaio completo de 17/11 foi em `SIMULATION`, com planilha sintética; a preparação REAL foi conferida até `check`. CI não instala o Hermes nem um modelo. [Registro E2E](../verification-desktop-e2e.md). |
+| O que ainda não está homologado? | Aceite, CMV e preço com a planilha original. A jornada REAL de 17/11 foi até a viabilidade `PENDING`; o ensaio completo até o preço foi em `SIMULATION`. CI não instala o Hermes nem um modelo. [Jornada REAL](../verification-desktop-real.md), [jornada SIMULATION](../verification-desktop-e2e.md). |
+| Por que o REAL parou? | Base cru/cozido `UNKNOWN` nas 9 linhas (o plano só soma linhas `RAW`), água sem custo, quatro lacunas declaradas na receita (tempo, peso da porção, requisitos, base) e interesse não registrado. Nenhum desses dados podia ser inventado. [planning.py](../../src/dona_maria/planning.py). |
+| Por que o agente não mostrou o saldo de R$ 80? | Com demanda incompleta, `remaining_budget` é `null`. Mostrar R$ 80 seria afirmar que nada precisa ser comprado. O agente disse que não conseguia confirmar o saldo, que é o comportamento esperado. |
+| Quanto daria o prato REAL? | Uma estimativa manual com os custos da planilha dá cerca de R$ 1,98 de ingredientes por porção e piso de R$ 2,21. Não é evidência: só a ferramenta, depois do aceite, calcula o valor oficial. O número também mostra por que chamo a diferença de sobra, e não de lucro. |
+| Como você avalia o agente, e não só o código? | Agent Evals com cenário, tools chamadas e estado persistido; a resposta escrita sozinha não aprova. Falhas e tentativas ficam preservadas. O próximo passo é rodar os mesmos casos em outros modelos e na CI. [evals/README.md](../../evals/README.md). |
+| E custo e latência? | Não medi de forma controlada. A arquitetura reduz o que o modelo precisa fazer (a matemática e as regras ficam no Python), mas o agente consulta o estado muitas vezes: 26 `get_business_state` no ensaio SIMULATION. Eu instrumentaria tokens, chamadas por etapa e tempo até a decisão. |
+| Como observar isso em produção? | Logs estruturados já registram tool, resultado e duração por chamada MCP, sem dados privados. Faltam traces por atendimento, métricas de travamento por etapa e custo por conversa. |
+| O que faria com mais duas semanas? | Concluir o REAL até o preço com dados medidos; simplificar o contrato de revisão de receita, que causou as recusas `SOURCE_NOT_LINKED`; trazer duas ou três candidatas por busca; comparar modelos nos evals; trocar o terminal por uma revisão autenticada. |
 | O E2E foi autônomo? | Não. Duas propostas corretivas da adaptação foram preparadas pela operação, fora da conversa, depois de recusas `SOURCE_NOT_LINKED`; o primeiro aceite foi recusado por falta de interesse registrado; a pesquisa do perfil `SIMULATION` foi configurada manualmente. Nenhuma aprovação foi feita pelo agente. [Intervenções](../verification-desktop-e2e.md#intervenções-operacionais). |

@@ -58,10 +58,6 @@ Thumbs.db
 .harness/**
 
 # Local development context (preserved on disk, outside the deliverable)
-/RULES.md
-/docs/architecture.md
-/docs/development.md
-/docs/testing.md
 /docs/ci.md
 /docs/s00-smoke.md
 /tools/harness_check.py

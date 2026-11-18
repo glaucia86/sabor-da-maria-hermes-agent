@@ -1,5 +1,8 @@
 # Verificação do percurso local REAL — 16/11/2026
 
+> [!NOTE]
+> **Registro histórico.** O estado atual está em [Evidências e limites do README](../../README.md#validar), na [jornada REAL no Desktop](../verification-desktop-real.md) e na [jornada SIMULATION](../verification-desktop-e2e.md), todas de 17/11/2026. Última suíte completa: 948 aprovados e 2 ignorados.
+
 Esta revisão muda o percurso principal para planilha real, modelo escolhido
 localmente no Hermes e Desktop. Os registros históricos em
 [verification-s20.md](verification-s20.md) permanecem históricos.
@@ -36,8 +39,8 @@ por um adaptador controlado; não abre interface nem usa credenciais/rede.
 | Links locais | PASS: 84 links/âncoras em sete documentos. |
 | Cópia preparada para Pages | HTML atualizado no worktree separado; workflow e oito assets validados. Sem publicação. |
 | Instalação limpa em outra máquina/SO | NOT_RUN. |
-| Planilha original no percurso REAL | NOT_RUN; anexo binário não disponível nesta execução. |
-| Desktop, modelo autenticado e pesquisa ao vivo | NOT_RUN nesta revisão. Em 17/11, a [jornada E2E assistida](../verification-desktop-e2e.md) foi concluída em `SIMULATION`; o perfil REAL com a planilha original segue NOT_RUN. |
+| Planilha original no percurso REAL | NOT_RUN nesta revisão; anexo binário não disponível. Em 17/11, a planilha foi versionada e usada na [jornada REAL](../verification-desktop-real.md). |
+| Desktop, modelo autenticado e pesquisa ao vivo | NOT_RUN nesta revisão. Em 17/11: [jornada REAL](../verification-desktop-real.md) com a planilha original até a viabilidade `PENDING` (PARCIAL, sem aceite nem preço) e [jornada `SIMULATION`](../verification-desktop-e2e.md) completa. |
 
 Comandos executados no Windows, com o Python 3.13 da aplicação:
 

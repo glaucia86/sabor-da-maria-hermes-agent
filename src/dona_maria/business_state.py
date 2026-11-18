@@ -803,8 +803,13 @@ def _attendance_purchase(data, state, snapshot):
     }
     questions = []
     for gap in data["gaps"]:
-        message = messages.get(
-            gap.partition(":")[0], "Há uma pendência de compra. Revise as condições do plano."
+        message = (
+            "Precisamos saber se a quantidade da receita é do ingrediente cru "
+            "ou já preparado antes de avaliar a compra."
+            if gap.startswith("UNIT_CONVERSION_REQUIRED: base cru/cozido")
+            else messages.get(
+                gap.partition(":")[0], "Há uma pendência de compra. Revise as condições do plano."
+            )
         )
         ingredients = sorted({name for identifier, name in names.items() if identifier in gap})
         question = {"message": message, "ingredients": ingredients}

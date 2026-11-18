@@ -43,6 +43,9 @@ ritmo, não como limite rígido.
 - A pesquisa mostrada é o registro de uma busca feita antes da sessão. Não a
   apresente como busca ao vivo.
 - A viabilidade observada é `PENDING`. Não declare o prato elegível.
+- O estado REAL esperado está descrito em
+  [verification-desktop-real.md](../verification-desktop-real.md), com os
+  bloqueios que impediram o aceite.
 - A receita REAL não foi aceita nem precificada. Preço e cardápio finalizados
   existem apenas no [ensaio `SIMULATION`](../verification-desktop-e2e.md) de
   17/11/2026 e aparecem no slide seguinte como resultado documentado.

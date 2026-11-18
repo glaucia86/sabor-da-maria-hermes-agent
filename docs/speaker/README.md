@@ -6,8 +6,9 @@
 - [Demo Hermes](demo-hermes.md): demo rápida de 8 minutos, somente leitura, no perfil REAL preparado.
 - [Guia interativo da Dona Maria](../demo/hermes-desktop-walkthrough.html): prompts
   naturais da demonstração, também acessível pelo slide 11.
-- [Verificação do percurso REAL](verification-local-real.md): testes atuais e pendências humanas.
-- [Jornada E2E assistida no Desktop](../verification-desktop-e2e.md): ensaio `SIMULATION` concluído e intervenções operacionais.
+- [Jornada REAL no Desktop](../verification-desktop-real.md): planilha original até a viabilidade `PENDING`, decisões aprovadas e retomada em conversa nova (17/11).
+- [Jornada E2E assistida no Desktop](../verification-desktop-e2e.md): ensaio `SIMULATION` concluído até o preço, com intervenções operacionais.
+- [Verificação do percurso REAL](verification-local-real.md): registro histórico de 16/11.
 - [Verificação e limites S20](verification-s20.md): resultados reais e integração.
 
 ## Publicação no GitHub Pages
@@ -96,7 +97,10 @@ Funcionamento das notas: [documentação oficial Reveal.js](https://revealjs.com
 
 ## Antes da entrevista
 
-Ensaie a jornada completa com o perfil definitivo e a planilha original.
-Não apresente a demo como evidência de autonomia geral. A pesquisa real faz parte do percurso completo;
-se falhar, registre a limitação sem apresentar uma receita própria como essa prova.
+A demo rápida consulta o atendimento REAL registrado em
+[verification-desktop-real.md](../verification-desktop-real.md). Antes da
+entrevista, confira se o estado continua o mesmo: perfil, receitas, plano,
+viabilidade e propostas. Não apresente a demo como evidência de autonomia geral
+nem os números da SIMULATION como resultado da planilha original. Se a pesquisa
+falhar ao vivo, registre a limitação sem apresentar uma receita própria como essa prova.
 A apresentação local continua disponível independentemente do GitHub Pages.
