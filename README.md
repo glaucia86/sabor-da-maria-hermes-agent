@@ -399,6 +399,7 @@ uv run --locked --no-sync ruff format --check src tests/conftest.py tests/unit t
 | Limitação | Próximo passo |
 | --- | --- |
 | A jornada REAL parou antes do aceite: faltam tempo medido, peso da porção, base cru/cozido e custo da água | Completar com dados medidos ou declarados, sempre rotulados como declaração |
+| Água da rede pública não está na planilha. Sem identidade e custo, a linha fica `MISSING_INFORMATION`, a demanda não fecha e aceite e CMV ficam bloqueados. Não há regra especial nem custo zero presumido | Decidir no domínio, com aprovação local, se a água entra no CMV com custo declarado pela cozinheira ou se fica como insumo operacional fora do CMV de ingredientes |
 | A aprovação local atesta o conteúdo exato, mas não autentica a cozinheira | Interface de revisão autenticada, ainda fora do catálogo do modelo |
 | A jornada completa leva mais de uma hora; na SIMULATION, duas revisões da adaptação foram recusadas (`SOURCE_NOT_LINKED`) e exigiram a operação | Contrato de revisão de receita mais simples e skill mais explícita |
 | A pesquisa traz 1 resultado por busca | Duas ou três candidatas por busca, com os mesmos controles |

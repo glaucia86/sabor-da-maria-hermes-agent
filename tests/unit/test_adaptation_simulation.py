@@ -963,6 +963,356 @@ def test_bound_partial_input_preserves_omitted_fields(local_context, own_recipe)
     assert adapted["title"] == original["title"]
 
 
+SOURCE = {"kind": "USER_PROVIDED"}
+
+
+def _recipe(title, lines, basis="RAW", requirements=()):
+    """Receita arbitrária declarada pela cozinheira, com linhas ainda sem identidade."""
+    requirements = [dict(requirement, source=SOURCE) for requirement in requirements]
+    return dict(
+        origin=dict(source=SOURCE),
+        title=title,
+        sources=[SOURCE],
+        ingredients=[
+            dict(
+                description=description,
+                original_measure=dict(
+                    raw_text=f"{value} {unit} de {description}",
+                    value=value,
+                    unit_label=unit,
+                    source=SOURCE,
+                ),
+                quantity=dict(value=value, unit=unit),
+                preparation_basis=basis,
+                source=SOURCE,
+            )
+            for description, value, unit in lines
+        ],
+        method=f"Preparo declarado para {title}.",
+        method_source=SOURCE,
+        yield_per_batch=dict(servings_per_batch=4, sale_unit_label="porção", source=SOURCE),
+        operational_context="Um lote por vez, preparado pela própria cozinheira.",
+        context_source=SOURCE,
+        requirements=requirements,
+        category_reviews=[
+            dict(
+                category=category,
+                requirement_keys=keys,
+                method_version=1,
+                not_applicable_reason=None if keys else "Sem requisito declarado na categoria.",
+                source=SOURCE,
+            )
+            for category in ("EQUIPMENT", "SKILL", "OPERATION")
+            for keys in [[r["key"] for r in requirements if r["category"] == category]]
+        ],
+    )
+
+
+def _context(directory, inventory_file, mode):
+    database = directory / f"{uuid4()}.sqlite3"
+    workspace = bootstrap_workspace(
+        database, inventory_file, allowed_directory=inventory_file.parent, context_mode=mode
+    )["workspace_id"]
+    repository = SQLiteWorkspaceRepository(database)
+    migrate_proposals(repository, directory / f"{uuid4()}-backup.sqlite3")
+    return ApprovalService(repository), workspace, database
+
+
+def _same_version(local, workspace, candidate):
+    # Interesse vem do feedback atual; não faz parte da versão comprometida.
+    historical = _historical(local, workspace, candidate["id"], candidate["version"]).public()
+    return historical | {"interest": candidate["interest"]} == candidate
+
+
+def _revision(number, version, changes):
+    return dict(
+        kind="register_recipe_candidate",
+        payload=dict(
+            recipe_id=number,
+            candidate=dict(
+                origin=dict(source=SOURCE, derived_from=dict(recipe_id=number, version=version)),
+                changes=changes,
+            ),
+        ),
+    )
+
+
+def _historical(local, workspace, recipe_id, version):
+    from contextlib import closing
+
+    from dona_maria.provenance import RecipeVersionRef
+
+    with closing(local.repository._connect("ro")) as db:
+        return SQLiteWorkspaceRepository.historical_recipe(
+            db, workspace, RecipeVersionRef(recipe_id=recipe_id, version=version)
+        )
+
+
+def _audit_rows(database):
+    with sqlite3.connect(f"file:{database}?mode=ro", uri=True) as db:
+        return {
+            table: set(db.execute(f"SELECT * FROM {table}").fetchall())
+            for table in ("decisions", "operations")
+        }
+
+
+RESOLUTION_SCENARIOS = {
+    "v4-resolucao-v5-lacuna": dict(
+        others=1,
+        recipe=_recipe(
+            "Sopa de legumes da casa",
+            [("Abóbora cabotiá", "350", "g"), ("Caldo de legumes", "1", "L")],
+            requirements=[
+                dict(
+                    category="EQUIPMENT",
+                    key="panela_grande",
+                    condition="PRESENT",
+                    reason="Lote único em panela grande.",
+                )
+            ],
+        ),
+        revisions=3,
+        resolutions=[(2, dict(new_ingredient=dict(name="Caldo caseiro", dimension="ml")))],
+        changes=dict(declared_gaps=["Confirmar o ponto final do caldo."]),
+    ),
+    "v1-resolucao-v2-titulo": dict(
+        others=0,
+        recipe=_recipe(
+            "Bolinho de arroz", [("Arroz cozido", "200", "g"), ("Ovos", "2", "un")], "COOKED"
+        ),
+        revisions=0,
+        resolutions=[(1, dict(existing_ingredient_id=1))],
+        changes=dict(title="Bolinho de arroz assado"),
+    ),
+    "duas-resolucoes-consecutivas": dict(
+        others=2,
+        recipe=_recipe(
+            "Feijão tropeiro",
+            [("Feijão", "500", "g"), ("Farinha de mandioca", "150", "g"), ("Salsa", "20", "g")],
+            "UNKNOWN",
+            requirements=[
+                dict(
+                    category="SKILL",
+                    key="ponto_farofa",
+                    condition="SKILL_KNOWN",
+                    reason="Farofa úmida sem queimar.",
+                )
+            ],
+        ),
+        revisions=1,
+        resolutions=[
+            (1, dict(new_ingredient=dict(name="Feijão carioca", dimension="g"))),
+            (3, dict(existing_ingredient_id=1)),
+        ],
+        changes=dict(declared_gaps=["Declarar o tempo de cocção do feijão."]),
+    ),
+}
+
+
+@pytest.mark.parametrize("mode", ["REAL", "SIMULATION"])
+@pytest.mark.parametrize("scenario", RESOLUTION_SCENARIOS.values(), ids=RESOLUTION_SCENARIOS)
+def test_revision_derives_from_any_version_created_by_ingredient_resolution(
+    tmp_path, inventory_file, scenario, mode
+):
+    local, workspace, database = _context(tmp_path, inventory_file, mode)
+    public = AttendanceService(database, workspace, "ATTENDANCE")
+
+    def bound(command):
+        request = dict(operation_id=str(uuid4()), command=command)
+        view = public.call("propose_user_change", request)
+        assert view["ok"], view
+        proposal = local.list(workspace)[view["data"]["proposal"] - 1]
+        result = approve(local, workspace, proposal)
+        assert result["ok"], result
+        return request, proposal, result
+
+    others = [
+        approve(
+            local,
+            workspace,
+            propose(local, workspace, _recipe(f"Prato {n}", [("Batata", "3", "kg")])),
+        )["data"]["candidate"]
+        for n in range(scenario["others"])
+    ]
+    number = len(others) + 1
+    recipe = approve(local, workspace, propose(local, workspace, scenario["recipe"]))["data"][
+        "candidate"
+    ]
+    decide(
+        local, workspace, "record_recipe_feedback", recipe_id=recipe["id"], feedback="INTERESTED"
+    )
+    decide(
+        local,
+        workspace,
+        "set_production_plan",
+        items=[dict(recipe_id=recipe["id"], recipe_version=1, batches=1, position=0)],
+    )
+    committed = {1: recipe}
+    for n in range(scenario["revisions"]):
+        changes = dict(title=f"{recipe['title']} ({n + 1})")
+        result = bound(_revision(number, max(committed), changes))[2]
+        committed[max(committed) + 1] = result["data"]["candidate"]
+    for line, target in scenario["resolutions"]:
+        command = dict(
+            kind="resolve_recipe_ingredient",
+            payload=dict(recipe_id=number, line_id=line, **target),
+        )
+        resolved = bound(command)[2]["data"]["candidate"]
+        assert resolved["version"] == max(committed) + 1
+        assert resolved["ingredients"][line - 1]["ingredient_id"] is not None
+        committed[resolved["version"]] = resolved
+    assert sorted(committed) == list(range(1, max(committed) + 1))
+    assert all(_same_version(local, workspace, c) for c in committed.values())
+
+    base = committed[max(committed)]
+    before = state(local, workspace)["data"]
+    audit = _audit_rows(database)
+    request, proposal, revised = bound(_revision(number, base["version"], scenario["changes"]))
+    adapted = revised["data"]["candidate"]
+    assert adapted["version"] == base["version"] + 1
+    assert adapted["origin"]["derived_from"] == dict(
+        recipe_id=recipe["id"], version=base["version"]
+    )
+    assert adapted["origin"]["source"]["information_ref"]["version"] == adapted["version"]
+    for key in ("title", "declared_gaps"):
+        assert adapted[key] == scenario["changes"].get(key, base[key])
+
+    def without(items, key):
+        return [{k: v for k, v in item.items() if k != key} for item in items]
+
+    assert without(adapted["ingredients"], "line_id") == without(base["ingredients"], "line_id")
+    assert without(adapted["requirements"], "id") == without(base["requirements"], "id")
+    assert adapted["category_reviews"] == [
+        review | {"method_version": adapted["version"]} for review in base["category_reviews"]
+    ]
+    assert set(adapted["category_status"].values()) == {"REVIEWED"}
+    for key in (
+        "sources",
+        "method",
+        "method_source",
+        "yield_per_batch",
+        "operational_context",
+        "context_source",
+    ):
+        assert adapted[key] == base[key]
+
+    after = state(local, workspace)["data"]
+    for key in ("plan", "kitchen_facts", "ingredient_resolutions", "complement_ingredients"):
+        assert after[key] == before[key]
+    assert after["acceptances"] == before["acceptances"]
+    assert after["candidates"][: len(others)] == before["candidates"][: len(others)]
+    if "declared_gaps" not in scenario["changes"]:
+        assert after["evaluation"]["fingerprint"] == before["evaluation"]["fingerprint"]
+    rows = _audit_rows(database)
+    assert all(audit[table] <= rows[table] for table in audit)
+    assert all(_same_version(local, workspace, c) for c in [*committed.values(), adapted])
+
+    reopened = ApprovalService(SQLiteWorkspaceRepository(database))
+    assert state(reopened, workspace)["data"] == after
+    assert approve(reopened, workspace, proposal) == revised
+    replay = AttendanceService(database, workspace, "ATTENDANCE").call(
+        "propose_user_change", request
+    )
+    assert replay["data"]["status"] == "APPLIED_HISTORICAL"
+
+
+@settings(
+    max_examples=8,
+    deadline=None,
+    database=None,
+    suppress_health_check=[HealthCheck.function_scoped_fixture],
+)
+@given(
+    title=st.text(st.characters(categories=("L", "N")), min_size=1, max_size=30),
+    lines=st.lists(
+        st.tuples(
+            st.text(st.characters(categories=("L",)), min_size=1, max_size=20),
+            st.integers(1, 999).map(str),
+            st.sampled_from(["g", "kg", "ml", "L", "un"]),
+        ),
+        min_size=1,
+        max_size=3,
+    ),
+    basis=st.sampled_from(["RAW", "COOKED", "UNKNOWN"]),
+    steps=st.lists(st.sampled_from(["title", "gaps", "resolve"]), min_size=1, max_size=5),
+    mode=st.sampled_from(["REAL", "SIMULATION"]),
+)
+def test_every_committed_version_of_an_arbitrary_recipe_is_recoverable(
+    tmp_path, inventory_file, title, lines, basis, steps, mode
+):
+    local, workspace, _ = _context(tmp_path, inventory_file, mode)
+    recipe = approve(local, workspace, propose(local, workspace, _recipe(title, lines, basis)))[
+        "data"
+    ]["candidate"]
+    committed = {1: recipe}
+    unresolved = list(range(1, len(lines) + 1))
+    for n, step in enumerate(steps, 1):
+        if step == "resolve" and unresolved:
+            payload = dict(recipe_id=1, line_id=unresolved.pop(0), existing_ingredient_id=1)
+            command = dict(kind="resolve_recipe_ingredient", payload=payload)
+        else:
+            changes = (
+                dict(title=f"{title} {n}")
+                if step == "title"
+                else dict(declared_gaps=[f"Lacuna declarada {n}."])
+            )
+            command = _revision(1, max(committed), changes)
+        view = local.propose_bound(workspace, dict(operation_id=str(uuid4()), command=command))
+        result = approve(local, workspace, local.list(workspace)[view["proposal"] - 1])
+        assert result["ok"], result
+        committed[max(committed) + 1] = result["data"]["candidate"]
+    assert sorted(committed) == list(range(1, len(steps) + 2))
+    assert all(_same_version(local, workspace, c) for c in committed.values())
+    assert state(local, workspace)["ok"]
+
+
+def test_resolution_version_is_not_recovered_from_divergent_audit(local_context):
+    local, workspace, database = local_context
+    recipe = approve(
+        local, workspace, propose(local, workspace, _recipe("Arroz", [("Arroz", "100", "g")]))
+    )["data"]["candidate"]
+    rice = BusinessStateReader(local.repository).get_inventory_snapshot(
+        {"workspace_id": workspace}
+    )["data"]["items"][0]["id"]
+    resolved = decide(
+        local,
+        workspace,
+        "resolve_recipe_ingredient",
+        recipe_id=recipe["id"],
+        recipe_version=1,
+        line_id=recipe["ingredients"][0]["line_id"],
+        existing_ingredient_id=rice,
+    )
+    assert resolved["data"]["candidate"]["version"] == 2
+    with sqlite3.connect(database) as db:
+        identifier, payload = db.execute(
+            "SELECT id, payload_json FROM decisions WHERE kind='RESOLVE_RECIPE_INGREDIENT'"
+        ).fetchone()
+        payload = json.loads(payload)
+        payload["candidate"]["title"] = "Título adulterado"
+        db.execute(
+            "UPDATE decisions SET payload_json=? WHERE id=?", (json.dumps(payload), identifier)
+        )
+    before = database.read_bytes()
+    with pytest.raises(sqlite3.DatabaseError):
+        _historical(local, workspace, recipe["id"], 2)
+    with pytest.raises(sqlite3.DatabaseError):
+        propose(
+            local,
+            workspace,
+            dict(
+                origin=dict(
+                    source={"kind": "USER_PROVIDED"},
+                    derived_from=dict(recipe_id=recipe["id"], version=2),
+                ),
+                changes=dict(declared_gaps=["Lacuna"]),
+            ),
+            recipe_id=recipe["id"],
+            expected_recipe_version=2,
+        )
+    assert database.read_bytes() == before
+
+
 def test_new_reported_measurement_can_attest_the_same_numeric_value(local_context, own_recipe):
     local, workspace, _ = local_context
     original = approve(local, workspace, propose(local, workspace, own_recipe))["data"]["candidate"]

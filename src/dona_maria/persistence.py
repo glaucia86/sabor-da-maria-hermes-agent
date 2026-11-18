@@ -117,6 +117,16 @@ def _replay_result(operation: sqlite3.Row, current_revision: int) -> dict:
     return result
 
 
+def _recipe_content(candidate: dict) -> dict:
+    """Conteúdo do agregado a partir da projeção pública registrada em um resultado."""
+    content = {k: v for k, v in candidate.items() if k in RecipeCandidate.model_fields}
+    content["requirements"] = [
+        {k: v for k, v in requirement.items() if k != "status"}
+        for requirement in content["requirements"]
+    ]
+    return content
+
+
 def _invalidation_summary(state: WorkspaceState, previously_invalid: set[UUID]) -> dict:
     invalidated = [
         identifier
@@ -472,13 +482,7 @@ class SQLiteWorkspaceRepository:
                     conversions[conversion["id"]] = (conversion, event["id"])
                 candidate = result["data"].get("candidate")
                 if candidate:
-                    content = {
-                        k: v for k, v in candidate.items() if k in RecipeCandidate.model_fields
-                    }
-                    content["requirements"] = [
-                        {k: v for k, v in requirement.items() if k != "status"}
-                        for requirement in content["requirements"]
-                    ]
+                    content = _recipe_content(candidate)
                     snapshots[(candidate["id"], candidate["version"])] = content
                     events[event["id"]] = (candidate["id"], candidate["version"])
                     if candidate.get("provenance_version") == "2.0":
@@ -805,16 +809,31 @@ class SQLiteWorkspaceRepository:
     @staticmethod
     def historical_recipe(db, workspace_id, reference):
         """Resolve somente versões comprometidas e auditadas no workspace vinculado."""
-        for row in db.execute(
-            "SELECT * FROM decisions WHERE workspace_id=? AND kind='REGISTER_RECIPE_CANDIDATE'",
-            (workspace_id,),
-        ):
-            content = _decode_json(row["payload_json"])
-            if (content.get("id"), content.get("version")) != (
+        for row in db.execute("SELECT * FROM decisions WHERE workspace_id=?", (workspace_id,)):
+            payload = _decode_json(row["payload_json"])
+            registered = row["kind"] == "REGISTER_RECIPE_CANDIDATE"
+            content = payload if registered else payload.get("candidate")
+            if not isinstance(content, dict) or (content.get("id"), content.get("version")) != (
                 str(reference.recipe_id),
                 reference.version,
             ):
                 continue
+            if not registered:
+                # Outro comando que cria versão a publica no resultado idêntico da operação.
+                operation = db.execute(
+                    "SELECT result_json FROM operations WHERE workspace_id=? "
+                    "AND tool=? AND payload_hash=?",
+                    (workspace_id, row["kind"].lower(), row["fingerprint"]),
+                ).fetchone()
+                content = _recipe_content(content)
+                candidate = RecipeCandidate.model_validate(content)
+                if (
+                    operation is None
+                    or _decode_json(operation[0]).get("data") != payload
+                    or candidate.model_dump(mode="json") != content
+                ):
+                    raise sqlite3.DatabaseError("Versão histórica inconsistente.")
+                return candidate
             candidate = RecipeCandidate.model_validate(content)
             snapshot = db.execute(
                 "SELECT snapshot_id FROM workspaces WHERE id=?", (workspace_id,)
