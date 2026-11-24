@@ -2,7 +2,7 @@
 # Uso, na raiz do checkout (PowerShell 7 ou Windows PowerShell 5.1):
 #   . .\docs\speaker\demo-terminal.ps1 -Directory "artifacts/private/demo-24nov"
 # Os atalhos só leem propostas e chamam a revisão local. A atestação continua
-# manual: `aprovar` mostra o resumo, copia "ATESTO <hash>" e espera você colar.
+# manual: `aprovar` mostra o resumo e a frase completa que você deve enviar.
 
 param([Parameter(Mandatory = $true)][string]$Directory)
 
@@ -114,18 +114,20 @@ function aprovar([int]$Numero = 0) {
     $p = $lista[$Numero - 1]
     Write-Host "Confira se corresponde ao que a Dona Maria disse:" -ForegroundColor Cyan
     Write-Host (Format-DmResumo $p)
-    Set-Clipboard -Value ("ATESTO " + $p.hash)
-    Write-Host "Copiei 'ATESTO <hash>'. Se estiver correto, cole (Ctrl+V) e tecle Enter. Para desistir, Ctrl+C." -ForegroundColor Cyan
+    $atestacao = "ATESTO " + $p.hash
+    Set-Clipboard -Value $atestacao
+    Write-Host "Se o resumo estiver correto, cole a linha abaixo com Ctrl+V e pressione Enter. Ctrl+C cancela." -ForegroundColor Cyan
+    Write-Host $atestacao
     $saida = dm approve $p.id --hash $p.hash
-    $json = @($saida | Where-Object { $_ -match '^\s*\{' }) | Select-Object -Last 1
-    if ($json) {
-        $resultado = $json | ConvertFrom-Json
+    $ultimaLinha = $saida | Select-Object -Last 1
+    if ($LASTEXITCODE -eq 0 -and $ultimaLinha -match '(\{.*\})\s*$') {
+        $resultado = $Matches[1] | ConvertFrom-Json
         if ($resultado.ok) {
             Write-Host "Aprovada: $($p.command.kind) · revisão $($resultado.revision)" -ForegroundColor Green
             return
         }
     }
-    Write-Host "Não aplicada. Se apareceu AUTHORIZATION_EXPIRED ou STALE_REVISION, peça ao Hermes: 'refaça só essa proposta'. A pasta continua íntegra." -ForegroundColor Red
+    Write-Host "Confira o resultado com historico. Se apareceu AUTHORIZATION_EXPIRED ou STALE_REVISION, peça ao Hermes: 'refaça só essa proposta'." -ForegroundColor Yellow
 }
 
 Write-Host "Atalhos carregados para $Directory : pend, aprovar [n], ver [n], historico, dm" -ForegroundColor Green

@@ -436,15 +436,11 @@ html[data-track="real"] [data-only="sim"], html[data-track="sim"] [data-only="re
       <ol class="steps-list">
         <li>
           <h3>Carregar os atalhos</h3>
-          <p>Na raiz do checkout, no PowerShell que ficará ao lado do Desktop.</p>
-          <figure class="cmd-block">
-            <figcaption class="prompt-head"><span class="speaker">PowerShell da operadora</span><button type="button" class="copy" data-copy>Copiar comando</button></figcaption>
-            <pre><code>. .\docs\speaker\demo-terminal.ps1 -Directory "artifacts/private/demo-24nov"</code></pre>
-          </figure>
+          <p>Na raiz do projeto, carregue no PowerShell o bloco de ensaio ou de apresentação da <a href="#demo-2">cena 2</a>. Mantenha essa janela para as demais aprovações.</p>
         </li>
         <li>
           <h3>Aprovar <code>aprovar</code></h3>
-          <p>Mostra o resumo, copia <code>ATESTO &lt;hash&gt;</code> e abre a revisão local. Leia, confira com a fala, cole (Ctrl+V) e tecle Enter. Com duas propostas, use <code>aprovar 1</code> ou <code>aprovar 2</code>.</p>
+          <p>Mostra o resumo e, em uma linha separada, a frase completa de atestação. Confira o resumo com a fala. Se estiver correto, envie somente a linha que começa com <code>ATESTO</code>. Com duas propostas, use <code>aprovar 1</code> ou <code>aprovar 2</code>.</p>
         </li>
         <li>
           <h3>Conferir <code>pend</code> · <code>ver 1</code> · <code>historico</code></h3>
@@ -533,14 +529,29 @@ html[data-track="real"] [data-only="sim"], html[data-track="sim"] [data-only="re
         <figcaption class="prompt-head"><span class="speaker">Se faltar RAW ou categoria <span class="tag real">REAL</span></span><button type="button" class="copy" data-copy>Copiar prompt</button></figcaption>
         <blockquote class="prompt-text">Faltou registrar que todos os ingredientes são crus e as três categorias. Refaça só a proposta da receita.</blockquote>
       </figure>
+      <div class="block">
+        <h3>Preparar o PowerShell e listar as propostas</h3>
+        <p>Na raiz do projeto, execute o bloco que corresponde ao perfil aberto no Hermes. Se preparou outra pasta REAL, ajuste o caminho em <code>-Directory</code>.</p>
+        <figure class="cmd-block">
+          <figcaption class="prompt-head"><span class="speaker">PowerShell · ensaio</span><button type="button" class="copy" data-copy>Copiar comando</button></figcaption>
+          <pre><code>. .\docs\speaker\demo-terminal.ps1 -Directory "artifacts/private/ensaio-roteiro"
+pend</code></pre>
+        </figure>
+        <figure class="cmd-block">
+          <figcaption class="prompt-head"><span class="speaker">PowerShell · apresentação</span><button type="button" class="copy" data-copy>Copiar comando</button></figcaption>
+          <pre><code>. .\docs\speaker\demo-terminal.ps1 -Directory "artifacts/private/demo-24nov-recuperacao"
+pend</code></pre>
+        </figure>
+      </div>
       <figure class="cmd-block">
-        <figcaption class="prompt-head"><span class="speaker">PowerShell da operadora</span><button type="button" class="copy" data-copy>Copiar comando</button></figcaption>
+        <figcaption class="prompt-head"><span class="speaker">PowerShell · revisar proposta única</span><button type="button" class="copy" data-copy>Copiar comando</button></figcaption>
         <pre><code>aprovar</code></pre>
       </figure>
+      <p>Com mais de uma proposta, use o número atual mostrado por <code>pend</code>, por exemplo <code>aprovar 2</code>. O terminal mostra e copia a frase de atestação. Depois de conferir o resumo, pressione <strong>Ctrl+V</strong> para preencher a entrada com <code>ATESTO</code> seguido do hash. Confira a linha colada e só então pressione <strong>Enter</strong>.</p>
       <div class="block say"><h3>Diga ao avaliador</h3><p>“A proposta fica pendente, com hash e a revisão do estado. Ela disse que tudo é cru e revisou as três categorias; sem isso, o sistema não aceitaria o prato.”</p></div>
     </div>
     <div class="stack">
-      <div class="block expected"><h3>Resultado esperado</h3><p>O resumo do <code>aprovar</code> mostra 5 ingredientes <code>RAW</code>, 4 porções, as categorias EQUIPMENT, SKILL e OPERATION e 0 lacunas. Depois da atestação: <code>Aprovada · revisão 1</code>.</p></div>
+      <div class="block expected"><h3>Resultado esperado</h3><p>O resumo do <code>aprovar</code> mostra 5 ingredientes <code>RAW</code>, 4 porções, as categorias EQUIPMENT, SKILL e OPERATION e 0 lacunas. Depois da atestação, em um atendimento novo, aparece <code>Aprovada: register_recipe_candidate · revisão 1</code>.</p></div>
       <div class="block done"><h3>Cena concluída quando</h3><ul class="checks"><li>O resumo foi lido e conferido com a fala.</li><li>A receita foi aprovada no terminal.</li></ul></div>
     </div>
   </div>

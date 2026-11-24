@@ -75,9 +75,11 @@ Quando o Hermes disser que enviou uma proposta para revisão:
 aprovar
 ```
 
-O atalho mostra o resumo da proposta, copia `ATESTO <hash>` para a área de
-transferência e abre a revisão local. **Leia o resumo em voz alta, confira com a
-fala**, cole (Ctrl+V) e tecle Enter. O esperado é `Aprovada: … · revisão N`.
+O atalho mostra o resumo e, em uma linha separada, a frase de atestação com o
+hash completo. **Leia o resumo em voz alta e confira com a fala.** Se estiver
+correto, pressione Ctrl+V para preencher a entrada com a frase que o atalho
+copiou. Confira `ATESTO` e o hash na linha colada e então pressione Enter. O
+esperado é `Aprovada: … · revisão N`.
 
 - Se houver mais de uma proposta, `aprovar` lista as duas. Aprove a que
   corresponde à fala (`aprovar 1` ou `aprovar 2`) e peça ao Hermes que refaça a
